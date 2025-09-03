@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useReducer, useCallback, useMemo } from 'react';
@@ -5,11 +6,13 @@ import ImageManager from '@/components/image-manager';
 import SheetConfig from '@/components/sheet-config';
 import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout } from '@/app/schema';
-import { getNestedLayout } from '@/app/actions';
+import { getNestedLayout, saveToCart } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 
 type Image = {
   id: string;
@@ -25,6 +28,7 @@ type State = {
   nestedLayout: NestedLayout;
   sheetLength: number;
   isLoading: boolean;
+  isSaving: boolean;
 };
 
 type Action =
@@ -33,6 +37,8 @@ type Action =
   | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
   | { type: 'SET_LAYOUT'; payload: { layout: NestedLayout; length: number } }
+  | { type: 'START_SAVING' }
+  | { type: 'SET_SAVE_SUCCESS' }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
@@ -45,6 +51,7 @@ const initialState: State = {
   nestedLayout: [],
   sheetLength: 0,
   isLoading: false,
+  isSaving: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -59,8 +66,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, isLoading: true };
     case 'SET_LAYOUT':
       return { ...state, nestedLayout: action.payload.layout, sheetLength: action.payload.length, isLoading: false };
+    case 'START_SAVING':
+      return { ...state, isSaving: true };
+    case 'SET_SAVE_SUCCESS':
+      return { ...state, isSaving: false };
     case 'SET_ERROR':
-      return { ...state, isLoading: false };
+      return { ...state, isLoading: false, isSaving: false };
     default:
       return state;
   }
@@ -69,8 +80,11 @@ function reducer(state: State, action: Action): State {
 export default function NestingTool() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { toast } = useToast()
+  const { user } = useAuth();
+  const router = useRouter();
 
   const handleAddImage = useCallback(() => {
+    // Prevent hydration errors by running client-side only logic in useEffect or callbacks
     const id = (state.images.length + 1).toString() + Date.now();
     const width = 200 + Math.floor(Math.random() * 200);
     const height = 200 + Math.floor(Math.random() * 200);
@@ -111,7 +125,22 @@ export default function NestingTool() {
     }
   };
   
-  const handleAddToCart = () => {
+  const price = useMemo(() => {
+    if(state.sheetLength === 0) return 0;
+    const rate = state.sheetWidth === 13 ? 2.00 : 2.50;
+    return state.sheetLength * rate;
+  }, [state.sheetLength, state.sheetWidth]);
+
+  const handleAddToCart = async () => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Logged In',
+        description: 'Please sign in to add items to your cart.',
+      });
+      router.push('/login');
+      return;
+    }
     if (state.nestedLayout.length === 0) {
        toast({
         variant: "destructive",
@@ -120,17 +149,33 @@ export default function NestingTool() {
       });
       return;
     }
-    toast({
-      title: "Added to Cart!",
-      description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet is in your cart.`,
-    })
+
+    dispatch({ type: 'START_SAVING' });
+
+    const cartItem = {
+      sheetWidth: state.sheetWidth,
+      sheetLength: state.sheetLength,
+      price: price,
+      layout: state.nestedLayout,
+    };
+
+    const result = await saveToCart(cartItem);
+
+    if (result.success) {
+      dispatch({ type: 'SET_SAVE_SUCCESS' });
+      toast({
+        title: "Added to Cart!",
+        description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
+      });
+    } else {
+      dispatch({ type: 'SET_ERROR', payload: result.error || 'An unknown error occurred.' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: result.error || 'Could not save the item to your cart. Please try again.',
+      });
+    }
   }
-  
-  const price = useMemo(() => {
-    if(state.sheetLength === 0) return 0;
-    const rate = state.sheetWidth === 13 ? 2.00 : 2.50;
-    return state.sheetLength * rate;
-  }, [state.sheetLength, state.sheetWidth]);
 
   return (
     <div className="container py-8">
@@ -160,7 +205,7 @@ export default function NestingTool() {
             price={price}
             onArrange={handleArrange}
             onAddToCart={handleAddToCart}
-            isLoading={state.isLoading}
+            isLoading={state.isLoading || state.isSaving}
             hasImages={state.images.length > 0}
           />
         </div>

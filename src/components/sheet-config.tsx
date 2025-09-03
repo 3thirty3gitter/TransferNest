@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -74,7 +75,11 @@ export default function SheetConfig({
           <span className="text-2xl font-bold text-primary">${price.toFixed(2)}</span>
         </div>
         <Button onClick={onAddToCart} disabled={isLoading || sheetLength === 0} className="w-full" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-          <ShoppingCart className="mr-2 h-4 w-4" />
+           {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <ShoppingCart className="mr-2 h-4 w-4" />
+          )}
           Add to Cart
         </Button>
       </CardFooter>
