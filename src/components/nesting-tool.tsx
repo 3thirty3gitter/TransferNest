@@ -7,6 +7,9 @@ import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout } from '@/app/schema';
 import { getNestedLayout } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 type Image = {
   id: string;
@@ -130,31 +133,45 @@ export default function NestingTool() {
   }, [state.sheetLength, state.sheetWidth]);
 
   return (
-    <div className="container my-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-      <div className="lg:col-span-1 flex flex-col gap-8 lg:sticky lg:top-24">
-        <ImageManager
-          images={state.images}
-          onAddImage={handleAddImage}
-          onRemoveImage={handleRemoveImage}
-        />
-        <SheetConfig
-          sheetWidth={state.sheetWidth}
-          onSheetWidthChange={handleSheetWidthChange}
-          sheetLength={state.sheetLength}
-          price={price}
-          onArrange={handleArrange}
-          onAddToCart={handleAddToCart}
-          isLoading={state.isLoading}
-          hasImages={state.images.length > 0}
-        />
+    <div className="container py-8">
+      <Button asChild variant="ghost" className="mb-4">
+        <Link href="/">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Link>
+      </Button>
+      <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-headline font-bold">Gang Sheet Builder</h1>
+          <p className="mt-2 max-w-2xl mx-auto text-muted-foreground">
+              Upload your images, choose a sheet size, and let our AI arrange them for you.
+          </p>
       </div>
-      <div className="lg:col-span-2">
-        <SheetPreview
-          sheetWidth={state.sheetWidth}
-          sheetLength={state.sheetLength}
-          nestedLayout={state.nestedLayout}
-          isLoading={state.isLoading}
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-1 flex flex-col gap-8 lg:sticky lg:top-24">
+          <ImageManager
+            images={state.images}
+            onAddImage={handleAddImage}
+            onRemoveImage={handleRemoveImage}
+          />
+          <SheetConfig
+            sheetWidth={state.sheetWidth}
+            onSheetWidthChange={handleSheetWidthChange}
+            sheetLength={state.sheetLength}
+            price={price}
+            onArrange={handleArrange}
+            onAddToCart={handleAddToCart}
+            isLoading={state.isLoading}
+            hasImages={state.images.length > 0}
+          />
+        </div>
+        <div className="lg:col-span-2">
+          <SheetPreview
+            sheetWidth={state.sheetWidth}
+            sheetLength={state.sheetLength}
+            nestedLayout={state.nestedLayout}
+            isLoading={state.isLoading}
+          />
+        </div>
       </div>
     </div>
   );

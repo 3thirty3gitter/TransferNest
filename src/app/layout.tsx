@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'TransferNest',
-  description: 'Intelligently nest your DTF transfers.',
+  title: 'DTF Wholesale Canada - High Quality DTF Transfers',
+  description: 'Your #1 source for wholesale DTF transfers in Canada. Fast turnarounds, vibrant colors, and unbeatable prices. Upload your designs and get started today!',
 };
 
 export default function RootLayout({
