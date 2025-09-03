@@ -22,7 +22,7 @@ export async function getNestedLayout(
       sheetWidthInches: sheetWidth,
     });
 
-    const parsedLayout = NestedLayoutSchema.safeParse(JSON.parse(result.nestedLayout));
+    const parsedLayout = NestedLayoutSchema.safeParse(result.nestedLayout);
 
     if (!parsedLayout.success) {
       console.error("Failed to parse nested layout from AI:", parsedLayout.error);

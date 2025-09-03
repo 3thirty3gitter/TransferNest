@@ -12,9 +12,9 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ImageDetailsSchema = z.object({
-  url: z.string(),
-  width: z.number(),
-  height: z.number(),
+  url: z.string().describe("URL of the image."),
+  width: z.number().describe("Width of the image in inches."),
+  height: z.number().describe("Height of the image in inches."),
 });
 
 const IntelligentImageNestingInputSchema = z.object({
@@ -33,13 +33,21 @@ export type IntelligentImageNestingInput = z.infer<
   typeof IntelligentImageNestingInputSchema
 >;
 
+const NestedImagePositionSchema = z.object({
+    url: z.string().describe("The URL of the placed image."),
+    x: z.number().describe("The x-coordinate of the top-left corner of the image in inches."),
+    y: z.number().describe("The y-coordinate of the top-left corner of the image in inches."),
+    width: z.number().describe("The original width of the image in inches."),
+    height: z.number().describe("The original height of the image in inches."),
+});
+
 const IntelligentImageNestingOutputSchema = z.object({
   nestedLayout: z
-    .string()
-    .describe("A JSON string representing the nested image layout."),
+    .array(NestedImagePositionSchema)
+    .describe("An array of objects representing the nested image layout."),
   sheetLengthInches: z
     .number()
-    .describe("The length of the sheet in inches after nesting."),
+    .describe("The total length of the sheet in inches required to accommodate all the nested images."),
 });
 
 export type IntelligentImageNestingOutput = z.infer<
@@ -56,17 +64,21 @@ const prompt = ai.definePrompt({
   name: 'intelligentImageNestingPrompt',
   input: {schema: IntelligentImageNestingInputSchema},
   output: {schema: IntelligentImageNestingOutputSchema},
-  prompt: `You are an expert in image nesting for DTF transfers. Your goal is to efficiently arrange a set of images onto a sheet of a specified width, minimizing wasted space.
+  prompt: `You are an expert in image nesting for DTF transfers. Your goal is to efficiently arrange a given set of images onto a sheet of a specified width, minimizing wasted space.
 
-  You will receive an array of image objects, each with a URL and its dimensions in inches, and the desired sheet width (either 13 or 17 inches). Your task is to determine the optimal layout for these images on the sheet and the resulting sheet length.
+You will receive an array of image objects, each with a URL and its dimensions in inches, and the desired sheet width (either 13 or 17 inches).
 
-  Respond with a JSON object that includes the following fields:
+Your task is to determine the optimal layout for these images on the sheet. Images can be rotated 90 degrees if it improves packing efficiency. The original dimensions of the images must be preserved.
 
-  - nestedLayout: A JSON string representing the nested image layout. This layout should specify the position (x, y coordinates) and dimensions (width, height) of each image on the sheet. The units for position and dimensions should be in inches. The layout must not alter the original dimensions of the images.
-  - sheetLengthInches: The total length of the sheet in inches required to accommodate all the nested images.
+Respond with an object that includes the following fields:
 
-  Input Images (with dimensions): {{{json images}}}
-  Sheet Width: {{{sheetWidthInches}}} inches`,
+- nestedLayout: An array of objects, where each object represents a placed image and includes its 'url', original 'width' and 'height', and its final 'x' and 'y' coordinates on the sheet. The top-left corner of the sheet is (0, 0).
+- sheetLengthInches: The total length of the sheet in inches required to accommodate all the nested images. This should be the highest y-coordinate plus the height of the image at that coordinate.
+
+Input Images (with dimensions):
+{{{json images}}}
+
+Sheet Width: {{{sheetWidthInches}}} inches`,
 });
 
 const intelligentImageNestingFlow = ai.defineFlow(
