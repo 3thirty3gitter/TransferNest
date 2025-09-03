@@ -62,7 +62,7 @@ const initialState: State = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'ADD_IMAGE':
-      return { ...state, images: [...state.images, action.payload] };
+      return { ...state, images: [...state.images, action.payload], isUploading: false };
     case 'REMOVE_IMAGE':
       return { ...state, images: state.images.filter((img) => img.id !== action.payload) };
     case 'SET_SHEET_WIDTH':
@@ -112,22 +112,35 @@ export default function NestingTool() {
       const downloadURL = await uploadImage(file, user.uid);
       
       const id = new Date().getTime().toString();
-      dispatch({
-        type: 'ADD_IMAGE',
-        payload: {
-          id: id,
-          url: downloadURL,
-          // Set a default size for the uploaded image.
-          // Users can adjust this later if needed.
-          width: 3, 
-          height: 3,
-          dataAiHint: 'uploaded image',
-        },
-      });
-      toast({
-        title: 'Image Uploaded',
-        description: 'Your image has been successfully added.',
-      });
+      
+      const image = new window.Image();
+      image.onload = () => {
+        dispatch({
+          type: 'ADD_IMAGE',
+          payload: {
+            id: id,
+            url: downloadURL,
+            // Using a default of 3 inches for now. A more advanced implementation
+            // could use DPI to calculate the real-world size.
+            width: 3, 
+            height: (image.height / image.width) * 3,
+            dataAiHint: 'uploaded image',
+          },
+        });
+        toast({
+          title: 'Image Uploaded',
+          description: 'Your image has been successfully added.',
+        });
+      };
+      image.onerror = () => {
+        dispatch({ type: 'SET_ERROR', payload: 'Could not load uploaded image.' });
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not load the uploaded image. Please try another file.",
+        });
+      };
+      image.src = downloadURL;
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
       toast({
@@ -135,8 +148,6 @@ export default function NestingTool() {
         title: "Upload Failed",
         description: error.message || 'An unexpected error occurred during upload.',
       });
-    } finally {
-       dispatch({ type: 'SET_UPLOAD_COMPLETE' });
     }
   };
 

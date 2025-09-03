@@ -27,8 +27,11 @@ export async function uploadImage(file: File, userId: string): Promise<string> {
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading image to Firebase Storage:', error);
-    throw new Error('Failed to upload image.');
+    if (error.code === 'storage/unauthorized') {
+        throw new Error('Permission denied. Please check your Storage security rules.');
+    }
+    throw new Error('Failed to upload image. Please try again.');
   }
 }
