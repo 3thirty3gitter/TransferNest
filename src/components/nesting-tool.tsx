@@ -42,7 +42,7 @@ type Action =
   | { type: 'START_SAVING' }
   | { type: 'SET_SAVE_SUCCESS' }
   | { type: 'START_UPLOADING' }
-  | { type: 'SET_UPLOAD_SUCCESS' }
+  | { type: 'SET_UPLOAD_COMPLETE' }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
@@ -77,7 +77,7 @@ function reducer(state: State, action: Action): State {
       return { ...state, isSaving: false };
     case 'START_UPLOADING':
       return { ...state, isUploading: true };
-    case 'SET_UPLOAD_SUCCESS':
+    case 'SET_UPLOAD_COMPLETE':
         return { ...state, isUploading: false };
     case 'SET_ERROR':
       return { ...state, isLoading: false, isSaving: false, isUploading: false };
@@ -113,6 +113,7 @@ export default function NestingTool() {
       
       const image = new window.Image();
       image.src = downloadURL;
+
       image.onload = () => {
         const id = new Date().getTime().toString();
         dispatch({
@@ -126,14 +127,14 @@ export default function NestingTool() {
             dataAiHint: 'uploaded image',
           },
         });
-        dispatch({ type: 'SET_UPLOAD_SUCCESS' });
         toast({
           title: 'Image Uploaded',
           description: 'Your image has been successfully added.',
         });
+        dispatch({ type: 'SET_UPLOAD_COMPLETE' });
       };
+
       image.onerror = () => {
-        // This was the bug. Errors inside this callback were not caught by the try/catch block.
         dispatch({ type: 'SET_ERROR', payload: 'Could not load image dimensions.' });
         toast({
             variant: "destructive",

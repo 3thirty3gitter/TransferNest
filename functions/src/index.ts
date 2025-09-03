@@ -1,7 +1,7 @@
 // functions/src/index.ts
 import {onRequest} from "firebase-functions/v2/https";
 import type {Request, Response} from "express";
-import {multiAgentRespond} from "../../src/ai/middleware";
+import {multiAgentRespond} from "./ai/middleware";
 
 export const aiGateway = onRequest(
   {cors: true},
