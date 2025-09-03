@@ -12,30 +12,34 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
+import { ImageEditDialog } from './image-edit-dialog';
 
-type Image = {
+export type ManagedImage = {
   id: string;
   url: string;
   dataAiHint: string;
-  width: number;
-  height: number;
+  width: number; // in inches
+  height: number; // in inches
+  aspectRatio: number;
 };
 
 type State = {
-  images: Image[];
+  images: ManagedImage[];
   sheetWidth: 13 | 17;
   nestedLayout: NestedLayout;
   sheetLength: number;
   isLoading: boolean;
   isSaving: boolean;
   isUploading: boolean;
+  editingImageId: string | null;
 };
 
 type Action =
-  | { type: 'ADD_IMAGE'; payload: Image }
+  | { type: 'ADD_IMAGE'; payload: ManagedImage }
   | { type: 'REMOVE_IMAGE'; payload: string }
+  | { type: 'UPDATE_IMAGE'; payload: { id: string, copies: number, width: number, height: number } }
   | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
   | { type: 'SET_LAYOUT'; payload: { layout: NestedLayout; length: number } }
@@ -43,13 +47,14 @@ type Action =
   | { type: 'SET_SAVE_SUCCESS' }
   | { type: 'START_UPLOADING' }
   | { type: 'SET_UPLOAD_COMPLETE' }
+  | { type: 'SET_EDITING_IMAGE'; payload: string | null }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
   images: [
-    { id: '1', url: 'https://picsum.photos/300/400', dataAiHint: 'logo design', width: 3, height: 4 },
-    { id: '2', url: 'https://picsum.photos/400/350', dataAiHint: 'tshirt graphic', width: 4, height: 3.5 },
-    { id: '3', url: 'https://picsum.photos/200/300', dataAiHint: 'sticker illustration', width: 2, height: 3 },
+    { id: '1', url: 'https://picsum.photos/300/400', dataAiHint: 'logo design', width: 3, height: 4, aspectRatio: 3/4 },
+    { id: '2', url: 'https://picsum.photos/400/350', dataAiHint: 'tshirt graphic', width: 4, height: 3.5, aspectRatio: 4/3.5 },
+    { id: '3', url: 'https://picsum.photos/200/300', dataAiHint: 'sticker illustration', width: 2, height: 3, aspectRatio: 2/3 },
   ],
   sheetWidth: 13,
   nestedLayout: [],
@@ -57,14 +62,35 @@ const initialState: State = {
   isLoading: false,
   isSaving: false,
   isUploading: false,
+  editingImageId: null,
 };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'ADD_IMAGE':
-      return { ...state, images: [...state.images, action.payload], isUploading: false };
+      return { ...state, images: [...state.images, action.payload] };
     case 'REMOVE_IMAGE':
       return { ...state, images: state.images.filter((img) => img.id !== action.payload) };
+    case 'UPDATE_IMAGE': {
+      const { id, copies, width, height } = action.payload;
+      const originalImage = state.images.find(img => img.id === id);
+      if (!originalImage) return state;
+
+      const otherImages = state.images.filter(img => img.id !== id);
+      const newImages = [
+        // Keep original
+        { ...originalImage, width, height }, 
+        // Add copies
+        ...Array.from({ length: copies - 1 }, () => ({
+          ...originalImage,
+          id: new Date().getTime().toString() + Math.random(),
+          width,
+          height,
+        }))
+      ];
+      
+      return { ...state, images: [...otherImages, ...newImages], editingImageId: null };
+    }
     case 'SET_SHEET_WIDTH':
       return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0 };
     case 'START_NESTING':
@@ -79,6 +105,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, isUploading: true };
     case 'SET_UPLOAD_COMPLETE':
         return { ...state, isUploading: false };
+    case 'SET_EDITING_IMAGE':
+      return { ...state, editingImageId: action.payload };
     case 'SET_ERROR':
       return { ...state, isLoading: false, isSaving: false, isUploading: false };
     default:
@@ -91,6 +119,15 @@ export default function NestingTool() {
   const { toast } = useToast()
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const editingImage = useMemo(() => {
+    return state.images.find(img => img.id === state.editingImageId) || null;
+  }, [state.editingImageId, state.images]);
+
+  const handleSetEditingImage = useCallback((id: string | null) => {
+      dispatch({ type: 'SET_EDITING_IMAGE', payload: id });
+  }, []);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) {
@@ -111,19 +148,16 @@ export default function NestingTool() {
     try {
       const downloadURL = await uploadImage(file, user.uid);
       
-      const id = new Date().getTime().toString();
-      
       const image = new window.Image();
       image.onload = () => {
         dispatch({
           type: 'ADD_IMAGE',
           payload: {
-            id: id,
+            id: new Date().getTime().toString(),
             url: downloadURL,
-            // Using a default of 3 inches for now. A more advanced implementation
-            // could use DPI to calculate the real-world size.
-            width: 3, 
-            height: (image.height / image.width) * 3,
+            width: 3, // default width
+            height: (image.height / image.width) * 3, // maintain aspect ratio
+            aspectRatio: image.width / image.height,
             dataAiHint: 'uploaded image',
           },
         });
@@ -131,23 +165,24 @@ export default function NestingTool() {
           title: 'Image Uploaded',
           description: 'Your image has been successfully added.',
         });
+        dispatch({ type: 'SET_UPLOAD_COMPLETE' });
       };
       image.onerror = () => {
-        dispatch({ type: 'SET_ERROR', payload: 'Could not load uploaded image.' });
-        toast({
+         toast({
             variant: "destructive",
             title: "Error",
             description: "Could not load the uploaded image. Please try another file.",
         });
+        dispatch({ type: 'SET_UPLOAD_COMPLETE' });
       };
       image.src = downloadURL;
     } catch (error: any) {
-      dispatch({ type: 'SET_ERROR', payload: error.message });
       toast({
         variant: "destructive",
         title: "Upload Failed",
         description: error.message || 'An unexpected error occurred during upload.',
       });
+      dispatch({ type: 'SET_UPLOAD_COMPLETE' });
     }
   };
 
@@ -175,6 +210,14 @@ export default function NestingTool() {
       dispatch({ type: 'SET_LAYOUT', payload: { layout: result.layout, length: result.length } });
     }
   };
+
+  const handleUpdateImage = (id: string, copies: number, width: number, height: number) => {
+    dispatch({ type: 'UPDATE_IMAGE', payload: { id, copies, width, height }});
+    toast({
+        title: 'Image Updated',
+        description: `Your image and its copies have been updated/added to the list.`,
+      });
+  }
   
   const price = useMemo(() => {
     if(state.sheetLength === 0) return 0;
@@ -230,6 +273,14 @@ export default function NestingTool() {
 
   return (
     <div className="container py-8">
+      {editingImage && (
+        <ImageEditDialog
+          image={editingImage}
+          isOpen={!!state.editingImageId}
+          onClose={() => handleSetEditingImage(null)}
+          onSave={handleUpdateImage}
+        />
+      )}
       <Button asChild variant="ghost" className="mb-4">
         <Link href="/">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -248,6 +299,7 @@ export default function NestingTool() {
             images={state.images}
             onFileChange={handleFileChange}
             onRemoveImage={handleRemoveImage}
+            onEditImage={handleSetEditingImage}
             isUploading={state.isUploading}
           />
           <SheetConfig

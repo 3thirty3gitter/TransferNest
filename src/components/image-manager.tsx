@@ -4,26 +4,19 @@
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, X, Loader2 } from 'lucide-react';
+import { Upload, X, Loader2, Pencil } from 'lucide-react';
 import { useRef } from 'react';
-import { Label } from '@/components/ui/label';
-
-type Image = {
-  id: string;
-  url: string;
-  dataAiHint: string;
-  width: number;
-  height: number;
-};
+import type { ManagedImage } from './nesting-tool';
 
 type ImageManagerProps = {
-  images: Image[];
+  images: ManagedImage[];
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: (id: string) => void;
+  onEditImage: (id: string) => void;
   isUploading: boolean;
 };
 
-export default function ImageManager({ images, onFileChange, onRemoveImage, isUploading }: ImageManagerProps) {
+export default function ImageManager({ images, onFileChange, onRemoveImage, onEditImage, isUploading }: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUploadClick = () => {
@@ -64,15 +57,26 @@ export default function ImageManager({ images, onFileChange, onRemoveImage, isUp
                   className="object-cover rounded-md border transition-all group-hover:opacity-75"
                   data-ai-hint={image.dataAiHint}
                 />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => onRemoveImage(image.id)}
-                  aria-label="Remove image"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onEditImage(image.id)}
+                    aria-label="Edit image"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onRemoveImage(image.id)}
+                    aria-label="Remove image"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
