@@ -133,7 +133,13 @@ export default function NestingTool() {
         });
       };
       image.onerror = () => {
-        throw new Error('Could not load image dimensions.');
+        // This was the bug. Errors inside this callback were not caught by the try/catch block.
+        dispatch({ type: 'SET_ERROR', payload: 'Could not load image dimensions.' });
+        toast({
+            variant: "destructive",
+            title: "Upload Failed",
+            description: 'The uploaded image could not be loaded. Please try a different file.',
+        });
       }
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message });

@@ -1,0 +1,81 @@
+{
+  "tools": [
+    {
+      "name": "ack_rules",
+      "description": "Must be called first. Summarize rules and return prepared checklist.",
+      "parameters": {
+        "type": "object",
+        "properties": { "version": { "type": "string" } },
+        "required": ["version"]
+      }
+    },
+    {
+      "name": "retrieve_memory",
+      "description": "Retrieve top-K prior lessons relevant to a query.",
+      "parameters": {
+        "type": "object",
+        "properties": { "query": { "type": "string" }, "k": { "type": "number", "default": 5 } },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "save_lesson_to_memory",
+      "description": "Persist a lesson with tags and importance.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "lesson": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "importance": { "type": "string", "enum": ["low","medium","high"] }
+        },
+        "required": ["lesson","tags","importance"]
+      }
+    },
+    {
+      "name": "propose_file_changes",
+      "description": "Propose code diffs with apply/rollback instructions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["file","diff","apply","rollback"],
+              "properties": {
+                "file": { "type": "string" },
+                "diff": { "type": "string" },
+                "apply": { "type": "string" },
+                "rollback": { "type": "string" }
+              }
+            }
+          }
+        },
+        "required": ["changes"]
+      }
+    },
+    {
+      "name": "run_tests",
+      "description": "Execute or simulate tests and return results.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "suite": { "type": "string", "enum": ["unit","integration","e2e","a11y","perf"] },
+          "pattern": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "escalate_blocker",
+      "description": "Escalate when a rule cannot be satisfied without user approval.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "reason": { "type": "string" },
+          "proposed_alternatives": { "type": "string" }
+        },
+        "required": ["reason"]
+      }
+    }
+  ]
+}

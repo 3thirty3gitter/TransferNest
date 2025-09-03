@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gemini Multi-Agent Response",
+  "type": "object",
+  "required": ["role_summaries","plan","changes","tests","rule_checklist","status"],
+  "properties": {
+    "status": { "type": "string", "enum": ["OK","STOP"], "description": "STOP if any rule_checklist item fails or a safety gate is unmet." },
+    "role_summaries": {
+      "type": "object",
+      "properties": {
+        "architect": { "type": "string" },
+        "backend":   { "type": "string" },
+        "frontend":  { "type": "string" },
+        "data_sec":  { "type": "string" },
+        "qa":        { "type": "string" },
+        "ops":       { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "plan": { "type": "string" },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file","diff","apply","rollback"],
+        "properties": {
+          "file": { "type": "string" },
+          "diff": { "type": "string", "description": "Unified diff or patch" },
+          "apply": { "type": "string" },
+          "rollback": { "type": "string" }
+        }
+      }
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name","type","steps","expected"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["unit","integration","e2e","a11y","perf"] },
+          "steps": { "type": "string" },
+          "expected": { "type": "string" }
+        }
+      }
+    },
+    "rule_checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule","status","notes"],
+        "properties": {
+          "rule": { "type": "string" },
+          "status": { "type": "string", "enum": ["PASS","FAIL"] },
+          "notes": { "type": "string" }
+        }
+      },
+      "minItems": 1
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "references": { "type": "array", "items": { "type": "string" } },
+        "write": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["lesson","tags","importance"],
+            "properties": {
+              "lesson": { "type": "string" },
+              "tags":   { "type": "array", "items": { "type": "string" } },
+              "importance": { "type": "string", "enum": ["low","medium","high"] }
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
