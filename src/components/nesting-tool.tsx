@@ -111,37 +111,23 @@ export default function NestingTool() {
     try {
       const downloadURL = await uploadImage(file, user.uid);
       
-      const image = new window.Image();
-      image.src = downloadURL;
-
-      image.onload = () => {
-        const id = new Date().getTime().toString();
-        dispatch({
-          type: 'ADD_IMAGE',
-          payload: {
-            id: id,
-            url: downloadURL,
-            // Assuming 96 DPI for initial size calculation
-            width: Math.round(image.naturalWidth / 96 * 100) / 100,
-            height: Math.round(image.naturalHeight / 96 * 100) / 100,
-            dataAiHint: 'uploaded image',
-          },
-        });
-        toast({
-          title: 'Image Uploaded',
-          description: 'Your image has been successfully added.',
-        });
-        dispatch({ type: 'SET_UPLOAD_COMPLETE' });
-      };
-
-      image.onerror = () => {
-        dispatch({ type: 'SET_ERROR', payload: 'Could not load image dimensions.' });
-        toast({
-            variant: "destructive",
-            title: "Upload Failed",
-            description: 'The uploaded image could not be loaded. Please try a different file.',
-        });
-      }
+      const id = new Date().getTime().toString();
+      dispatch({
+        type: 'ADD_IMAGE',
+        payload: {
+          id: id,
+          url: downloadURL,
+          // Set a default size for the uploaded image.
+          // Users can adjust this later if needed.
+          width: 3, 
+          height: 3,
+          dataAiHint: 'uploaded image',
+        },
+      });
+      toast({
+        title: 'Image Uploaded',
+        description: 'Your image has been successfully added.',
+      });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
       toast({
@@ -149,6 +135,8 @@ export default function NestingTool() {
         title: "Upload Failed",
         description: error.message || 'An unexpected error occurred during upload.',
       });
+    } finally {
+       dispatch({ type: 'SET_UPLOAD_COMPLETE' });
     }
   };
 
