@@ -12,7 +12,7 @@ export async function getNestedLayout(
   sheetWidth: 13 | 17
 ): Promise<{ layout: NestedLayout; length: number; error?: string }> {
   if (imageUrls.length === 0) {
-    return { layout: [], length: 0, error: "Please upload at least one image." };
+    return { layout: [], length: 0, error: "Please upload at least one image before arranging the sheet." };
   }
 
   try {
