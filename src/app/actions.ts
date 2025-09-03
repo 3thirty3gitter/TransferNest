@@ -5,19 +5,20 @@ import { intelligentImageNesting, IntelligentImageNestingOutput } from '@/ai/flo
 import { NestedLayoutSchema, type NestedLayout } from '@/app/schema';
 import { addCartItem } from '@/services/firestore';
 import { auth } from '@/lib/firebase';
+import { ManagedImage } from '@/components/nesting-tool';
 
 
 export async function getNestedLayout(
-  imageUrls: string[],
+  images: Omit<ManagedImage, 'id' | 'aspectRatio' | 'dataAiHint'>[],
   sheetWidth: 13 | 17
 ): Promise<{ layout: NestedLayout; length: number; error?: string }> {
-  if (imageUrls.length === 0) {
-    return { layout: [], length: 0, error: "Please upload at least one image before arranging the sheet." };
+  if (images.length === 0) {
+    return { layout: [], length: 0, error: "Please add at least one image before arranging the sheet." };
   }
 
   try {
     const result: IntelligentImageNestingOutput = await intelligentImageNesting({
-      imageUrls,
+      images,
       sheetWidthInches: sheetWidth,
     });
 

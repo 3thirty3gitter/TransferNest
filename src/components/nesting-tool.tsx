@@ -196,8 +196,8 @@ export default function NestingTool() {
 
   const handleArrange = async () => {
     dispatch({ type: 'START_NESTING' });
-    const imageUrls = state.images.map(img => img.url);
-    const result = await getNestedLayout(imageUrls, state.sheetWidth);
+    const imagesToNest = state.images.map(({ url, width, height }) => ({ url, width, height }));
+    const result = await getNestedLayout(imagesToNest, state.sheetWidth);
 
     if (result.error) {
       dispatch({ type: 'SET_ERROR', payload: result.error });

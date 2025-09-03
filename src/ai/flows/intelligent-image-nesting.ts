@@ -11,10 +11,16 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const ImageDetailsSchema = z.object({
+  url: z.string(),
+  width: z.number(),
+  height: z.number(),
+});
+
 const IntelligentImageNestingInputSchema = z.object({
-  imageUrls: z
-    .array(z.string())
-    .describe("An array of image URLs to nest onto the sheet."),
+  images: z
+    .array(ImageDetailsSchema)
+    .describe("An array of image objects to nest onto the sheet, including their dimensions."),
   sheetWidthInches: z
     .number()
     .describe("The width of the sheet in inches (either 13 or 17).")
@@ -52,14 +58,14 @@ const prompt = ai.definePrompt({
   output: {schema: IntelligentImageNestingOutputSchema},
   prompt: `You are an expert in image nesting for DTF transfers. Your goal is to efficiently arrange a set of images onto a sheet of a specified width, minimizing wasted space.
 
-  You will receive an array of image URLs and the desired sheet width (either 13 or 17 inches). Your task is to determine the optimal layout for these images on the sheet and the resulting sheet length.
+  You will receive an array of image objects, each with a URL and its dimensions in inches, and the desired sheet width (either 13 or 17 inches). Your task is to determine the optimal layout for these images on the sheet and the resulting sheet length.
 
   Respond with a JSON object that includes the following fields:
 
-  - nestedLayout: A JSON string representing the nested image layout. This layout should specify the position (x, y coordinates) and dimensions (width, height) of each image on the sheet.  The units for position and dimensions should be in inches.
+  - nestedLayout: A JSON string representing the nested image layout. This layout should specify the position (x, y coordinates) and dimensions (width, height) of each image on the sheet. The units for position and dimensions should be in inches. The layout must not alter the original dimensions of the images.
   - sheetLengthInches: The total length of the sheet in inches required to accommodate all the nested images.
 
-  Input Image URLs: {{{imageUrls}}}
+  Input Images (with dimensions): {{{json images}}}
   Sheet Width: {{{sheetWidthInches}}} inches`,
 });
 
