@@ -17,10 +17,15 @@ export async function getNestedLayout(
   }
 
   try {
-    const result: IntelligentImageNestingOutput = await intelligentImageNesting({
+    const result: IntelligentImageNestingOutput | null = await intelligentImageNesting({
       images,
       sheetWidthInches: sheetWidth,
     });
+
+    if (!result || !result.nestedLayout) {
+        console.error("AI did not return a valid layout.", result);
+        return { layout: [], length: 0, error: "The AI failed to generate a layout. Please try again." };
+    }
 
     const parsedLayout = NestedLayoutSchema.safeParse(result.nestedLayout);
 
@@ -33,10 +38,10 @@ export async function getNestedLayout(
       layout: parsedLayout.data,
       length: result.sheetLengthInches,
     };
-  } catch (e) {
+  } catch (e: any) {
     console.error("Error in getNestedLayout action:", e);
     // This could be a JSON parsing error or a network error from the AI call
-    return { layout: [], length: 0, error: "An unexpected error occurred while arranging images. Please try again." };
+    return { layout: [], length: 0, error: e.message || "An unexpected error occurred while arranging images. Please try again." };
   }
 }
 
