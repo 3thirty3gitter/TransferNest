@@ -1,0 +1,161 @@
+'use client';
+
+import { useState, useReducer, useCallback, useMemo } from 'react';
+import ImageManager from '@/components/image-manager';
+import SheetConfig from '@/components/sheet-config';
+import SheetPreview from '@/components/sheet-preview';
+import type { NestedLayout } from '@/app/schema';
+import { getNestedLayout } from '@/app/actions';
+import { useToast } from "@/hooks/use-toast"
+
+type Image = {
+  id: string;
+  url: string;
+  dataAiHint: string;
+  width: number;
+  height: number;
+};
+
+type State = {
+  images: Image[];
+  sheetWidth: 13 | 17;
+  nestedLayout: NestedLayout;
+  sheetLength: number;
+  isLoading: boolean;
+};
+
+type Action =
+  | { type: 'ADD_IMAGE'; payload: Image }
+  | { type: 'REMOVE_IMAGE'; payload: string }
+  | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
+  | { type: 'START_NESTING' }
+  | { type: 'SET_LAYOUT'; payload: { layout: NestedLayout; length: number } }
+  | { type: 'SET_ERROR'; payload: string };
+
+const initialState: State = {
+  images: [
+    { id: '1', url: 'https://picsum.photos/300/400', dataAiHint: 'logo design', width: 3, height: 4 },
+    { id: '2', url: 'https://picsum.photos/400/350', dataAiHint: 'tshirt graphic', width: 4, height: 3.5 },
+    { id: '3', url: 'https://picsum.photos/200/300', dataAiHint: 'sticker illustration', width: 2, height: 3 },
+  ],
+  sheetWidth: 13,
+  nestedLayout: [],
+  sheetLength: 0,
+  isLoading: false,
+};
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'ADD_IMAGE':
+      return { ...state, images: [...state.images, action.payload] };
+    case 'REMOVE_IMAGE':
+      return { ...state, images: state.images.filter((img) => img.id !== action.payload) };
+    case 'SET_SHEET_WIDTH':
+      return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0 };
+    case 'START_NESTING':
+      return { ...state, isLoading: true };
+    case 'SET_LAYOUT':
+      return { ...state, nestedLayout: action.payload.layout, sheetLength: action.payload.length, isLoading: false };
+    case 'SET_ERROR':
+      return { ...state, isLoading: false };
+    default:
+      return state;
+  }
+}
+
+export default function NestingTool() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { toast } = useToast()
+
+  const handleAddImage = useCallback(() => {
+    const id = (state.images.length + 1).toString() + Date.now();
+    const width = 200 + Math.floor(Math.random() * 200);
+    const height = 200 + Math.floor(Math.random() * 200);
+    dispatch({
+      type: 'ADD_IMAGE',
+      payload: {
+        id,
+        url: `https://picsum.photos/${width}/${height}`,
+        dataAiHint: 'new image',
+        width: Math.round(width / 100),
+        height: Math.round(height / 100),
+      },
+    });
+  }, [state.images.length]);
+
+  const handleRemoveImage = useCallback((id: string) => {
+    dispatch({ type: 'REMOVE_IMAGE', payload: id });
+  }, []);
+
+  const handleSheetWidthChange = useCallback((width: 13 | 17) => {
+    dispatch({ type: 'SET_SHEET_WIDTH', payload: width });
+  }, []);
+
+  const handleArrange = async () => {
+    dispatch({ type: 'START_NESTING' });
+    const imageUrls = state.images.map(img => img.url);
+    const result = await getNestedLayout(imageUrls, state.sheetWidth);
+
+    if (result.error) {
+      dispatch({ type: 'SET_ERROR', payload: result.error });
+      toast({
+        variant: "destructive",
+        title: "Layout Error",
+        description: result.error,
+      })
+    } else {
+      dispatch({ type: 'SET_LAYOUT', payload: { layout: result.layout, length: result.length } });
+    }
+  };
+  
+  const handleAddToCart = () => {
+    if (state.nestedLayout.length === 0) {
+       toast({
+        variant: "destructive",
+        title: "Empty Sheet",
+        description: "Please arrange your images before adding to cart.",
+      });
+      return;
+    }
+    toast({
+      title: "Added to Cart!",
+      description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet is in your cart.`,
+    })
+  }
+  
+  const price = useMemo(() => {
+    if(state.sheetLength === 0) return 0;
+    const rate = state.sheetWidth === 13 ? 2.00 : 2.50;
+    return state.sheetLength * rate;
+  }, [state.sheetLength, state.sheetWidth]);
+
+  return (
+    <div className="container my-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className="lg:col-span-1 flex flex-col gap-8 lg:sticky lg:top-24">
+        <ImageManager
+          images={state.images}
+          onAddImage={handleAddImage}
+          onRemoveImage={handleRemoveImage}
+        />
+        <SheetConfig
+          sheetWidth={state.sheetWidth}
+          onSheetWidthChange={handleSheetWidthChange}
+          sheetLength={state.sheetLength}
+          price={price}
+          onArrange={handleArrange}
+          onAddToCart={handleAddToCart}
+          isLoading={state.isLoading}
+          hasImages={state.images.length > 0}
+        />
+      </div>
+      <div className="lg:col-span-2">
+        <SheetPreview
+          sheetWidth={state.sheetWidth}
+          sheetLength={state.sheetLength}
+          nestedLayout={state.nestedLayout}
+          isLoading={state.isLoading}
+        />
+      </div>
+    </div>
+  );
+}
