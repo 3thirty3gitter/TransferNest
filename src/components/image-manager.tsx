@@ -1,9 +1,12 @@
+
 'use client';
 
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Loader2 } from 'lucide-react';
+import { useRef } from 'react';
+import { Label } from '@/components/ui/label';
 
 type Image = {
   id: string;
@@ -15,17 +18,36 @@ type Image = {
 
 type ImageManagerProps = {
   images: Image[];
-  onAddImage: () => void;
+  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: (id: string) => void;
+  isUploading: boolean;
 };
 
-export default function ImageManager({ images, onAddImage, onRemoveImage }: ImageManagerProps) {
+export default function ImageManager({ images, onFileChange, onRemoveImage, isUploading }: ImageManagerProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+  
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="font-headline text-xl">Your Images</CardTitle>
-        <Button onClick={onAddImage} size="sm" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-          <Upload className="mr-2 h-4 w-4" />
+        <input
+            type="file"
+            ref={fileInputRef}
+            onChange={onFileChange}
+            className="hidden"
+            accept="image/png, image/jpeg, image/webp, image/svg+xml"
+            disabled={isUploading}
+        />
+        <Button onClick={handleUploadClick} size="sm" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }} disabled={isUploading}>
+          {isUploading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="mr-2 h-4 w-4" />
+          )}
           Upload
         </Button>
       </CardHeader>
@@ -56,7 +78,7 @@ export default function ImageManager({ images, onAddImage, onRemoveImage }: Imag
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-            <p className="text-muted-foreground">No images uploaded yet.</p>
+             <p className="text-muted-foreground">No images uploaded yet.</p>
             <p className="text-sm text-muted-foreground mt-1">Click "Upload" to get started!</p>
           </div>
         )}

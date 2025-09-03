@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
+import { uploadImage } from '@/services/storage';
 
 type Image = {
   id: string;
@@ -29,6 +30,7 @@ type State = {
   sheetLength: number;
   isLoading: boolean;
   isSaving: boolean;
+  isUploading: boolean;
 };
 
 type Action =
@@ -39,6 +41,8 @@ type Action =
   | { type: 'SET_LAYOUT'; payload: { layout: NestedLayout; length: number } }
   | { type: 'START_SAVING' }
   | { type: 'SET_SAVE_SUCCESS' }
+  | { type: 'START_UPLOADING' }
+  | { type: 'SET_UPLOAD_SUCCESS' }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
@@ -52,6 +56,7 @@ const initialState: State = {
   sheetLength: 0,
   isLoading: false,
   isSaving: false,
+  isUploading: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -70,8 +75,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, isSaving: true };
     case 'SET_SAVE_SUCCESS':
       return { ...state, isSaving: false };
+    case 'START_UPLOADING':
+      return { ...state, isUploading: true };
+    case 'SET_UPLOAD_SUCCESS':
+        return { ...state, isUploading: false };
     case 'SET_ERROR':
-      return { ...state, isLoading: false, isSaving: false };
+      return { ...state, isLoading: false, isSaving: false, isUploading: false };
     default:
       return state;
   }
@@ -83,22 +92,58 @@ export default function NestingTool() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const handleAddImage = useCallback(() => {
-    // Prevent hydration errors by running client-side only logic in useEffect or callbacks
-    const id = (state.images.length + 1).toString() + Date.now();
-    const width = 200 + Math.floor(Math.random() * 200);
-    const height = 200 + Math.floor(Math.random() * 200);
-    dispatch({
-      type: 'ADD_IMAGE',
-      payload: {
-        id,
-        url: `https://picsum.photos/${width}/${height}`,
-        dataAiHint: 'new image',
-        width: Math.round(width / 100),
-        height: Math.round(height / 100),
-      },
-    });
-  }, [state.images.length]);
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'You must be logged in to upload images.',
+      });
+      router.push('/login');
+      return;
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    dispatch({ type: 'START_UPLOADING' });
+
+    try {
+      const downloadURL = await uploadImage(file, user.uid);
+      
+      const image = new window.Image();
+      image.src = downloadURL;
+      image.onload = () => {
+        const id = new Date().getTime().toString();
+        dispatch({
+          type: 'ADD_IMAGE',
+          payload: {
+            id: id,
+            url: downloadURL,
+            // Assuming 96 DPI for initial size calculation
+            width: Math.round(image.naturalWidth / 96 * 100) / 100,
+            height: Math.round(image.naturalHeight / 96 * 100) / 100,
+            dataAiHint: 'uploaded image',
+          },
+        });
+        dispatch({ type: 'SET_UPLOAD_SUCCESS' });
+        toast({
+          title: 'Image Uploaded',
+          description: 'Your image has been successfully added.',
+        });
+      };
+      image.onerror = () => {
+        throw new Error('Could not load image dimensions.');
+      }
+    } catch (error: any) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: error.message || 'An unexpected error occurred during upload.',
+      });
+    }
+  };
 
   const handleRemoveImage = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_IMAGE', payload: id });
@@ -195,8 +240,9 @@ export default function NestingTool() {
         <div className="lg:col-span-1 flex flex-col gap-8 lg:sticky lg:top-24">
           <ImageManager
             images={state.images}
-            onAddImage={handleAddImage}
+            onFileChange={handleFileChange}
             onRemoveImage={handleRemoveImage}
+            isUploading={state.isUploading}
           />
           <SheetConfig
             sheetWidth={state.sheetWidth}
