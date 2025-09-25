@@ -72,7 +72,7 @@ Your task is to determine the optimal layout for these images on the sheet. Imag
 
 Respond with an object that includes the following fields:
 
-- nestedLayout: An array of objects, where each object represents a placed image and includes its 'url', original 'width' and 'height', and its final 'x' and 'y' coordinates on the sheet. The top-left corner of the sheet is (0, 0).
+- nestedLayout: An array of objects, where each object represents a placed image and includes its 'url', original 'width' and 'height', and its final 'x' and 'y' coordinates on the sheet. The top-left corner of the sheet is (0, 0). The 'width' and 'height' in the response MUST be the same as the input image dimensions.
 - sheetLengthInches: The total length of the sheet in inches required to accommodate all the nested images. This should be the highest y-coordinate plus the height of the image at that coordinate.
 
 Input Images (with dimensions):
