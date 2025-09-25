@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -58,7 +59,9 @@ export default function SheetPreview({
                 <p className="text-sm text-muted-foreground">Upload and arrange images to see a preview.</p>
               </div>
             )}
-            {memoizedLayout.map((item, index) => (
+            {memoizedLayout
+              .filter(item => item && item.url)
+              .map((item, index) => (
               <div
                 key={item.url + index}
                 className={cn(
