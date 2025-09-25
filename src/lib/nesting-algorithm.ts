@@ -4,7 +4,6 @@ type Rectangle = {
   url: string;
   width: number;
   height: number;
-  allowRotation?: boolean;
 };
 
 type PlacedRectangle = Rectangle & {
@@ -16,7 +15,7 @@ type PlacedRectangle = Rectangle & {
 /**
  * MaxRects Bin Packer - Based on Jukka Jylänki's proven algorithm
  * Original C++ source: https://github.com/juj/RectangleBinPack
- * This is a direct JavaScript port of the proven algorithm
+ * This is a direct TypeScript port of the proven algorithm
  */
 class MaxRectsBinPack {
     private binWidth: number;
@@ -186,18 +185,20 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
     
     let placedItems: PlacedRectangle[] = [];
     const unplacedItems: Rectangle[] = [...sortedImages];
+    
+    let currentSheetHeight = 1; // Start with a small height
+    const totalImageArea = sortedImages.reduce((sum, img) => sum + (img.width * img.height), 0);
+    currentSheetHeight = Math.max(currentSheetHeight, totalImageArea / sheetWidth);
 
-    let currentSheetHeight = sortedImages.reduce((sum, img) => sum + img.height, 0);
 
     while (unplacedItems.length > 0) {
         const packer = new MaxRectsBinPack(sheetWidth, currentSheetHeight, true);
-        const newlyPlaced: PlacedRectangle[] = [];
-        const stillUnplaced: Rectangle[] = [];
+        const newlyPlaced: Rectangle[] = [];
 
         for(const image of unplacedItems) {
-            const rect = packer.insert(image.width, image.height);
+            const rect = packer.insert(image.width, image.height, 'BestShortSideFit');
             if (rect) {
-                newlyPlaced.push({
+                placedItems.push({
                     ...image,
                     x: rect.x,
                     y: rect.y,
@@ -205,22 +206,24 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
                     height: rect.height,
                     rotated: rect.width !== image.width,
                 });
-            } else {
-                stillUnplaced.push(image);
+                newlyPlaced.push(image);
             }
         }
         
-        placedItems = placedItems.concat(newlyPlaced);
-
-        if(stillUnplaced.length > 0 && newlyPlaced.length === 0) {
+        if (newlyPlaced.length === 0 && unplacedItems.length > 0) {
              // If no new items could be placed, increase height to avoid infinite loop
              currentSheetHeight *= 1.5;
+             // And we need to re-try placing all items that were unplaced so far
+             placedItems = []; // reset placed items
+        } else {
+             // remove newly placed items from unplaced
+            for(const placed of newlyPlaced) {
+                const index = unplacedItems.indexOf(placed);
+                if(index > -1) {
+                    unplacedItems.splice(index, 1);
+                }
+            }
         }
-
-        if (stillUnplaced.length === 0) {
-            break; // All items placed
-        }
-        unplacedItems.splice(0, unplacedItems.length, ...stillUnplaced);
     }
     
     const sheetLength = placedItems.reduce((maxLength, item) => {
