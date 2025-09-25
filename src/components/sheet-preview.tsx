@@ -28,6 +28,13 @@ export default function SheetPreview({
 
   const memoizedLayout = useMemo(() => nestedLayout, [nestedLayout]);
 
+  const checkerboardStyle = {
+    backgroundImage:
+      'linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%)',
+    backgroundSize: '20px 20px',
+    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+  };
+
   return (
     <Card className="lg:sticky lg:top-24">
       <CardHeader>
@@ -44,6 +51,7 @@ export default function SheetPreview({
               width: `${displayWidth}px`,
               height: `${displayHeight}px`,
               maxWidth: '100%',
+              ...checkerboardStyle
             }}
           >
             {isLoading && (
@@ -63,7 +71,7 @@ export default function SheetPreview({
               .filter(item => item && item.url)
               .map((item, index) => (
               <div
-                key={item.url + index}
+                key={item.id ? `${item.id}-${index}` : `${item.url}-${index}`}
                 className={cn(
                   'absolute transition-all duration-500',
                   'data-[state=loading]:opacity-0',
