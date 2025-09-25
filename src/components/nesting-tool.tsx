@@ -12,7 +12,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
 import { ImageEditDialog } from './image-edit-dialog';
 
@@ -39,7 +39,8 @@ type State = {
 type Action =
   | { type: 'ADD_IMAGE'; payload: ManagedImage }
   | { type: 'REMOVE_IMAGE'; payload: string }
-  | { type: 'UPDATE_IMAGE'; payload: { id: string, copies: number, width: number, height: number } }
+  | { type: 'UPDATE_IMAGE_AND_ADD_COPIES'; payload: { id: string, copies: number, width: number, height: number } }
+  | { type: 'DUPLICATE_IMAGE'; payload: { id: string, width: number, height: number } }
   | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
   | { type: 'SET_LAYOUT'; payload: { layout: NestedLayout; length: number } }
@@ -71,25 +72,41 @@ function reducer(state: State, action: Action): State {
       return { ...state, images: [...state.images, action.payload] };
     case 'REMOVE_IMAGE':
       return { ...state, images: state.images.filter((img) => img.id !== action.payload) };
-    case 'UPDATE_IMAGE': {
-      const { id, copies, width, height } = action.payload;
-      const originalImage = state.images.find(img => img.id === id);
-      if (!originalImage) return state;
+    case 'UPDATE_IMAGE_AND_ADD_COPIES': {
+        const { id, copies, width, height } = action.payload;
+        const imageToUpdate = state.images.find(img => img.id === id);
+        if (!imageToUpdate) return state;
 
-      const otherImages = state.images.filter(img => img.id !== id);
-      const newImages = [
-        // Keep original
-        { ...originalImage, width, height }, 
-        // Add copies
-        ...Array.from({ length: copies - 1 }, () => ({
-          ...originalImage,
-          id: new Date().getTime().toString() + Math.random(),
-          width,
-          height,
-        }))
-      ];
-      
-      return { ...state, images: [...otherImages, ...newImages], editingImageId: null };
+        const updatedImages = state.images.filter(img => img.id !== id);
+        
+        // Update the original image
+        updatedImages.push({ ...imageToUpdate, width, height });
+
+        // Add new copies if requested
+        for (let i = 0; i < copies - 1; i++) {
+            updatedImages.push({
+            ...imageToUpdate,
+            id: `${new Date().getTime()}-${Math.random()}`,
+            width,
+            height,
+            });
+        }
+        
+        return { ...state, images: updatedImages };
+    }
+    case 'DUPLICATE_IMAGE': {
+        const { id, width, height } = action.payload;
+        const imageToDuplicate = state.images.find(img => img.id === id);
+        if (!imageToDuplicate) return state;
+        
+        const newImage: ManagedImage = {
+            ...imageToDuplicate,
+            id: `${new Date().getTime()}-${Math.random()}`,
+            width,
+            height,
+        };
+        
+        return { ...state, images: [...state.images, newImage] };
     }
     case 'SET_SHEET_WIDTH':
       return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0 };
@@ -119,7 +136,6 @@ export default function NestingTool() {
   const { toast } = useToast()
   const { user } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const editingImage = useMemo(() => {
     return state.images.find(img => img.id === state.editingImageId) || null;
@@ -146,43 +162,43 @@ export default function NestingTool() {
     dispatch({ type: 'START_UPLOADING' });
 
     try {
-      const downloadURL = await uploadImage(file, user.uid);
-      
-      const image = new window.Image();
-      image.onload = () => {
-        dispatch({
-          type: 'ADD_IMAGE',
-          payload: {
-            id: new Date().getTime().toString(),
-            url: downloadURL,
-            width: 3, // default width
-            height: (image.height / image.width) * 3, // maintain aspect ratio
-            aspectRatio: image.width / image.height,
-            dataAiHint: 'uploaded image',
-          },
-        });
-        toast({
-          title: 'Image Uploaded',
-          description: 'Your image has been successfully added.',
-        });
-        dispatch({ type: 'SET_UPLOAD_COMPLETE' });
-      };
-      image.onerror = () => {
-         toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not load the uploaded image. Please try another file.",
-        });
-        dispatch({ type: 'SET_UPLOAD_COMPLETE' });
-      };
-      image.src = downloadURL;
+        const downloadURL = await uploadImage(file, user.uid);
+        
+        const image = new window.Image();
+        image.onload = () => {
+            dispatch({
+            type: 'ADD_IMAGE',
+            payload: {
+                id: new Date().getTime().toString(),
+                url: downloadURL,
+                width: 3, // default width
+                height: (image.height / image.width) * 3, // maintain aspect ratio
+                aspectRatio: image.width / image.height,
+                dataAiHint: 'uploaded image',
+            },
+            });
+            toast({
+            title: 'Image Uploaded',
+            description: 'Your image has been successfully added.',
+            });
+            dispatch({ type: 'SET_UPLOAD_COMPLETE' });
+        };
+        image.onerror = () => {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not load the uploaded image. Please try another file.",
+            });
+            dispatch({ type: 'SET_UPLOAD_COMPLETE' });
+        };
+        image.src = downloadURL;
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Upload Failed",
-        description: error.message || 'An unexpected error occurred during upload.',
-      });
-      dispatch({ type: 'SET_UPLOAD_COMPLETE' });
+        toast({
+            variant: "destructive",
+            title: "Upload Failed",
+            description: error.message || 'An unexpected error occurred during upload.',
+        });
+        dispatch({ type: 'SET_UPLOAD_COMPLETE' });
     }
   };
 
@@ -211,12 +227,20 @@ export default function NestingTool() {
     }
   };
 
-  const handleUpdateImage = (id: string, copies: number, width: number, height: number) => {
-    dispatch({ type: 'UPDATE_IMAGE', payload: { id, copies, width, height }});
-    toast({
-        title: 'Image Updated',
-        description: `Your image and its copies have been updated/added to the list.`,
-      });
+  const handleUpdateImage = (id: string, copies: number, width: number, height: number, duplicate: boolean) => {
+    if (duplicate) {
+        dispatch({ type: 'DUPLICATE_IMAGE', payload: { id, width, height } });
+        toast({
+            title: 'Image Duplicated',
+            description: `A new instance of the image has been added to your list.`,
+        });
+    } else {
+        dispatch({ type: 'UPDATE_IMAGE_AND_ADD_COPIES', payload: { id, copies, width, height }});
+        toast({
+            title: 'Image Updated',
+            description: `The image has been updated and ${copies} cop(y/ies) are now in the list.`,
+        });
+    }
   }
   
   const price = useMemo(() => {

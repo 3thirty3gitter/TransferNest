@@ -14,25 +14,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ManagedImage } from './nesting-tool';
-import { Check, Copy } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 interface ImageEditDialogProps {
   image: ManagedImage | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, copies: number, width: number, height: number) => void;
+  onSave: (id: string, copies: number, width: number, height: number, duplicate: boolean) => void;
 }
 
 export function ImageEditDialog({ image, isOpen, onClose, onSave }: ImageEditDialogProps) {
   const [width, setWidth] = useState(image?.width || 0);
   const [height, setHeight] = useState(image?.height || 0);
   const [copies, setCopies] = useState(1);
+  const [duplicate, setDuplicate] = useState(false);
 
   useEffect(() => {
     if (image) {
       setWidth(image.width);
       setHeight(image.height);
       setCopies(1);
+      setDuplicate(false);
     }
   }, [image]);
 
@@ -54,7 +57,7 @@ export function ImageEditDialog({ image, isOpen, onClose, onSave }: ImageEditDia
   
   const handleSave = () => {
     if (image) {
-      onSave(image.id, copies, width, height);
+      onSave(image.id, copies, width, height, duplicate);
       onClose();
     }
   };
@@ -67,7 +70,7 @@ export function ImageEditDialog({ image, isOpen, onClose, onSave }: ImageEditDia
         <DialogHeader>
           <DialogTitle>Edit Image</DialogTitle>
           <DialogDescription>
-            Adjust the size and quantity of your image. Changes will be applied to all selected copies.
+            Adjust the size, quantity, or duplicate the image with new dimensions.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -95,19 +98,34 @@ export function ImageEditDialog({ image, isOpen, onClose, onSave }: ImageEditDia
               className="col-span-3"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="copies" className="text-right">
-              Copies
+           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="duplicate" className="text-right">
+              Duplicate
             </Label>
-            <Input
-              id="copies"
-              type="number"
-              value={copies}
-              onChange={(e) => setCopies(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="col-span-3"
-              min="1"
-            />
+            <div className="col-span-3 flex items-center">
+              <Switch
+                id="duplicate"
+                checked={duplicate}
+                onCheckedChange={setDuplicate}
+              />
+               <span className="ml-3 text-sm text-muted-foreground">Creates a new image instance.</span>
+            </div>
           </div>
+          {!duplicate && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="copies" className="text-right">
+                Copies
+              </Label>
+              <Input
+                id="copies"
+                type="number"
+                value={copies}
+                onChange={(e) => setCopies(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className="col-span-3"
+                min="1"
+              />
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button type="button" onClick={handleSave}>
