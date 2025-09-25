@@ -216,10 +216,9 @@ export default function NestingTool() {
     // Allow UI to update before blocking the main thread for calculation
     setTimeout(() => {
         try {
-            // Expand images based on the 'copies' property
             const imagesToNest = state.images.flatMap(image => {
                 return Array.from({ length: image.copies }, (_, i) => ({
-                    id: `${image.id}-${i}`, // Create a unique ID for each copy
+                    id: `${image.id}-${i}`,
                     url: image.url,
                     width: image.width,
                     height: image.height,
