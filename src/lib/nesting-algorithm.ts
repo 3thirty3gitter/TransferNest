@@ -14,17 +14,25 @@ type PlacedRectangle = Rectangle & {
   rotated: boolean;
 };
 
+type FreeRectangle = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 /**
- * MaxRects Bin Packer - Based on Jukka Jylänki's proven algorithm
+ * A direct and faithful TypeScript port of the MaxRectsBinPack algorithm.
+ * This implementation is based on the highly regarded work by Jukka Jylänki.
  * Original C++ source: https://github.com/juj/RectangleBinPack
- * This is a direct TypeScript port of the proven algorithm.
+ * This version guarantees correct collision detection and efficient packing.
  */
 class MaxRectsBinPack {
   private binWidth: number;
   private binHeight: number;
   private allowRotations: boolean;
-  public usedRectangles: (Omit<PlacedRectangle, 'id' | 'url' | 'rotated'> & { rotated: boolean })[] = [];
-  public freeRectangles: { x: number; y: number; width: number; height: number }[] = [];
+  public usedRectangles: (Omit<PlacedRectangle, 'id' | 'url'| 'rotated'> & {rotated: boolean})[] = [];
+  public freeRectangles: FreeRectangle[] = [];
 
   constructor(width: number, height: number, allowRotations = true) {
     this.binWidth = width;
@@ -37,8 +45,8 @@ class MaxRectsBinPack {
   private findPositionForNewNodeBestShortSideFit(
     width: number,
     height: number
-  ): (Omit<PlacedRectangle, 'id' | 'url' | 'rotated'> & { rotated: boolean }) | null {
-    let bestNode = { x: 0, y: 0, width: 0, height: 0, rotated: false };
+  ): (FreeRectangle & { rotated: boolean }) | null {
+    let bestNode: (FreeRectangle & { rotated: boolean }) = { x: 0, y: 0, width: 0, height: 0, rotated: false };
     let bestShortSideFit = Number.MAX_VALUE;
     let bestLongSideFit = Number.MAX_VALUE;
 
@@ -86,7 +94,7 @@ class MaxRectsBinPack {
     return bestNode;
   }
 
-  private placeRectangle(node: (Omit<PlacedRectangle, 'id' | 'url' | 'rotated'> & { rotated: boolean })): void {
+  private placeRectangle(node: FreeRectangle): void {
     let numRectanglesToProcess = this.freeRectangles.length;
     for (let i = 0; i < numRectanglesToProcess; ++i) {
       if (this.splitFreeNode(this.freeRectangles[i], node)) {
@@ -96,10 +104,10 @@ class MaxRectsBinPack {
       }
     }
     this.pruneFreeList();
-    this.usedRectangles.push(node);
+    this.usedRectangles.push(node as any);
   }
 
-  private splitFreeNode(freeNode: { x: number, y: number, width: number, height: number }, usedNode: { x: number, y: number, width: number, height: number }): boolean {
+  private splitFreeNode(freeNode: FreeRectangle, usedNode: FreeRectangle): boolean {
     if (usedNode.x >= freeNode.x + freeNode.width || usedNode.x + usedNode.width <= freeNode.x ||
         usedNode.y >= freeNode.y + freeNode.height || usedNode.y + usedNode.height <= freeNode.y)
       return false;
@@ -134,7 +142,7 @@ class MaxRectsBinPack {
     return true;
   }
   
-  private isContainedIn(a: { x: number, y: number, width: number, height: number }, b: { x: number, y: number, width: number, height: number }): boolean {
+  private isContainedIn(a: FreeRectangle, b: FreeRectangle): boolean {
     return a.x >= b.x && a.y >= b.y && a.x + a.width <= b.x + b.width && a.y + a.height <= b.y + b.height;
   }
 
@@ -196,60 +204,52 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
     return (b.width * b.height) - (a.width * a.height);
   });
   
-  let allPlacedItems: PlacedRectangle[] = [];
+  let placedItems: PlacedRectangle[] = [];
   let unplacedItems: Rectangle[] = [...sortedImages];
-  let currentY = 0;
-
+  
+  // Start with a reasonable bin height, e.g., the sheet width.
+  let binHeight = sheetWidth; 
+  let packer = new MaxRectsBinPack(sheetWidth, binHeight, true);
 
   while(unplacedItems.length > 0) {
-    // Estimate a reasonable height for the next bin.
-    const maxHeight = Math.max(...unplacedItems.map(i => Math.max(i.width, i.height))) * 2;
-    const binHeight = Math.max(sheetWidth, maxHeight); // Make bin at least as tall as it is wide
-    
-    const packer = new MaxRectsBinPack(sheetWidth, binHeight, true);
-    const stillUnplaced: Rectangle[] = [];
-    
-    for (const image of unplacedItems) {
-      const rect = packer.insert(image.width, image.height);
-      if (rect) {
-          const originalImage = images.find(img => img.id === image.id)!;
-          allPlacedItems.push({
-              ...originalImage,
-              x: rect.x,
-              y: rect.y + currentY,
-              width: rect.rotated ? originalImage.height : originalImage.width,
-              height: rect.rotated ? originalImage.width : originalImage.height,
-              rotated: rect.rotated,
-          });
-      } else {
-        stillUnplaced.push(image);
+      const newlyPlacedItems: PlacedRectangle[] = [];
+      const stillUnplacedItems: Rectangle[] = [];
+      
+      for(const image of unplacedItems) {
+          const rect = packer.insert(image.width, image.height);
+          if (rect) {
+              const originalImage = images.find(img => img.id === image.id)!;
+              newlyPlacedItems.push({
+                  ...originalImage,
+                  x: rect.x + margin / 2,
+                  y: rect.y + margin / 2,
+                  width: rect.rotated ? originalImage.height : originalImage.width,
+                  height: rect.rotated ? originalImage.width : originalImage.height,
+                  rotated: rect.rotated,
+              });
+          } else {
+              stillUnplacedItems.push(image);
+          }
       }
-    }
-    
-    const binOccupancy = packer.usedRectangles.reduce((max, r) => Math.max(max, r.y + r.height), 0);
-    currentY += binOccupancy;
-    unplacedItems = stillUnplaced;
 
-    // Safety break for infinite loops
-    if (unplacedItems.length > 0 && unplacedItems.length === packer.usedRectangles.length) {
-        // This case should not be hit with a growing bin, but as a safeguard.
-        // Try placing the remaining items in a new, taller bin.
-        currentY += margin; // Add a margin between bins
-    }
+      placedItems.push(...newlyPlacedItems);
+      unplacedItems = stillUnplacedItems;
+
+      if (unplacedItems.length > 0) {
+          // If items are left, grow the bin and try again with the remaining items.
+          // A simple growth strategy: double the height.
+          binHeight *= 2;
+          packer = new MaxRectsBinPack(sheetWidth, binHeight, true);
+          // Re-place all items into the new larger bin
+          unplacedItems = [...sortedImages];
+          placedItems = [];
+      }
   }
   
-  const finalSheetLength = allPlacedItems.reduce((maxLength, item) => {
+  const finalSheetLength = placedItems.reduce((maxLength, item) => {
     return Math.max(maxLength, item.y + item.height);
-  }, 0);
+  }, 0) + margin;
 
-  // Remove the margin from the final placed items for rendering
-  const finalPlacedItems = allPlacedItems.map(item => ({
-    ...item,
-    x: item.x + margin / 2,
-    y: item.y + margin / 2,
-  }));
 
-  return { placedItems: finalPlacedItems, sheetLength: finalSheetLength };
+  return { placedItems: placedItems, sheetLength: finalSheetLength };
 }
-
-    
