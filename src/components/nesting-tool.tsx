@@ -14,7 +14,6 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
-import { ImageEditDialog } from './image-edit-dialog';
 import { nestImages } from '@/lib/nesting-algorithm';
 
 export type ManagedImage = {
@@ -35,13 +34,12 @@ type State = {
   isLoading: boolean;
   isSaving: boolean;
   isUploading: boolean;
-  editingImageId: string | null;
 };
 
 type Action =
   | { type: 'ADD_IMAGE'; payload: Omit<ManagedImage, 'copies'> }
   | { type: 'REMOVE_IMAGE'; payload: string }
-  | { type: 'UPDATE_IMAGE'; payload: { id: string; copies: number; width: number; height: number } }
+  | { type: 'UPDATE_IMAGE'; payload: { id: string; updates: Partial<Omit<ManagedImage, 'id' | 'url' | 'aspectRatio'>> } }
   | { type: 'DUPLICATE_IMAGE'; payload: string }
   | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
@@ -50,7 +48,6 @@ type Action =
   | { type: 'SET_SAVE_SUCCESS' }
   | { type: 'START_UPLOADING' }
   | { type: 'SET_UPLOAD_COMPLETE' }
-  | { type: 'SET_EDITING_IMAGE'; payload: string | null }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
@@ -61,7 +58,6 @@ const initialState: State = {
   isLoading: false,
   isSaving: false,
   isUploading: false,
-  editingImageId: null,
 };
 
 function reducer(state: State, action: Action): State {
@@ -71,11 +67,10 @@ function reducer(state: State, action: Action): State {
     case 'REMOVE_IMAGE':
       return { ...state, images: state.images.filter((img) => img.id !== action.payload), nestedLayout: [] };
     case 'UPDATE_IMAGE': {
-        const { id, copies, width, height } = action.payload;
         return {
           ...state,
           images: state.images.map(img => 
-            img.id === id ? { ...img, width, height, copies } : img
+            img.id === action.payload.id ? { ...img, ...action.payload.updates } : img
           ),
           nestedLayout: [],
         };
@@ -89,7 +84,11 @@ function reducer(state: State, action: Action): State {
             id: `${new Date().getTime()}-${Math.random()}`,
         };
         
-        return { ...state, images: [...state.images, newImage] };
+        const index = state.images.findIndex(img => img.id === action.payload);
+        const newImages = [...state.images];
+        newImages.splice(index + 1, 0, newImage);
+        
+        return { ...state, images: newImages };
     }
     case 'SET_SHEET_WIDTH':
       return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0 };
@@ -105,8 +104,6 @@ function reducer(state: State, action: Action): State {
       return { ...state, isUploading: true };
     case 'SET_UPLOAD_COMPLETE':
         return { ...state, isUploading: false };
-    case 'SET_EDITING_IMAGE':
-      return { ...state, editingImageId: action.payload };
     case 'SET_ERROR':
       return { ...state, isLoading: false, isSaving: false, isUploading: false };
     default:
@@ -120,14 +117,6 @@ export default function NestingTool() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const editingImage = useMemo(() => {
-    return state.images.find(img => img.id === state.editingImageId) || null;
-  }, [state.editingImageId, state.images]);
-
-  const handleSetEditingImage = useCallback((id: string | null) => {
-      dispatch({ type: 'SET_EDITING_IMAGE', payload: id });
-  }, []);
-
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) {
       toast({
@@ -139,49 +128,53 @@ export default function NestingTool() {
       return;
     }
 
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
     dispatch({ type: 'START_UPLOADING' });
 
     try {
-        const downloadURL = await uploadImage(file, user.uid);
-        
-        const image = new window.Image();
-        image.onload = () => {
-            dispatch({
-            type: 'ADD_IMAGE',
-            payload: {
-                id: new Date().getTime().toString(),
-                url: downloadURL,
-                width: 3, // default width
-                height: (image.height / image.width) * 3, // maintain aspect ratio
-                aspectRatio: image.width / image.height,
-                dataAiHint: 'uploaded image',
-            },
+        const uploadPromises = Array.from(files).map(file => uploadImage(file, user.uid));
+        const downloadURLs = await Promise.all(uploadPromises);
+
+        const imageLoadPromises = downloadURLs.map(url => {
+            return new Promise<Omit<ManagedImage, 'copies'>>((resolve, reject) => {
+                const image = new window.Image();
+                image.onload = () => {
+                    resolve({
+                        id: `${new Date().getTime()}-${Math.random()}`,
+                        url: url,
+                        width: 3, // default width
+                        height: (image.height / image.width) * 3, // maintain aspect ratio
+                        aspectRatio: image.width / image.height,
+                        dataAiHint: 'uploaded image',
+                    });
+                };
+                image.onerror = () => reject(new Error(`Could not load image at ${url}`));
+                image.src = url;
             });
-            toast({
-            title: 'Image Uploaded',
-            description: 'Your image has been successfully added.',
-            });
-            dispatch({ type: 'SET_UPLOAD_COMPLETE' });
-        };
-        image.onerror = () => {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not load the uploaded image. Please try another file.",
-            });
-            dispatch({ type: 'SET_UPLOAD_COMPLETE' });
-        };
-        image.src = downloadURL;
+        });
+
+        const newImages = await Promise.all(imageLoadPromises);
+        newImages.forEach(img => dispatch({ type: 'ADD_IMAGE', payload: img }));
+
+        toast({
+            title: `${newImages.length} Image(s) Uploaded`,
+            description: 'Your images have been successfully added.',
+        });
+
     } catch (error: any) {
         toast({
             variant: "destructive",
             title: "Upload Failed",
             description: error.message || 'An unexpected error occurred during upload.',
         });
+    } finally {
         dispatch({ type: 'SET_UPLOAD_COMPLETE' });
+        // Reset file input to allow re-uploading the same file
+        if (event.target) {
+            event.target.value = '';
+        }
     }
   };
 
@@ -189,14 +182,13 @@ export default function NestingTool() {
     dispatch({ type: 'REMOVE_IMAGE', payload: id });
   }, []);
 
-  const handleDuplicateImage = useCallback((id: string) => {
+  const handleDuplicateImage = useCallback((id:string) => {
     dispatch({ type: 'DUPLICATE_IMAGE', payload: id });
     toast({
       title: 'Image Duplicated',
       description: 'A copy of the image has been added to your list.',
     });
   }, []);
-
 
   const handleSheetWidthChange = useCallback((width: 13 | 17) => {
     dispatch({ type: 'SET_SHEET_WIDTH', payload: width });
@@ -238,12 +230,8 @@ export default function NestingTool() {
     }, 10);
   };
 
-  const handleUpdateImage = (id: string, copies: number, width: number, height: number) => {
-    dispatch({ type: 'UPDATE_IMAGE', payload: { id, copies, width, height }});
-    toast({
-        title: 'Image Updated',
-        description: `The properties for this image have been updated.`,
-    });
+  const handleUpdateImage = (id: string, updates: Partial<Omit<ManagedImage, 'id' | 'url' | 'aspectRatio'>>) => {
+    dispatch({ type: 'UPDATE_IMAGE', payload: { id, updates }});
   }
   
   const price = useMemo(() => {
@@ -300,14 +288,6 @@ export default function NestingTool() {
 
   return (
     <div className="container py-8">
-      {editingImage && (
-        <ImageEditDialog
-          image={editingImage}
-          isOpen={!!state.editingImageId}
-          onClose={() => handleSetEditingImage(null)}
-          onSave={handleUpdateImage}
-        />
-      )}
       <Button asChild variant="ghost" className="mb-4">
         <Link href="/">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -326,7 +306,7 @@ export default function NestingTool() {
             images={state.images}
             onFileChange={handleFileChange}
             onRemoveImage={handleRemoveImage}
-            onEditImage={handleSetEditingImage}
+            onUpdateImage={handleUpdateImage}
             onDuplicateImage={handleDuplicateImage}
             isUploading={state.isUploading}
           />
