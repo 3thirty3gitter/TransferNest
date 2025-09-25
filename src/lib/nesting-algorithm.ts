@@ -50,15 +50,13 @@ class BottomLeftFillNester {
 
     // Return a new object that matches the expected NestedLayout schema
     const placedItems = this.placedRectangles.map(item => {
-        const originalImage = images.find(img => img.id === item.id);
         return {
             id: item.id,
             url: item.url,
             x: item.x,
             y: item.y,
-            width: originalImage!.width, // Return original dimensions
-            height: originalImage!.height,
-            // rotated: item.rotated // This property is not in the schema, so we omit it
+            width: item.rotated ? item.height : item.width, // Return original dimensions
+            height: item.rotated ? item.width : item.height,
         }
     });
 
@@ -70,33 +68,58 @@ class BottomLeftFillNester {
 
   private findBestPosition(rect: Rectangle) {
     let bestPosition: (PlacedRectangle & { area: number }) | null = null;
-    const rotations = this.getRotations(rect);
 
-    for (const rotatedRect of rotations) {
-      if (rotatedRect.width > this.sheetWidth) continue;
+    const testPoints: {x: number, y: number}[] = [{ x: 0, y: 0 }];
 
-      // Start at y=0 and move upwards
-      for (let y = 0; ; y++) {
-        let canPlace = false;
-        // Check along the x-axis for a spot
-        for (let x = 0; x <= this.sheetWidth - rotatedRect.width; x++) {
-          if (this.canPlaceAt(x, y, rotatedRect.width, rotatedRect.height)) {
-            const currentPosition = {
-              ...rect,
-              ...rotatedRect,
-              x,
-              y,
-              area: rotatedRect.width * rotatedRect.height,
-            };
-            // The first position found at the lowest y is the best one (bottom-left approach)
-            return currentPosition;
-          }
+    // Add corners of already placed rectangles as potential test points
+    this.placedRectangles.forEach(p => {
+        testPoints.push({ x: p.x + p.width, y: p.y });
+        testPoints.push({ x: p.x, y: p.y + p.height });
+        testPoints.push({ x: p.x + p.width, y: p.y + p.height });
+    });
+
+    for (const point of testPoints) {
+        const rotations = this.getRotations(rect);
+        for (const rotatedRect of rotations) {
+
+            const x = point.x;
+            const y = point.y;
+            
+            if (x + rotatedRect.width > this.sheetWidth) continue;
+            
+            if (this.canPlaceAt(x, y, rotatedRect.width, rotatedRect.height)) {
+                // Score the position (lower is better)
+                const score = y + rotatedRect.height; // Prioritize lower placement
+                const currentPosition = {
+                  ...rect,
+                  ...rotatedRect,
+                  x,
+                  y,
+                  area: rotatedRect.width * rotatedRect.height,
+                };
+                if (!bestPosition || score < (bestPosition.y + bestPosition.height)) {
+                    bestPosition = currentPosition
+                }
+            }
+
+            // Try to place the rectangle against the bottom of placed items
+            for (const placed of this.placedRectangles) {
+                const testY = placed.y + placed.height;
+                if(x + rotatedRect.width > this.sheetWidth) continue;
+                if(this.canPlaceAt(x, testY, rotatedRect.width, rotatedRect.height)) {
+                     const score = testY + rotatedRect.height;
+                     if(!bestPosition || score < (bestPosition.y + bestPosition.height)) {
+                        bestPosition = {
+                            ...rect,
+                            ...rotatedRect,
+                            x,
+                            y: testY,
+                            area: rotatedRect.width * rotatedRect.height,
+                        }
+                     }
+                }
+            }
         }
-        // If we couldn't place it at this y level, and there's an obstacle above, stop.
-        if (this.isShelf(y)) {
-           break;
-        }
-      }
     }
     return bestPosition;
   }
@@ -113,7 +136,7 @@ class BottomLeftFillNester {
   }
   
   private canPlaceAt(x: number, y: number, width: number, height: number): boolean {
-    if (x + width > this.sheetWidth) {
+    if (x < 0 || y < 0 || x + width > this.sheetWidth) {
       return false;
     }
 
@@ -130,20 +153,16 @@ class BottomLeftFillNester {
     return true;
   }
 
-  private isShelf(y: number): boolean {
-    // A "shelf" is the top edge of any placed rectangle
-    for (const placed of this.placedRectangles) {
-        if(placed.y + placed.height > y) return true;
-    }
-    return false;
-  }
-
   private placeRectangle(rect: PlacedRectangle) {
     this.placedRectangles.push(rect);
   }
 }
 
-export function nestImages(images: Rectangle[], sheetWidth: number) {
+export function nestImages(images: Omit<Rectangle, 'url' | 'allowRotation'>[], sheetWidth: number) {
     const nester = new BottomLeftFillNester(sheetWidth);
-    return nester.nest(images);
+    
+    const rectsToNest: Rectangle[] = images.map(img => ({...img, url: 'dummy', allowRotation: true}));
+
+    return nester.nest(rectsToNest);
 }
+
