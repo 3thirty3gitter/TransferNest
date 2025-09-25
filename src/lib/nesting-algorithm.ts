@@ -38,7 +38,7 @@ class FixedMaxRectsBinPack {
         });
     }
 
-    insert(width: number, height: number, method: 'BestShortSideFit' = 'BestShortSideFit'): PlacedRectangle | null {
+    insert(width: number, height: number, method: 'BestShortSideFit' = 'BestShortSideFit'): (Omit<PlacedRectangle, 'id' | 'url'>) | null {
         const marginWidth = width + this.margin;
         const marginHeight = height + this.margin;
         
@@ -87,7 +87,7 @@ class FixedMaxRectsBinPack {
 
         if (bestRect) {
             this.placeRectangle(bestRect);
-            return bestRect as PlacedRectangle;
+            return bestRect;
         }
         
         return null;
@@ -200,35 +200,38 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
     const sortedImages = [...images].sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height));
     
     let placedItems: PlacedRectangle[] = [];
-    const unplacedItems: Rectangle[] = [...sortedImages];
+    let unplacedItems: Rectangle[] = [...sortedImages];
     
     let currentSheetHeight = sortedImages.reduce((max, img) => Math.max(max, img.height), 0) * 2;
     
     while (unplacedItems.length > 0) {
         const packer = new FixedMaxRectsBinPack(sheetWidth, currentSheetHeight, true);
         const newlyPlacedThisRound: PlacedRectangle[] = [];
+        const stillUnplaced: Rectangle[] = [];
 
-        for (let i = unplacedItems.length - 1; i >= 0; i--) {
-            const image = unplacedItems[i];
+        for (const image of unplacedItems) {
             const rect = packer.insert(image.width, image.height, 'BestShortSideFit');
             if (rect) {
                 newlyPlacedThisRound.push({
                     ...image,
                     ...rect,
                 });
-                unplacedItems.splice(i, 1);
+            } else {
+                stillUnplaced.push(image);
             }
         }
         
         placedItems.push(...newlyPlacedThisRound);
+        unplacedItems = stillUnplaced;
 
-        if (newlyPlacedThisRound.length === 0 && unplacedItems.length > 0) {
+        if (unplacedItems.length > 0 && newlyPlacedThisRound.length === 0) {
             currentSheetHeight *= 1.5; 
         }
     }
     
     const sheetLength = placedItems.reduce((maxLength, item) => {
-        return Math.max(maxLength, item.y + item.height);
+        const itemHeight = item.rotated ? item.width : item.height;
+        return Math.max(maxLength, item.y + itemHeight);
     }, 0) + (3 / 40); // Add final margin
 
     return { placedItems, sheetLength };
