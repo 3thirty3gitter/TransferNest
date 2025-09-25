@@ -12,15 +12,11 @@ type PlacedRectangle = Rectangle & {
   rotated: boolean;
 };
 
-/**
- * MaxRects Bin Packer - Based on Jukka Jylänki's proven algorithm
- * Original C++ source: https://github.com/juj/RectangleBinPack
- * This is a direct TypeScript port of the proven algorithm
- */
-class MaxRectsBinPack {
+class FixedMaxRectsBinPack {
     private binWidth: number;
     private binHeight: number;
     private allowRotations: boolean;
+    private margin: number;
 
     public usedRectangles: PlacedRectangle[] = [];
     public freeRectangles: { x: number; y: number; width: number; height: number }[] = [];
@@ -29,144 +25,164 @@ class MaxRectsBinPack {
         this.binWidth = width;
         this.binHeight = height;
         this.allowRotations = allowRotations;
-        
+        this.margin = 3 / 40; // 3px margin converted to inches
+
         this.usedRectangles = [];
         this.freeRectangles = [];
         
         this.freeRectangles.push({
-            x: 0,
-            y: 0,
-            width: this.binWidth,
-            height: this.binHeight
+            x: this.margin,
+            y: this.margin,
+            width: this.binWidth - (2 * this.margin),
+            height: this.binHeight - (2 * this.margin)
         });
     }
 
-    insert(width: number, height: number, method: 'BestShortSideFit' = 'BestShortSideFit'): { x: number, y: number, width: number, height: number } | null {
-        let newNode: { x: number, y: number, width: number, height: number } = { x: 0, y: 0, width: 0, height: 0 };
-        const score1 = { value: 0 };
-        const score2 = { value: 0 };
+    insert(width: number, height: number, method: 'BestShortSideFit' = 'BestShortSideFit'): PlacedRectangle | null {
+        const marginWidth = width + this.margin;
+        const marginHeight = height + this.margin;
+        
+        let bestRect: (Omit<PlacedRectangle, 'id' | 'url'>) | null = null;
+        let bestScore = Number.MAX_VALUE;
+        let bestSecondaryScore = Number.MAX_VALUE;
 
+        for (let i = 0; i < this.freeRectangles.length; i++) {
+            const freeRect = this.freeRectangles[i];
+            
+            if (freeRect.width >= marginWidth && freeRect.height >= marginHeight) {
+                const score = this.scoreRect(freeRect, marginWidth, marginHeight, method);
+                if (score.primary < bestScore || 
+                   (score.primary === bestScore && score.secondary < bestSecondaryScore)) {
+                    bestRect = {
+                        x: freeRect.x,
+                        y: freeRect.y,
+                        width: width,
+                        height: height,
+                        rotated: false
+                    };
+                    bestScore = score.primary;
+                    bestSecondaryScore = score.secondary;
+                }
+            }
+            
+            if (this.allowRotations && 
+                freeRect.width >= marginHeight && 
+                freeRect.height >= marginWidth &&
+                width !== height) {
+                const score = this.scoreRect(freeRect, marginHeight, marginWidth, method);
+                if (score.primary < bestScore || 
+                   (score.primary === bestScore && score.secondary < bestSecondaryScore)) {
+                    bestRect = {
+                        x: freeRect.x,
+                        y: freeRect.y,
+                        width: height,
+                        height: width,
+                        rotated: true
+                    };
+                    bestScore = score.primary;
+                    bestSecondaryScore = score.secondary;
+                }
+            }
+        }
+
+        if (bestRect) {
+            this.placeRectangle(bestRect);
+            return bestRect as PlacedRectangle;
+        }
+        
+        return null;
+    }
+
+    private scoreRect(freeRect: {width:number, height:number}, width: number, height: number, method: string) {
         switch (method) {
             case 'BestShortSideFit':
-                newNode = this.findPositionForNewNodeBestShortSideFit(width, height, score1, score2);
-                break;
-            // Other methods can be implemented here if needed
+                const leftoverHoriz = freeRect.width - width;
+                const leftoverVert = freeRect.height - height;
+                return {
+                    primary: Math.min(leftoverHoriz, leftoverVert),
+                    secondary: Math.max(leftoverHoriz, leftoverVert)
+                };
+            
+            case 'BestAreaFit':
+                return {
+                    primary: freeRect.width * freeRect.height - width * height,
+                    secondary: Math.min(freeRect.width - width, freeRect.height - height)
+                };
+            
+            case 'BottomLeftRule':
+                return {
+                    primary: freeRect.y,
+                    secondary: freeRect.x
+                };
+                
+            default:
+                return { primary: 0, secondary: 0 };
         }
-
-        if (newNode.height === 0) {
-            return null;
-        }
-
-        this.placeRectangle(newNode);
-        return newNode;
-    }
-    
-    private findPositionForNewNodeBestShortSideFit(width: number, height: number, bestShortSide: { value: number }, bestLongSide: { value: number }): { x: number, y: number, width: number, height: number } {
-        let bestNode = { x: 0, y: 0, width: 0, height: 0 };
-        bestShortSide.value = Number.MAX_VALUE;
-        bestLongSide.value = Number.MAX_VALUE;
-
-        for (let i = 0; i < this.freeRectangles.length; ++i) {
-            // Try to place the rectangle in upright (non-flipped) orientation
-            if (this.freeRectangles[i].width >= width && this.freeRectangles[i].height >= height) {
-                let leftoverHoriz = this.freeRectangles[i].width - width;
-                let leftoverVert = this.freeRectangles[i].height - height;
-                let shortSide = Math.min(leftoverHoriz, leftoverVert);
-                let longSide = Math.max(leftoverHoriz, leftoverVert);
-
-                if (shortSide < bestShortSide.value || (shortSide === bestShortSide.value && longSide < bestLongSide.value)) {
-                    bestNode.x = this.freeRectangles[i].x;
-                    bestNode.y = this.freeRectangles[i].y;
-                    bestNode.width = width;
-                    bestNode.height = height;
-                    bestShortSide.value = shortSide;
-                    bestLongSide.value = longSide;
-                }
-            }
-
-            if (this.allowRotations && this.freeRectangles[i].width >= height && this.freeRectangles[i].height >= width) {
-                let leftoverHoriz = this.freeRectangles[i].width - height;
-                let leftoverVert = this.freeRectangles[i].height - width;
-                let shortSide = Math.min(leftoverHoriz, leftoverVert);
-                let longSide = Math.max(leftoverHoriz, leftoverVert);
-
-                if (shortSide < bestShortSide.value || (shortSide === bestShortSide.value && longSide < bestLongSide.value)) {
-                    bestNode.x = this.freeRectangles[i].x;
-                    bestNode.y = this.freeRectangles[i].y;
-                    bestNode.width = height;
-                    bestNode.height = width;
-                    bestShortSide.value = shortSide;
-                    bestLongSide.value = longSide;
-                }
-            }
-        }
-        return bestNode;
     }
 
-
-    private placeRectangle(node: {x: number, y: number, width: number, height: number}) {
-        let numRectanglesToProcess = this.freeRectangles.length;
-        for (let i = 0; i < numRectanglesToProcess; ++i) {
-            if (this.splitFreeNode(this.freeRectangles[i], node)) {
-                this.freeRectangles.splice(i, 1);
-                --i;
-                --numRectanglesToProcess;
-            }
+    private placeRectangle(rect: Omit<PlacedRectangle, 'id' | 'url'>) {
+        this.usedRectangles.push(rect as PlacedRectangle);
+        
+        const newFreeRects: { x: number; y: number; width: number; height: number }[] = [];
+        
+        for (const freeRect of this.freeRectangles) {
+            const splits = this.splitFreeRectangle(freeRect, rect);
+            newFreeRects.push(...splits);
         }
-
-        this.pruneFreeList();
-        this.usedRectangles.push({ ...node, id: '', url: '', rotated: false });
+        
+        this.freeRectangles = newFreeRects;
+        this.removeDuplicateRectangles();
     }
 
-    private splitFreeNode(freeNode: { x: number; y: number; width: number; height: number; }, usedNode: { x: number; y: number; width: number; height: number; }) {
-        if (usedNode.x >= freeNode.x + freeNode.width || usedNode.x + usedNode.width <= freeNode.x ||
-            usedNode.y >= freeNode.y + freeNode.height || usedNode.y + usedNode.height <= freeNode.y)
-            return false;
-
-        if (usedNode.x < freeNode.x + freeNode.width && usedNode.x + usedNode.width > freeNode.x) {
-            if (usedNode.y > freeNode.y && usedNode.y < freeNode.y + freeNode.height) {
-                let newNode = { ...freeNode };
-                newNode.height = usedNode.y - newNode.y;
-                this.freeRectangles.push(newNode);
-            }
-            if (usedNode.y + usedNode.height < freeNode.y + freeNode.height) {
-                let newNode = { ...freeNode };
-                newNode.y = usedNode.y + usedNode.height;
-                newNode.height = freeNode.y + freeNode.height - (usedNode.y + usedNode.height);
-                this.freeRectangles.push(newNode);
-            }
+    private splitFreeRectangle(freeRect: { x: number; y: number; width: number; height: number; }, usedRect: Omit<PlacedRectangle, 'id' | 'url'>) {
+        const splits: { x: number; y: number; width: number; height: number }[] = [];
+        
+        const usedX = usedRect.x;
+        const usedY = usedRect.y;
+        const usedWidth = usedRect.width + this.margin;
+        const usedHeight = usedRect.height + this.margin;
+        
+        if (usedX >= freeRect.x + freeRect.width || 
+            usedX + usedWidth <= freeRect.x ||
+            usedY >= freeRect.y + freeRect.height || 
+            usedY + usedHeight <= freeRect.y) {
+            splits.push(freeRect);
+            return splits;
         }
-
-        if (usedNode.y < freeNode.y + freeNode.height && usedNode.y + usedNode.height > freeNode.y) {
-            if (usedNode.x > freeNode.x && usedNode.x < freeNode.x + freeNode.width) {
-                let newNode = { ...freeNode };
-                newNode.width = usedNode.x - newNode.x;
-                this.freeRectangles.push(newNode);
-            }
-            if (usedNode.x + usedNode.width < freeNode.x + freeNode.width) {
-                let newNode = { ...freeNode };
-                newNode.x = usedNode.x + usedNode.width;
-                newNode.width = freeNode.x + freeNode.width - (usedNode.x + usedNode.width);
-                this.freeRectangles.push(newNode);
-            }
+        
+        if (usedX > freeRect.x) {
+            splits.push({ x: freeRect.x, y: freeRect.y, width: usedX - freeRect.x, height: freeRect.height });
         }
-
-        return true;
+        
+        if (usedX + usedWidth < freeRect.x + freeRect.width) {
+            splits.push({ x: usedX + usedWidth, y: freeRect.y, width: freeRect.x + freeRect.width - (usedX + usedWidth), height: freeRect.height });
+        }
+        
+        if (usedY > freeRect.y) {
+            splits.push({ x: freeRect.x, y: freeRect.y, width: freeRect.width, height: usedY - freeRect.y });
+        }
+        
+        if (usedY + usedHeight < freeRect.y + freeRect.height) {
+            splits.push({ x: freeRect.x, y: usedY + usedHeight, width: freeRect.width, height: freeRect.y + freeRect.height - (usedY + usedHeight) });
+        }
+        
+        return splits.filter(rect => rect.width > 0 && rect.height > 0);
     }
 
-    private pruneFreeList() {
-        for (let i = 0; i < this.freeRectangles.length; ++i)
-            for (let j = i + 1; j < this.freeRectangles.length; ++j) {
+    private removeDuplicateRectangles() {
+        for (let i = 0; i < this.freeRectangles.length; i++) {
+            for (let j = i + 1; j < this.freeRectangles.length; j++) {
                 if (this.isContainedIn(this.freeRectangles[i], this.freeRectangles[j])) {
                     this.freeRectangles.splice(i, 1);
-                    --i;
+                    i--;
                     break;
                 }
                 if (this.isContainedIn(this.freeRectangles[j], this.freeRectangles[i])) {
                     this.freeRectangles.splice(j, 1);
-                    --j;
+                    j--;
                 }
             }
+        }
     }
 
     private isContainedIn(a: { x: number; y: number; width: number; height: number; }, b: { x: number; y: number; width: number; height: number; }) {
@@ -186,49 +202,34 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
     let placedItems: PlacedRectangle[] = [];
     const unplacedItems: Rectangle[] = [...sortedImages];
     
-    let currentSheetHeight = 1; // Start with a small height
-    const totalImageArea = sortedImages.reduce((sum, img) => sum + (img.width * img.height), 0);
-    currentSheetHeight = Math.max(currentSheetHeight, totalImageArea / sheetWidth);
-
-
+    let currentSheetHeight = sortedImages.reduce((max, img) => Math.max(max, img.height), 0) * 2;
+    
     while (unplacedItems.length > 0) {
-        const packer = new MaxRectsBinPack(sheetWidth, currentSheetHeight, true);
-        const newlyPlaced: Rectangle[] = [];
+        const packer = new FixedMaxRectsBinPack(sheetWidth, currentSheetHeight, true);
+        const newlyPlacedThisRound: PlacedRectangle[] = [];
 
-        for(const image of unplacedItems) {
+        for (let i = unplacedItems.length - 1; i >= 0; i--) {
+            const image = unplacedItems[i];
             const rect = packer.insert(image.width, image.height, 'BestShortSideFit');
             if (rect) {
-                placedItems.push({
+                newlyPlacedThisRound.push({
                     ...image,
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: rect.height,
-                    rotated: rect.width !== image.width,
+                    ...rect,
                 });
-                newlyPlaced.push(image);
+                unplacedItems.splice(i, 1);
             }
         }
         
-        if (newlyPlaced.length === 0 && unplacedItems.length > 0) {
-             // If no new items could be placed, increase height to avoid infinite loop
-             currentSheetHeight *= 1.5;
-             // And we need to re-try placing all items that were unplaced so far
-             placedItems = []; // reset placed items
-        } else {
-             // remove newly placed items from unplaced
-            for(const placed of newlyPlaced) {
-                const index = unplacedItems.indexOf(placed);
-                if(index > -1) {
-                    unplacedItems.splice(index, 1);
-                }
-            }
+        placedItems.push(...newlyPlacedThisRound);
+
+        if (newlyPlacedThisRound.length === 0 && unplacedItems.length > 0) {
+            currentSheetHeight *= 1.5; 
         }
     }
     
     const sheetLength = placedItems.reduce((maxLength, item) => {
         return Math.max(maxLength, item.y + item.height);
-    }, 0);
+    }, 0) + (3 / 40); // Add final margin
 
     return { placedItems, sheetLength };
 }
