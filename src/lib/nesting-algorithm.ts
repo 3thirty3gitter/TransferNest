@@ -3,7 +3,7 @@
 
 type Rectangle = {
   id: string;
-  url: string;
+  url:string;
   width: number;
   height: number;
 };
@@ -25,13 +25,13 @@ type FreeRectangle = {
  * A direct and faithful TypeScript port of the MaxRectsBinPack algorithm.
  * This implementation is based on the highly regarded work by Jukka Jylänki.
  * Original C++ source: https://github.com/juj/RectangleBinPack
- * This version guarantees correct collision detection and efficient packing.
+ * This version uses the Best Short Side Fit (BSSF) heuristic for optimal packing.
  */
 class MaxRectsBinPack {
   private binWidth: number;
   private binHeight: number;
   private allowRotations: boolean;
-  public usedRectangles: (Omit<PlacedRectangle, 'id' | 'url'| 'rotated'> & {rotated: boolean})[] = [];
+  public usedRectangles: PlacedRectangle[] = [];
   public freeRectangles: FreeRectangle[] = [];
 
   constructor(width: number, height: number, allowRotations = true) {
@@ -45,54 +45,56 @@ class MaxRectsBinPack {
   private findPositionForNewNodeBestShortSideFit(
     width: number,
     height: number
-  ): (FreeRectangle & { rotated: boolean }) | null {
-    let bestNode: (FreeRectangle & { rotated: boolean }) = { x: 0, y: 0, width: 0, height: 0, rotated: false };
+  ): { rect: FreeRectangle, rotated: boolean } | null {
+    let bestNode: { rect: FreeRectangle, rotated: boolean, shortSideFit: number, longSideFit: number } | null = null;
     let bestShortSideFit = Number.MAX_VALUE;
     let bestLongSideFit = Number.MAX_VALUE;
-
-    for (const freeRect of this.freeRectangles) {
+  
+    for (let i = 0; i < this.freeRectangles.length; i++) {
+      const freeRect = this.freeRectangles[i];
+  
       // Try to place the rectangle in upright (non-flipped) orientation
       if (freeRect.width >= width && freeRect.height >= height) {
         const leftoverHoriz = Math.abs(freeRect.width - width);
         const leftoverVert = Math.abs(freeRect.height - height);
         const shortSideFit = Math.min(leftoverHoriz, leftoverVert);
         const longSideFit = Math.max(leftoverHoriz, leftoverVert);
-
+  
         if (shortSideFit < bestShortSideFit || (shortSideFit === bestShortSideFit && longSideFit < bestLongSideFit)) {
-          bestNode.x = freeRect.x;
-          bestNode.y = freeRect.y;
-          bestNode.width = width;
-          bestNode.height = height;
-          bestNode.rotated = false;
-          bestShortSideFit = shortSideFit;
-          bestLongSideFit = longSideFit;
+            bestNode = {
+                rect: { x: freeRect.x, y: freeRect.y, width: width, height: height },
+                rotated: false,
+                shortSideFit: shortSideFit,
+                longSideFit: longSideFit,
+            };
+            bestShortSideFit = shortSideFit;
+            bestLongSideFit = longSideFit;
         }
       }
-
+  
+      // Try to place the rectangle in rotated orientation
       if (this.allowRotations && freeRect.width >= height && freeRect.height >= width) {
         const leftoverHoriz = Math.abs(freeRect.width - height);
         const leftoverVert = Math.abs(freeRect.height - width);
         const shortSideFit = Math.min(leftoverHoriz, leftoverVert);
         const longSideFit = Math.max(leftoverHoriz, leftoverVert);
-        
+
         if (shortSideFit < bestShortSideFit || (shortSideFit === bestShortSideFit && longSideFit < bestLongSideFit)) {
-          bestNode.x = freeRect.x;
-          bestNode.y = freeRect.y;
-          bestNode.width = height;
-          bestNode.height = width;
-          bestNode.rotated = true;
-          bestShortSideFit = shortSideFit;
-          bestLongSideFit = longSideFit;
+            bestNode = {
+                rect: { x: freeRect.x, y: freeRect.y, width: height, height: width },
+                rotated: true,
+                shortSideFit: shortSideFit,
+                longSideFit: longSideFit,
+            };
+            bestShortSideFit = shortSideFit;
+            bestLongSideFit = longSideFit;
         }
       }
     }
-    
-    if (bestNode.width === 0 || bestNode.height === 0) {
-        return null;
-    }
-
-    return bestNode;
+  
+    return bestNode ? { rect: bestNode.rect, rotated: bestNode.rotated } : null;
   }
+  
 
   private placeRectangle(node: FreeRectangle): void {
     let numRectanglesToProcess = this.freeRectangles.length;
@@ -104,7 +106,7 @@ class MaxRectsBinPack {
       }
     }
     this.pruneFreeList();
-    this.usedRectangles.push(node as any);
+    this.usedRectangles.push(node as PlacedRectangle);
   }
 
   private splitFreeNode(freeNode: FreeRectangle, usedNode: FreeRectangle): boolean {
@@ -166,20 +168,21 @@ class MaxRectsBinPack {
     }
   }
 
-  public insert(width: number, height: number): (Omit<PlacedRectangle, 'id' | 'url'>) | null {
-    const newNode = this.findPositionForNewNodeBestShortSideFit(width, height);
+  public insert(width: number, height: number): PlacedRectangle | null {
+    const pos = this.findPositionForNewNodeBestShortSideFit(width, height);
 
-    if (!newNode || newNode.width === 0 || newNode.height === 0) return null;
+    if (!pos) return null;
+    
+    const newNode: PlacedRectangle = {
+        ...pos.rect,
+        id: '',
+        url: '',
+        rotated: pos.rotated,
+    };
     
     this.placeRectangle(newNode);
     
-    return {
-        x: newNode.x,
-        y: newNode.y,
-        width: newNode.width,
-        height: newNode.height,
-        rotated: newNode.rotated,
-    };
+    return newNode;
   }
 }
 
@@ -205,14 +208,12 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
     return (b.width * b.height) - (a.width * a.height);
   });
   
-  let placedItems: PlacedRectangle[] = [];
+  let allPlacedItems: PlacedRectangle[] = [];
   let unplacedItems: Rectangle[] = [...sortedImages];
   
-  // Start with a reasonable bin height, e.g., total area / sheet width.
   const totalArea = unplacedItems.reduce((acc, img) => acc + img.width * img.height, 0);
-  let binHeight = Math.max(sheetWidth, totalArea / sheetWidth); 
+  let binHeight = Math.max(sheetWidth, totalArea / sheetWidth, ...unplacedItems.map(i => Math.max(i.width, i.height))); 
   
-  // Cap iterations to prevent infinite loops in case of an unforeseen issue.
   let iterations = 0;
   const MAX_ITERATIONS = 50;
 
@@ -243,11 +244,11 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
       if (stillUnplacedItems.length > 0) {
           // If items are left, grow the bin and try again from the beginning
           binHeight *= 1.5; // Grow by 50%
-          placedItems = [];
+          allPlacedItems = [];
           unplacedItems = [...sortedImages]; // Reset to the full sorted list
       } else {
           // All items were placed in this iteration
-          placedItems = newlyPlacedItems;
+          allPlacedItems = newlyPlacedItems;
           unplacedItems = [];
       }
   }
@@ -257,11 +258,10 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
       throw new Error("Could not fit all images. The items might be too large for the selected sheet width.");
   }
   
-  // Calculate the final sheet length based on the highest Y-coordinate of a placed item
-  const finalSheetLength = placedItems.reduce((maxLength, item) => {
+  const finalSheetLength = allPlacedItems.reduce((maxLength, item) => {
     return Math.max(maxLength, item.y + item.height);
   }, 0) + margin;
 
 
-  return { placedItems: placedItems, sheetLength: finalSheetLength };
+  return { placedItems: allPlacedItems, sheetLength: finalSheetLength };
 }
