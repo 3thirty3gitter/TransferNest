@@ -22,25 +22,28 @@ export async function getNestedLayout(
       sheetWidthInches: sheetWidth,
     });
 
-    if (!result || !result.nestedLayout) {
-        console.error("AI did not return a valid layout.", result);
+    // Immediately validate the entire structure from the AI
+    if (!result || !result.nestedLayout || !result.sheetLengthInches) {
+        console.error("AI did not return a valid or complete layout object.", result);
         return { layout: [], length: 0, error: "The AI failed to generate a layout. Please try again." };
     }
 
+    // Use Zod to parse the layout safely
     const parsedLayout = NestedLayoutSchema.safeParse(result.nestedLayout);
 
     if (!parsedLayout.success) {
-      console.error("Failed to parse nested layout from AI:", parsedLayout.error);
+      console.error("Failed to parse nested layout from AI:", parsedLayout.error.toString());
       return { layout: [], length: 0, error: "Failed to generate a valid layout. The AI returned an unexpected format." };
     }
 
+    // If parsing is successful, return the data
     return {
       layout: parsedLayout.data,
       length: result.sheetLengthInches,
     };
   } catch (e: any) {
     console.error("Error in getNestedLayout action:", e);
-    // This could be a JSON parsing error or a network error from the AI call
+    // This will catch network errors or other exceptions from the AI call
     return { layout: [], length: 0, error: e.message || "An unexpected error occurred while arranging images. Please try again." };
   }
 }
