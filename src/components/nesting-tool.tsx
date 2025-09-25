@@ -218,7 +218,6 @@ export default function NestingTool() {
     }
     dispatch({ type: 'START_NESTING' });
 
-    // Use a short timeout to allow the UI to update to the loading state
     setTimeout(() => {
         try {
             const imagesToNest = state.images.map(({ id, url, width, height }) => ({ id, url, width, height }));

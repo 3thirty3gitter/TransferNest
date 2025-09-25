@@ -24,7 +24,6 @@ class BottomLeftFillNester {
   nest(images: Rectangle[]): { placedItems: PlacedRectangle[], sheetLength: number } {
     this.placedRectangles = [];
     
-    // Create a copy and sort images by area (descending) for better packing
     const sortedImages = [...images].sort((a, b) => (b.width * b.height) - (a.width * a.height));
     
     for (const image of sortedImages) {
@@ -39,7 +38,6 @@ class BottomLeftFillNester {
                 rotated: position.rotated,
             });
         } else {
-            // This case should be handled - maybe add to a list of unplaced items
             console.warn(`Could not find a position for image ${image.id}`);
         }
     }
@@ -48,15 +46,15 @@ class BottomLeftFillNester {
         return Math.max(maxLength, item.y + item.height);
     }, 0);
 
-    // Return a new object that matches the expected NestedLayout schema
     const placedItems = this.placedRectangles.map(item => {
         return {
             id: item.id,
             url: item.url,
             x: item.x,
             y: item.y,
-            width: item.rotated ? item.height : item.width, // Return original dimensions
+            width: item.rotated ? item.height : item.width, 
             height: item.rotated ? item.width : item.height,
+            rotated: item.rotated,
         }
     });
 
@@ -71,7 +69,6 @@ class BottomLeftFillNester {
 
     const testPoints: {x: number, y: number}[] = [{ x: 0, y: 0 }];
 
-    // Add corners of already placed rectangles as potential test points
     this.placedRectangles.forEach(p => {
         testPoints.push({ x: p.x + p.width, y: p.y });
         testPoints.push({ x: p.x, y: p.y + p.height });
@@ -88,8 +85,7 @@ class BottomLeftFillNester {
             if (x + rotatedRect.width > this.sheetWidth) continue;
             
             if (this.canPlaceAt(x, y, rotatedRect.width, rotatedRect.height)) {
-                // Score the position (lower is better)
-                const score = y + rotatedRect.height; // Prioritize lower placement
+                const score = y + rotatedRect.height;
                 const currentPosition = {
                   ...rect,
                   ...rotatedRect,
@@ -102,7 +98,6 @@ class BottomLeftFillNester {
                 }
             }
 
-            // Try to place the rectangle against the bottom of placed items
             for (const placed of this.placedRectangles) {
                 const testY = placed.y + placed.height;
                 if(x + rotatedRect.width > this.sheetWidth) continue;
@@ -147,7 +142,7 @@ class BottomLeftFillNester {
         y < placed.y + placed.height &&
         y + height > placed.y
       ) {
-        return false; // Overlap detected
+        return false;
       }
     }
     return true;
@@ -158,11 +153,8 @@ class BottomLeftFillNester {
   }
 }
 
-export function nestImages(images: Omit<Rectangle, 'url' | 'allowRotation'>[], sheetWidth: number) {
+export function nestImages(images: Rectangle[], sheetWidth: number) {
     const nester = new BottomLeftFillNester(sheetWidth);
-    
-    const rectsToNest: Rectangle[] = images.map(img => ({...img, url: 'dummy', allowRotation: true}));
-
+    const rectsToNest: Rectangle[] = images.map(img => ({...img, allowRotation: true}));
     return nester.nest(rectsToNest);
 }
-
