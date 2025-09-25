@@ -1,4 +1,6 @@
 
+'use client';
+
 type Rectangle = {
   id: string;
   url: string;
@@ -15,11 +17,11 @@ type PlacedRectangle = Rectangle & {
 /**
  * MaxRects Bin Packer - Based on Jukka Jylänki's proven algorithm
  * Original C++ source: https://github.com/juj/RectangleBinPack
- * This is a direct TypeScript port of the proven algorithm
+ * This is a direct TypeScript port of the proven algorithm.
  */
 class MaxRectsBinPack {
-  private binWidth: number = 0;
-  private binHeight: number = 0;
+  private binWidth: number;
+  private binHeight: number;
   private allowRotations: boolean;
   public usedRectangles: (Omit<PlacedRectangle, 'id' | 'url' | 'rotated'> & { rotated: boolean })[] = [];
   public freeRectangles: { x: number; y: number; width: number; height: number }[] = [];
@@ -192,17 +194,20 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
   
   let placedItems: PlacedRectangle[] = [];
   let unplacedItems: Rectangle[] = [...sortedImages];
-  let sheetHeight = sortedImages.reduce((max, img) => Math.max(max, img.height, img.width), 0) * 1.5;
+  
+  // Start with a reasonable initial height and grow as needed
+  let sheetHeight = sortedImages.reduce((sum, img) => sum + img.height, 0);
 
   while (unplacedItems.length > 0) {
     const packer = new MaxRectsBinPack(sheetWidth, sheetHeight, true);
+    const currentlyPlaced: PlacedRectangle[] = [];
     const stillUnplaced: Rectangle[] = [];
 
     for (const image of unplacedItems) {
       const rect = packer.insert(image.width, image.height);
       if (rect) {
           const originalImage = images.find(img => img.id === image.id)!;
-          placedItems.push({
+          currentlyPlaced.push({
               ...originalImage,
               x: rect.x,
               y: rect.y,
@@ -216,15 +221,20 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
     }
     
     if (stillUnplaced.length > 0) {
+       // If no progress was made, the bin is too small. Double the height.
        if (stillUnplaced.length === unplacedItems.length) {
-         sheetHeight *= 1.5;
-         // clear placed items and try again with a larger sheet
+         sheetHeight *= 2;
+         // Reset and try again with the larger sheet
          placedItems = [];
          unplacedItems = [...sortedImages];
        } else {
+         // Some items were placed, add them to the final list and try to place the rest.
+         placedItems.push(...currentlyPlaced);
          unplacedItems = stillUnplaced;
        }
     } else {
+      // All items placed in this iteration
+      placedItems.push(...currentlyPlaced);
       unplacedItems = [];
     }
   }
