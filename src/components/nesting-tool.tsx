@@ -24,6 +24,7 @@ export type ManagedImage = {
   width: number; // in inches
   height: number; // in inches
   aspectRatio: number;
+  copies: number;
 };
 
 type State = {
@@ -38,9 +39,9 @@ type State = {
 };
 
 type Action =
-  | { type: 'ADD_IMAGE'; payload: ManagedImage }
+  | { type: 'ADD_IMAGE'; payload: Omit<ManagedImage, 'copies'> }
   | { type: 'REMOVE_IMAGE'; payload: string }
-  | { type: 'UPDATE_IMAGE_AND_ADD_COPIES'; payload: { id: string, copies: number, width: number, height: number } }
+  | { type: 'UPDATE_IMAGE'; payload: { id: string; copies: number; width: number; height: number } }
   | { type: 'DUPLICATE_IMAGE'; payload: string }
   | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
@@ -66,27 +67,18 @@ const initialState: State = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'ADD_IMAGE':
-      return { ...state, images: [...state.images, action.payload] };
+      return { ...state, images: [...state.images, { ...action.payload, copies: 1 }] };
     case 'REMOVE_IMAGE':
       return { ...state, images: state.images.filter((img) => img.id !== action.payload), nestedLayout: [] };
-    case 'UPDATE_IMAGE_AND_ADD_COPIES': {
+    case 'UPDATE_IMAGE': {
         const { id, copies, width, height } = action.payload;
-        const imageToUpdate = state.images.find(img => img.id === id);
-        if (!imageToUpdate) return state;
-
-        const updatedImages = state.images.map(img => img.id === id ? { ...img, width, height } : img);
-
-        const newCopies = [];
-        for (let i = 0; i < copies - 1; i++) {
-            newCopies.push({
-            ...imageToUpdate,
-            id: `${new Date().getTime()}-${Math.random()}`,
-            width,
-            height,
-            });
-        }
-        
-        return { ...state, images: [...updatedImages, ...newCopies], nestedLayout: [] };
+        return {
+          ...state,
+          images: state.images.map(img => 
+            img.id === id ? { ...img, width, height, copies } : img
+          ),
+          nestedLayout: [],
+        };
     }
     case 'DUPLICATE_IMAGE': {
         const imageToDuplicate = state.images.find(img => img.id === action.payload);
@@ -95,6 +87,7 @@ function reducer(state: State, action: Action): State {
         const newImage: ManagedImage = {
             ...imageToDuplicate,
             id: `${new Date().getTime()}-${Math.random()}`,
+            copies: 1, // Duplicates start with 1 copy
         };
         
         return { ...state, images: [...state.images, newImage] };
@@ -223,7 +216,16 @@ export default function NestingTool() {
 
     setTimeout(() => {
         try {
-            const imagesToNest = state.images.map(({ id, url, width, height }) => ({ id, url, width, height }));
+            // Expand images based on the 'copies' property
+            const imagesToNest = state.images.flatMap(image => {
+                return Array.from({ length: image.copies }, (_, i) => ({
+                    id: `${image.id}-${i}`, // Create a unique ID for each copy
+                    url: image.url,
+                    width: image.width,
+                    height: image.height,
+                }));
+            });
+
             const result = nestImages(imagesToNest, state.sheetWidth);
             dispatch({ type: 'SET_LAYOUT', payload: { layout: result.placedItems, length: result.sheetLength } });
         } catch (e: any) {
@@ -238,10 +240,10 @@ export default function NestingTool() {
   };
 
   const handleUpdateImage = (id: string, copies: number, width: number, height: number) => {
-    dispatch({ type: 'UPDATE_IMAGE_AND_ADD_COPIES', payload: { id, copies, width, height }});
+    dispatch({ type: 'UPDATE_IMAGE', payload: { id, copies, width, height }});
     toast({
         title: 'Image Updated',
-        description: `The image has been updated and ${copies} cop(y/ies) are now in the list.`,
+        description: `The properties for this image have been updated.`,
     });
   }
   

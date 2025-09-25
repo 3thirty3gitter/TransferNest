@@ -26,13 +26,13 @@ interface ImageEditDialogProps {
 export function ImageEditDialog({ image, isOpen, onClose, onSave }: ImageEditDialogProps) {
   const [width, setWidth] = useState(image?.width || 0);
   const [height, setHeight] = useState(image?.height || 0);
-  const [copies, setCopies] = useState(1);
+  const [copies, setCopies] = useState(image?.copies || 1);
 
   useEffect(() => {
     if (image) {
       setWidth(image.width);
       setHeight(image.height);
-      setCopies(1);
+      setCopies(image.copies);
     }
   }, [image]);
 
