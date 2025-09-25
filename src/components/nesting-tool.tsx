@@ -213,6 +213,7 @@ export default function NestingTool() {
     }
     dispatch({ type: 'START_NESTING' });
 
+    // Allow UI to update before blocking the main thread for calculation
     setTimeout(() => {
         try {
             // Expand images based on the 'copies' property
