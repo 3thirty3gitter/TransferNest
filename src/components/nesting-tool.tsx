@@ -74,14 +74,11 @@ function reducer(state: State, action: Action): State {
         const imageToUpdate = state.images.find(img => img.id === id);
         if (!imageToUpdate) return state;
 
-        const updatedImages = state.images.filter(img => img.id !== id);
-        
-        // Update the original image
-        updatedImages.push({ ...imageToUpdate, width, height });
+        const updatedImages = state.images.map(img => img.id === id ? { ...img, width, height } : img);
 
-        // Add new copies if requested
+        const newCopies = [];
         for (let i = 0; i < copies - 1; i++) {
-            updatedImages.push({
+            newCopies.push({
             ...imageToUpdate,
             id: `${new Date().getTime()}-${Math.random()}`,
             width,
@@ -89,7 +86,7 @@ function reducer(state: State, action: Action): State {
             });
         }
         
-        return { ...state, images: updatedImages, nestedLayout: [] };
+        return { ...state, images: [...updatedImages, ...newCopies], nestedLayout: [] };
     }
     case 'DUPLICATE_IMAGE': {
         const imageToDuplicate = state.images.find(img => img.id === action.payload);
