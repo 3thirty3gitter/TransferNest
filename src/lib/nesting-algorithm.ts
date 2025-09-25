@@ -236,9 +236,11 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
       unplacedItems = stillUnplacedItems;
 
       if (unplacedItems.length > 0) {
-          // If items are left, grow the bin and try again with the remaining items.
-          // A simple growth strategy: double the height.
-          binHeight *= 2;
+          // If items are left, grow the bin and try again.
+          const totalAreaUnplaced = unplacedItems.reduce((acc, img) => acc + img.width * img.height, 0);
+          const heightIncrease = Math.max(sheetWidth, Math.sqrt(totalAreaUnplaced)); // Heuristic for growth
+          
+          binHeight += heightIncrease;
           packer = new MaxRectsBinPack(sheetWidth, binHeight, true);
           // Re-place all items into the new larger bin
           unplacedItems = [...sortedImages];
