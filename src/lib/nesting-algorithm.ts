@@ -169,7 +169,7 @@ class MaxRectsBinPack {
   public insert(width: number, height: number): (Omit<PlacedRectangle, 'id' | 'url'>) | null {
     const newNode = this.findPositionForNewNodeBestShortSideFit(width, height);
 
-    if (!newNode) return null;
+    if (!newNode || newNode.width === 0 || newNode.height === 0) return null;
     
     this.placeRectangle(newNode);
     
@@ -194,7 +194,8 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
       width: img.width + margin,
       height: img.height + margin,
   }));
-
+  
+  // Sort images by max dimension, then by area
   const sortedImages = [...imagesWithMargin].sort((a, b) => {
     const maxA = Math.max(a.width, a.height);
     const maxB = Math.max(b.width, b.height);
@@ -207,11 +208,18 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
   let placedItems: PlacedRectangle[] = [];
   let unplacedItems: Rectangle[] = [...sortedImages];
   
-  // Start with a reasonable bin height, e.g., the sheet width.
-  let binHeight = sheetWidth; 
-  let packer = new MaxRectsBinPack(sheetWidth, binHeight, true);
+  // Start with a reasonable bin height, e.g., total area / sheet width.
+  const totalArea = unplacedItems.reduce((acc, img) => acc + img.width * img.height, 0);
+  let binHeight = Math.max(sheetWidth, totalArea / sheetWidth); 
+  
+  // Cap iterations to prevent infinite loops in case of an unforeseen issue.
+  let iterations = 0;
+  const MAX_ITERATIONS = 50;
 
-  while(unplacedItems.length > 0) {
+  while(unplacedItems.length > 0 && iterations < MAX_ITERATIONS) {
+      iterations++;
+      
+      const packer = new MaxRectsBinPack(sheetWidth, binHeight, true);
       const newlyPlacedItems: PlacedRectangle[] = [];
       const stillUnplacedItems: Rectangle[] = [];
       
@@ -232,22 +240,24 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
           }
       }
 
-      placedItems.push(...newlyPlacedItems);
-      unplacedItems = stillUnplacedItems;
-
-      if (unplacedItems.length > 0) {
-          // If items are left, grow the bin and try again.
-          const totalAreaUnplaced = unplacedItems.reduce((acc, img) => acc + img.width * img.height, 0);
-          const heightIncrease = Math.max(sheetWidth, Math.sqrt(totalAreaUnplaced)); // Heuristic for growth
-          
-          binHeight += heightIncrease;
-          packer = new MaxRectsBinPack(sheetWidth, binHeight, true);
-          // Re-place all items into the new larger bin
-          unplacedItems = [...sortedImages];
+      if (stillUnplacedItems.length > 0) {
+          // If items are left, grow the bin and try again from the beginning
+          binHeight *= 1.5; // Grow by 50%
           placedItems = [];
+          unplacedItems = [...sortedImages]; // Reset to the full sorted list
+      } else {
+          // All items were placed in this iteration
+          placedItems = newlyPlacedItems;
+          unplacedItems = [];
       }
   }
+
+  if (iterations >= MAX_ITERATIONS && unplacedItems.length > 0) {
+      // This should not happen with the growing logic, but it's a safeguard.
+      throw new Error("Could not fit all images. The items might be too large for the selected sheet width.");
+  }
   
+  // Calculate the final sheet length based on the highest Y-coordinate of a placed item
   const finalSheetLength = placedItems.reduce((maxLength, item) => {
     return Math.max(maxLength, item.y + item.height);
   }, 0) + margin;
