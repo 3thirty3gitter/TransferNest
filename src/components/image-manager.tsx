@@ -4,7 +4,7 @@
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, X, Loader2, Pencil } from 'lucide-react';
+import { Upload, X, Loader2, Pencil, Copy } from 'lucide-react';
 import { useRef } from 'react';
 import type { ManagedImage } from './nesting-tool';
 
@@ -13,10 +13,11 @@ type ImageManagerProps = {
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: (id: string) => void;
   onEditImage: (id: string) => void;
+  onDuplicateImage: (id: string) => void;
   isUploading: boolean;
 };
 
-export default function ImageManager({ images, onFileChange, onRemoveImage, onEditImage, isUploading }: ImageManagerProps) {
+export default function ImageManager({ images, onFileChange, onRemoveImage, onEditImage, onDuplicateImage, isUploading }: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUploadClick = () => {
@@ -58,6 +59,15 @@ export default function ImageManager({ images, onFileChange, onRemoveImage, onEd
                   data-ai-hint={image.dataAiHint}
                 />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                   <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onDuplicateImage(image.id)}
+                    aria-label="Duplicate image"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="secondary"
                     size="icon"

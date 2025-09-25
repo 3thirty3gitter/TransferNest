@@ -41,7 +41,7 @@ type Action =
   | { type: 'ADD_IMAGE'; payload: ManagedImage }
   | { type: 'REMOVE_IMAGE'; payload: string }
   | { type: 'UPDATE_IMAGE_AND_ADD_COPIES'; payload: { id: string, copies: number, width: number, height: number } }
-  | { type: 'DUPLICATE_IMAGE'; payload: { id: string, width: number, height: number } }
+  | { type: 'DUPLICATE_IMAGE'; payload: string }
   | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
   | { type: 'SET_LAYOUT'; payload: { layout: NestedLayout; length: number } }
@@ -68,7 +68,7 @@ function reducer(state: State, action: Action): State {
     case 'ADD_IMAGE':
       return { ...state, images: [...state.images, action.payload] };
     case 'REMOVE_IMAGE':
-      return { ...state, images: state.images.filter((img) => img.id !== action.payload) };
+      return { ...state, images: state.images.filter((img) => img.id !== action.payload), nestedLayout: [] };
     case 'UPDATE_IMAGE_AND_ADD_COPIES': {
         const { id, copies, width, height } = action.payload;
         const imageToUpdate = state.images.find(img => img.id === id);
@@ -89,18 +89,15 @@ function reducer(state: State, action: Action): State {
             });
         }
         
-        return { ...state, images: updatedImages };
+        return { ...state, images: updatedImages, nestedLayout: [] };
     }
     case 'DUPLICATE_IMAGE': {
-        const { id, width, height } = action.payload;
-        const imageToDuplicate = state.images.find(img => img.id === id);
+        const imageToDuplicate = state.images.find(img => img.id === action.payload);
         if (!imageToDuplicate) return state;
         
         const newImage: ManagedImage = {
             ...imageToDuplicate,
             id: `${new Date().getTime()}-${Math.random()}`,
-            width,
-            height,
         };
         
         return { ...state, images: [...state.images, newImage] };
@@ -203,6 +200,15 @@ export default function NestingTool() {
     dispatch({ type: 'REMOVE_IMAGE', payload: id });
   }, []);
 
+  const handleDuplicateImage = useCallback((id: string) => {
+    dispatch({ type: 'DUPLICATE_IMAGE', payload: id });
+    toast({
+      title: 'Image Duplicated',
+      description: 'A copy of the image has been added to your list.',
+    });
+  }, []);
+
+
   const handleSheetWidthChange = useCallback((width: 13 | 17) => {
     dispatch({ type: 'SET_SHEET_WIDTH', payload: width });
   }, []);
@@ -234,20 +240,12 @@ export default function NestingTool() {
     }, 50);
   };
 
-  const handleUpdateImage = (id: string, copies: number, width: number, height: number, duplicate: boolean) => {
-    if (duplicate) {
-        dispatch({ type: 'DUPLICATE_IMAGE', payload: { id, width, height } });
-        toast({
-            title: 'Image Duplicated',
-            description: `A new instance of the image has been added to your list.`,
-        });
-    } else {
-        dispatch({ type: 'UPDATE_IMAGE_AND_ADD_COPIES', payload: { id, copies, width, height }});
-        toast({
-            title: 'Image Updated',
-            description: `The image has been updated and ${copies} cop(y/ies) are now in the list.`,
-        });
-    }
+  const handleUpdateImage = (id: string, copies: number, width: number, height: number) => {
+    dispatch({ type: 'UPDATE_IMAGE_AND_ADD_COPIES', payload: { id, copies, width, height }});
+    toast({
+        title: 'Image Updated',
+        description: `The image has been updated and ${copies} cop(y/ies) are now in the list.`,
+    });
   }
   
   const price = useMemo(() => {
@@ -321,7 +319,7 @@ export default function NestingTool() {
       <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-headline font-bold">Gang Sheet Builder</h1>
           <p className="mt-2 max-w-2xl mx-auto text-muted-foreground">
-              Upload your images, choose a sheet size, and let our AI arrange them for you.
+              Upload your images, choose a sheet size, and our tool will arrange them for you.
           </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -331,6 +329,7 @@ export default function NestingTool() {
             onFileChange={handleFileChange}
             onRemoveImage={handleRemoveImage}
             onEditImage={handleSetEditingImage}
+            onDuplicateImage={handleDuplicateImage}
             isUploading={state.isUploading}
           />
           <SheetConfig
