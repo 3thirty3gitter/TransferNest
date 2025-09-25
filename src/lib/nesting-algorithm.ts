@@ -18,14 +18,14 @@ class FixedMaxRectsBinPack {
     private allowRotations: boolean;
     private margin: number;
 
-    public usedRectangles: PlacedRectangle[] = [];
+    public usedRectangles: (Omit<PlacedRectangle, 'id' | 'url'>)[] = [];
     public freeRectangles: { x: number; y: number; width: number; height: number }[] = [];
 
     constructor(width: number, height: number, allowRotations = true) {
         this.binWidth = width;
         this.binHeight = height;
         this.allowRotations = allowRotations;
-        this.margin = 3 / 40; // 3px margin converted to inches
+        this.margin = 3 / 40; // 3px margin in inches
 
         this.usedRectangles = [];
         this.freeRectangles = [];
@@ -103,25 +103,15 @@ class FixedMaxRectsBinPack {
                     secondary: Math.max(leftoverHoriz, leftoverVert)
                 };
             
-            case 'BestAreaFit':
-                return {
-                    primary: freeRect.width * freeRect.height - width * height,
-                    secondary: Math.min(freeRect.width - width, freeRect.height - height)
-                };
-            
-            case 'BottomLeftRule':
-                return {
-                    primary: freeRect.y,
-                    secondary: freeRect.x
-                };
-                
             default:
-                return { primary: 0, secondary: 0 };
+                 const areaFit = freeRect.width * freeRect.height - width * height;
+                 const shortSideFit = Math.min(freeRect.width - width, freeRect.height - height);
+                return { primary: areaFit, secondary: shortSideFit };
         }
     }
 
     private placeRectangle(rect: Omit<PlacedRectangle, 'id' | 'url'>) {
-        this.usedRectangles.push(rect as PlacedRectangle);
+        this.usedRectangles.push(rect);
         
         const newFreeRects: { x: number; y: number; width: number; height: number }[] = [];
         
@@ -139,8 +129,9 @@ class FixedMaxRectsBinPack {
         
         const usedX = usedRect.x;
         const usedY = usedRect.y;
-        const usedWidth = usedRect.width + this.margin;
-        const usedHeight = usedRect.height + this.margin;
+        // Use the dimensions *with* margin for splitting the free space
+        const usedWidth = (usedRect.rotated ? usedRect.height : usedRect.width) + this.margin;
+        const usedHeight = (usedRect.rotated ? usedRect.width : usedRect.height) + this.margin;
         
         if (usedX >= freeRect.x + freeRect.width || 
             usedX + usedWidth <= freeRect.x ||
@@ -201,8 +192,7 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
     
     let placedItems: PlacedRectangle[] = [];
     let unplacedItems: Rectangle[] = [...sortedImages];
-    
-    let currentSheetHeight = sortedImages.reduce((max, img) => Math.max(max, img.height), 0) * 2;
+    let currentSheetHeight = sortedImages.reduce((max, img) => Math.max(max, img.height, img.width), 0) * 1.5; // Start with a reasonable height
     
     while (unplacedItems.length > 0) {
         const packer = new FixedMaxRectsBinPack(sheetWidth, currentSheetHeight, true);
@@ -214,24 +204,34 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
             if (rect) {
                 newlyPlacedThisRound.push({
                     ...image,
-                    ...rect,
+                    x: rect.x,
+                    y: rect.y,
+                    width: rect.rotated ? image.height : image.width,
+                    height: rect.rotated ? image.width : image.height,
+                    rotated: rect.rotated,
                 });
             } else {
                 stillUnplaced.push(image);
             }
         }
         
-        placedItems.push(...newlyPlacedThisRound);
-        unplacedItems = stillUnplaced;
+        // This is a mix of newly placed and previously placed items from other bins
+        placedItems = [...placedItems.filter(p => !newlyPlacedThisRound.some(n => n.id === p.id)), ...newlyPlacedThisRound];
 
-        if (unplacedItems.length > 0 && newlyPlacedThisRound.length === 0) {
-            currentSheetHeight *= 1.5; 
+        if (stillUnplaced.length > 0 && newlyPlacedThisRound.length === 0) {
+             // If we couldn't place any more items, the bin is too small. Double it.
+            currentSheetHeight *= 2; 
+        } else if (stillUnplaced.length > 0) {
+             // Some were placed, some not. Re-run with the remaining on a potentially larger bin.
+            unplacedItems = stillUnplaced;
+        } else {
+            // All items placed
+            unplacedItems = [];
         }
     }
     
     const sheetLength = placedItems.reduce((maxLength, item) => {
-        const itemHeight = item.rotated ? item.width : item.height;
-        return Math.max(maxLength, item.y + itemHeight);
+        return Math.max(maxLength, item.y + item.height);
     }, 0) + (3 / 40); // Add final margin
 
     return { placedItems, sheetLength };

@@ -87,7 +87,6 @@ function reducer(state: State, action: Action): State {
         const newImage: ManagedImage = {
             ...imageToDuplicate,
             id: `${new Date().getTime()}-${Math.random()}`,
-            copies: 1, // Duplicates start with 1 copy
         };
         
         return { ...state, images: [...state.images, newImage] };
@@ -236,7 +235,7 @@ export default function NestingTool() {
                 description: e.message || "An unexpected error occurred while arranging images.",
             });
         }
-    }, 50);
+    }, 10);
   };
 
   const handleUpdateImage = (id: string, copies: number, width: number, height: number) => {
