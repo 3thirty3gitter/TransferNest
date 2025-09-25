@@ -52,11 +52,7 @@ type Action =
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
-  images: [
-    { id: '1', url: 'https://picsum.photos/300/400', dataAiHint: 'logo design', width: 3, height: 4, aspectRatio: 3/4 },
-    { id: '2', url: 'https://picsum.photos/400/350', dataAiHint: 'tshirt graphic', width: 4, height: 3.5, aspectRatio: 4/3.5 },
-    { id: '3', url: 'https://picsum.photos/200/300', dataAiHint: 'sticker illustration', width: 2, height: 3, aspectRatio: 2/3 },
-  ],
+  images: [],
   sheetWidth: 13,
   nestedLayout: [],
   sheetLength: 0,
