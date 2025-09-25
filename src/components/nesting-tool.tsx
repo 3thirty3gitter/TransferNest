@@ -6,7 +6,7 @@ import ImageManager from '@/components/image-manager';
 import SheetConfig from '@/components/sheet-config';
 import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout } from '@/app/schema';
-import { getNestedLayout, saveToCart } from '@/app/actions';
+import { saveToCart } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
 import { ImageEditDialog } from './image-edit-dialog';
+import { nestImages } from '@/lib/nesting-algorithm';
 
 export type ManagedImage = {
   id: string;
@@ -206,21 +207,32 @@ export default function NestingTool() {
     dispatch({ type: 'SET_SHEET_WIDTH', payload: width });
   }, []);
 
-  const handleArrange = async () => {
-    dispatch({ type: 'START_NESTING' });
-    const imagesToNest = state.images.map(({ url, width, height }) => ({ url, width, height }));
-    const result = await getNestedLayout(imagesToNest, state.sheetWidth);
-
-    if (result.error) {
-      dispatch({ type: 'SET_ERROR', payload: result.error });
+  const handleArrange = () => {
+    if (state.images.length === 0) {
       toast({
         variant: "destructive",
         title: "Layout Error",
-        description: result.error,
-      })
-    } else {
-      dispatch({ type: 'SET_LAYOUT', payload: { layout: result.layout, length: result.length } });
+        description: "Please add at least one image before arranging the sheet.",
+      });
+      return;
     }
+    dispatch({ type: 'START_NESTING' });
+
+    // Use a short timeout to allow the UI to update to the loading state
+    setTimeout(() => {
+        try {
+            const imagesToNest = state.images.map(({ id, url, width, height }) => ({ id, url, width, height }));
+            const result = nestImages(imagesToNest, state.sheetWidth);
+            dispatch({ type: 'SET_LAYOUT', payload: { layout: result.placedItems, length: result.sheetLength } });
+        } catch (e: any) {
+            dispatch({ type: 'SET_ERROR', payload: e.message });
+            toast({
+                variant: "destructive",
+                title: "Layout Error",
+                description: e.message || "An unexpected error occurred while arranging images.",
+            });
+        }
+    }, 50);
   };
 
   const handleUpdateImage = (id: string, copies: number, width: number, height: number, duplicate: boolean) => {
