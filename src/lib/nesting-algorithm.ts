@@ -30,7 +30,7 @@ type MRConfig = { heuristic: MRHeuristic; spacing: number; sheetWidth: number };
 // It correctly calculates free space and prevents overlaps.
 
 function packMaxRectsOnce(
-  items: Array<{ w: number; h: number; id: string; name: string; allowRotate: boolean }>,
+  items: Array<{ w: number; h: number; id: string; name: string; allowRotate: boolean; url: string }>,
   cfg: MRConfig
 ): { placements: PlacedRectangle[]; sheetHeight: number } {
   const { spacing, sheetWidth, heuristic } = cfg;
@@ -151,19 +151,16 @@ function packMaxRectsOnce(
     used.push({ r: usedRect, item: it, rotated: take.rotated });
   }
 
-  const placements: any[] = used.map(u => ({
+  const placements: PlacedRectangle[] = used.map(u => ({
     id: u.item.id,
+    url: u.item.url,
     x: u.r.x + Math.floor(pad / 2),
     y: u.r.y + Math.floor(pad / 2),
-    w: u.rotated ? u.item.h : u.item.w,
-    h: u.rotated ? u.item.w : u.item.h,
     width: u.rotated ? u.item.h : u.item.w,
     height: u.rotated ? u.item.w : u.item.h,
     rotated: u.rotated,
-    name: u.item.name,
-    url: u.item.url
   }));
-  const sheetHeight = placements.length ? Math.max(...placements.map(p => p.y + p.h)) + Math.floor(pad / 2) + spacing : 0;
+  const sheetHeight = placements.length ? Math.max(...placements.map(p => p.y + p.height)) + Math.floor(pad / 2) + spacing : 0;
   return { placements, sheetHeight: Math.ceil(sheetHeight) };
 }
 
