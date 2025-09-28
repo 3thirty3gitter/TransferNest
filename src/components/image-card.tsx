@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Copy, Minus, Plus } from 'lucide-react';
+import { Trash2, Copy, Minus, Plus, Scissors } from 'lucide-react';
 import type { ManagedImage } from './nesting-tool';
 
 type ImageCardProps = {
@@ -14,9 +14,10 @@ type ImageCardProps = {
   onUpdate: (id: string, updates: Partial<Omit<ManagedImage, 'id' | 'url' | 'aspectRatio'>>) => void;
   onRemove: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onTrim: (id: string) => void;
 };
 
-export function ImageCard({ image, onUpdate, onRemove, onDuplicate }: ImageCardProps) {
+export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: ImageCardProps) {
 
   const handleDimensionChange = (dimension: 'width' | 'height', value: string) => {
     const numericValue = parseFloat(value);
@@ -103,6 +104,10 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate }: ImageCardP
         <Badge variant="secondary">High quality - DPI: 300</Badge>
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t">
+          <Button variant="ghost" size="sm" onClick={() => onTrim(image.id)}>
+            <Scissors className="mr-2 h-4 w-4" />
+            Trim
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => onDuplicate(image.id)}>
             <Copy className="mr-2 h-4 w-4" />
             Duplicate

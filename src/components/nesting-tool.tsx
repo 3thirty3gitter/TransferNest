@@ -48,6 +48,7 @@ type Action =
   | { type: 'SET_SAVE_SUCCESS' }
   | { type: 'START_UPLOADING' }
   | { type: 'SET_UPLOAD_COMPLETE' }
+  | { type: 'TRIM_IMAGE', payload: { id: string; newUrl: string; newWidth: number; newHeight: number; newAspectRatio: number } }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
@@ -75,6 +76,22 @@ function reducer(state: State, action: Action): State {
           nestedLayout: [],
         };
     }
+    case 'TRIM_IMAGE':
+      return {
+        ...state,
+        images: state.images.map(img =>
+          img.id === action.payload.id
+            ? {
+                ...img,
+                url: action.payload.newUrl,
+                width: action.payload.newWidth,
+                height: action.payload.newHeight,
+                aspectRatio: action.payload.newAspectRatio,
+              }
+            : img
+        ),
+        nestedLayout: [],
+      };
     case 'DUPLICATE_IMAGE': {
         const imageToDuplicate = state.images.find(img => img.id === action.payload);
         if (!imageToDuplicate) return state;
@@ -181,6 +198,87 @@ export default function NestingTool() {
   const handleRemoveImage = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_IMAGE', payload: id });
   }, []);
+
+  const handleTrimImage = useCallback(async (id: string) => {
+    const imageToTrim = state.images.find(img => img.id === id);
+    if (!imageToTrim) return;
+
+    try {
+      const image = new window.Image();
+      // This is required for cross-origin images to be used in a canvas.
+      image.crossOrigin = 'Anonymous';
+
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) {
+          throw new Error('Could not get canvas context');
+        }
+        ctx.drawImage(image, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        let minX = canvas.width, minY = canvas.height, maxX = -1, maxY = -1;
+
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const alpha = data[(y * canvas.width + x) * 4 + 3];
+            if (alpha > 0) {
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+        }
+        
+        if (maxX === -1) { // Image is fully transparent
+            toast({ variant: 'destructive', title: 'Trim Failed', description: 'Image is fully transparent.' });
+            return;
+        }
+
+        const trimmedWidth = maxX - minX + 1;
+        const trimmedHeight = maxY - minY + 1;
+
+        const trimmedCanvas = document.createElement('canvas');
+        trimmedCanvas.width = trimmedWidth;
+        trimmedCanvas.height = trimmedHeight;
+        const trimmedCtx = trimmedCanvas.getContext('2d');
+        if (!trimmedCtx) return;
+        
+        trimmedCtx.drawImage(canvas, minX, minY, trimmedWidth, trimmedHeight, 0, 0, trimmedWidth, trimmedHeight);
+
+        const newUrl = trimmedCanvas.toDataURL();
+        const newAspectRatio = trimmedWidth / trimmedHeight;
+        // Maintain the original physical width, adjust height based on new aspect ratio
+        const newHeight = imageToTrim.width / newAspectRatio;
+
+        dispatch({
+          type: 'TRIM_IMAGE',
+          payload: {
+            id: id,
+            newUrl: newUrl,
+            newWidth: imageToTrim.width,
+            newHeight: newHeight,
+            newAspectRatio: newAspectRatio,
+          },
+        });
+        
+        toast({ title: 'Image Trimmed', description: 'Excess transparent space has been removed.' });
+      };
+
+      image.onerror = () => {
+        toast({ variant: 'destructive', title: 'Trim Failed', description: 'Could not load image for trimming. It might be a cross-origin issue.' });
+      };
+
+      image.src = imageToTrim.url;
+
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Trim Failed', description: error.message || 'An unexpected error occurred.' });
+    }
+  }, [state.images, toast]);
 
   const handleDuplicateImage = useCallback((id:string) => {
     dispatch({ type: 'DUPLICATE_IMAGE', payload: id });
@@ -308,6 +406,7 @@ export default function NestingTool() {
             onRemoveImage={handleRemoveImage}
             onUpdateImage={handleUpdateImage}
             onDuplicateImage={handleDuplicateImage}
+            onTrimImage={handleTrimImage}
             isUploading={state.isUploading}
           />
           <SheetConfig

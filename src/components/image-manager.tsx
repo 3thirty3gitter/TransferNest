@@ -14,6 +14,7 @@ type ImageManagerProps = {
   onRemoveImage: (id: string) => void;
   onUpdateImage: (id: string, updates: Partial<Omit<ManagedImage, 'id' | 'url' | 'aspectRatio'>>) => void;
   onDuplicateImage: (id: string) => void;
+  onTrimImage: (id: string) => void;
   isUploading: boolean;
 };
 
@@ -23,6 +24,7 @@ export default function ImageManager({
   onRemoveImage,
   onUpdateImage,
   onDuplicateImage,
+  onTrimImage,
   isUploading,
 }: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +65,7 @@ export default function ImageManager({
                 onUpdate={onUpdateImage}
                 onRemove={onRemoveImage}
                 onDuplicate={onDuplicateImage}
+                onTrim={onTrimImage}
               />
             ))}
           </div>
