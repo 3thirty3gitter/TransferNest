@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { NestedLayout } from '@/app/schema';
@@ -156,8 +157,8 @@ function packMaxRectsOnce(
     url: u.item.url,
     x: u.r.x + Math.floor(pad / 2),
     y: u.r.y + Math.floor(pad / 2),
-    width: u.rotated ? u.item.h : u.item.w,
-    height: u.rotated ? u.item.w : u.item.h,
+    width: u.item.w,
+    height: u.item.h,
     rotated: u.rotated,
   }));
   const sheetHeight = placements.length ? Math.max(...placements.map(p => p.y + p.height)) + Math.floor(pad / 2) + spacing : 0;
@@ -196,13 +197,13 @@ export function nestImages(
         return { placedItems: [], sheetLength: 0 };
     }
 
-    const margin = 0.125;
+    const margin = 0.1;
     let itemsToPack = images.map(img => ({
         ...img,
         w: img.width,
         h: img.height,
         name: img.id,
-        allowRotate: true, // Assuming rotation is always allowed as per UI
+        allowRotate: true,
     }));
 
     // Check if any image is too wide for the sheet
