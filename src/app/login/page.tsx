@@ -25,6 +25,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
+  AuthErrorCodes,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -54,7 +55,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Google Sign-In Failed',
-        description: error.message,
+        description: 'Could not sign in with Google. Please try again.',
       });
       setIsLoading(false);
     }
@@ -69,10 +70,14 @@ export default function LoginPage() {
       router.push('/');
     } catch (error: any) {
       console.error('Error signing in with email', error);
+      let description = 'An unexpected error occurred. Please try again.';
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        description = 'Invalid email or password. Please check your credentials and try again.';
+      }
       toast({
         variant: 'destructive',
         title: 'Sign-In Failed',
-        description: error.message,
+        description,
       });
       setIsLoading(false);
     }
@@ -92,10 +97,16 @@ export default function LoginPage() {
       router.push('/');
     } catch (error: any) {
       console.error('Error signing up with email', error);
+      let description = 'An unexpected error occurred. Please try again.';
+      if (error.code === AuthErrorCodes.EMAIL_EXISTS) {
+        description = 'An account with this email address already exists.';
+      } else if (error.code === AuthErrorCodes.WEAK_PASSWORD) {
+        description = 'The password is too weak. Please choose a stronger password.';
+      }
       toast({
         variant: 'destructive',
         title: 'Sign-Up Failed',
-        description: error.message,
+        description,
       });
       setIsLoading(false);
     }
