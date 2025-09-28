@@ -4,7 +4,6 @@
 import type { NestedLayout } from '@/app/schema';
 
 // ---------- Types ----------
-// Types used by the new, correct algorithm.
 
 type Rectangle = {
   id: string;
