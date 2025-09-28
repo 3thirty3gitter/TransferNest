@@ -8,6 +8,7 @@ type Rectangle = {
   url: string;
   width: number; // in inches
   height: number; // in inches
+  allowRotate: boolean;
 };
 
 type PlacedRectangle = Rectangle & {
@@ -23,19 +24,18 @@ type MRHeuristic = "BestAreaFit" | "BestShortSideFit" | "BestLongSideFit" | "Con
 type MRConfig = { heuristic: MRHeuristic; spacing: number; sheetWidth: number };
 
 // ---------- MaxRects Bin Packing (dense) ----------
-// Algorithm provided by user, based on Jukka Jylänki's work.
-// This is a direct implementation to ensure correctness and performance.
+// Algorithm based on Jukka Jylänki's work.
 
 function packMaxRectsOnce(
-  items: Array<{ w: number; h: number; id: string; allowRotate: boolean }>,
+  items: Array<{ w: number; h: number; id: string; url: string; allowRotate: boolean }>,
   cfg: MRConfig
-): { placements: PlacedRectangle[]; sheetHeight: number; unplaced: any[] } {
+): { placements: PlacedRectangle[]; sheetHeight: number; unplaced: typeof items } {
   const { spacing, sheetWidth, heuristic } = cfg;
   const H_MAX = 200000; // virtual tall bin
-  const pad = Math.max(0, Math.round(spacing));
-  const wants = items.map(it => ({ ...it, W: Math.max(1, Math.round(it.w + pad)), H: Math.max(1, Math.round(it.h + pad)) }));
+  const pad = Math.max(0, spacing);
+  const wants = items.map(it => ({ ...it, W: it.w + pad, H: it.h + pad }));
 
-  let free: MRRect[] = [{ x: 0, y: 0, w: Math.max(1, Math.round(sheetWidth)), h: H_MAX }];
+  let free: MRRect[] = [{ x: 0, y: 0, w: sheetWidth, h: H_MAX }];
   const used: Array<{ r: MRRect; item: typeof wants[number]; rotated: boolean }> = [];
   const unplaced: typeof wants = [];
 
@@ -62,26 +62,29 @@ function packMaxRectsOnce(
     const leftoverVert = fr.h - h;
     const shortSideFit = Math.min(leftoverHoriz, leftoverVert);
     const longSideFit = Math.max(leftoverHoriz, leftoverVert);
-    const a = fr.w * fr.h - w * h; // area fit
-    const c = contactPointScore(fr.x, fr.y, w, h);
-    return { a, shortSideFit, longSideFit, c };
+    const areaFit = fr.w * fr.h - w * h;
+    const contact = contactPointScore(fr.x, fr.y, w, h);
+    
+    switch (heuristic) {
+        case "BestShortSideFit": return { primary: shortSideFit, secondary: longSideFit };
+        case "BestLongSideFit": return { primary: longSideFit, secondary: shortSideFit };
+        case "BestAreaFit": return { primary: areaFit, secondary: shortSideFit };
+        case "ContactPoint": return { primary: -contact, secondary: shortSideFit }; // Negative to maximize contact
+        default: return { primary: shortSideFit, secondary: longSideFit };
+    }
   }
 
   function choosePosition(w: number, h: number) {
     let best: { fr: MRRect; x: number; y: number; scoreA: number; scoreB: number } | null = null;
     for (const fr of free) {
-      const sc = scoreRect(fr, w, h);
-      if (!sc) continue;
-      let sA = 0, sB = 0;
-      if (heuristic === "BestAreaFit") { sA = sc.a; sB = sc.shortSideFit; }
-      else if (heuristic === "BestShortSideFit") { sA = sc.shortSideFit; sB = sc.longSideFit; }
-      else if (heuristic === "BestLongSideFit") { sA = sc.longSideFit; sB = sc.shortSideFit; }
-      else { sA = -sc.c; sB = sc.shortSideFit; } // ContactPoint (maximize c)
-      if (!best || sA < best.scoreA || (sA === best.scoreA && sB < best.scoreB)) {
-        best = { fr, x: fr.x, y: fr.y, scoreA: sA, scoreB: sB };
+      const score = scoreRect(fr, w, h);
+      if (!score) continue;
+      
+      if (!best || score.primary < best.scoreA || (score.primary === best.scoreA && score.secondary < best.scoreB)) {
+        best = { fr, x: fr.x, y: fr.y, scoreA: score.primary, scoreB: score.secondary };
       }
     }
-    return best && { fr: best.fr, x: best.x, y: best.y };
+    return best;
   }
 
   function splitFreeNode(f: MRRect, u: MRRect) {
@@ -122,11 +125,24 @@ function packMaxRectsOnce(
   }
 
   const order = [...wants].sort((A, B) => Math.max(B.W, B.H) - Math.max(A.W, A.H));
+
   for (const it of order) {
     const nat = choosePosition(it.W, it.H);
     const rot = it.allowRotate ? choosePosition(it.H, it.W) : null;
-    const take = nat && rot ? ((nat.y < (rot?.y ?? Infinity) || (nat.y === (rot?.y ?? Infinity) && nat.x <= (rot?.x ?? Infinity))) ? { ...nat, rotated: false } : { ...rot!, rotated: true })
-                             : nat ? { ...nat, rotated: false } : rot ? { ...rot, rotated: true } : null;
+    
+    let take: { fr: MRRect; x: number; y: number; rotated: boolean; scoreA: number, scoreB: number } | null = null;
+    
+    if (nat && rot) {
+        if (nat.scoreA < rot.scoreA || (nat.scoreA === rot.scoreA && nat.scoreB < rot.scoreB)) {
+            take = { ...nat, rotated: false };
+        } else {
+            take = { ...rot, rotated: true };
+        }
+    } else if (nat) {
+        take = { ...nat, rotated: false };
+    } else if (rot) {
+        take = { ...rot, rotated: true };
+    }
     
     if (!take) { 
       unplaced.push(it);
@@ -142,85 +158,63 @@ function packMaxRectsOnce(
     used.push({ r: usedRect, item: it, rotated: take.rotated });
   }
 
-  const getOriginalItem = (item: typeof wants[number]): Rectangle => {
-    const original = items.find(orig => orig.id === item.id);
-    if (!original) throw new Error(`Could not find original item for id ${item.id}`);
-    return original;
-  }
-
-  const placements: PlacedRectangle[] = used.map(u => {
-    const originalItem = getOriginalItem(u.item);
-    return {
-      id: u.item.id,
-      url: originalItem.url,
-      x: u.r.x + Math.floor(pad / 2),
-      y: u.r.y + Math.floor(pad / 2),
-      width: u.rotated ? originalItem.height : originalItem.width,
-      height: u.rotated ? originalItem.width : originalItem.height,
-      rotated: u.rotated,
-    };
-  });
+  const placements: PlacedRectangle[] = used.map(u => ({
+    id: u.item.id,
+    url: u.item.url,
+    x: u.r.x + pad / 2,
+    y: u.r.y + pad / 2,
+    width: u.rotated ? u.item.height : u.item.width,
+    height: u.rotated ? u.item.width : u.item.height,
+    rotated: u.rotated,
+    allowRotate: u.item.allowRotate,
+  }));
   
-  const sheetHeight = placements.length ? Math.max(...placements.map(p => p.y + p.height)) + Math.floor(pad / 2) : 0;
-  return { placements, sheetHeight: Math.ceil(sheetHeight), unplaced };
+  const sheetHeight = placements.length ? Math.max(...placements.map(p => p.y + p.height + pad / 2)) : 0;
+  
+  return { placements, sheetHeight, unplaced: unplaced.map(u => items.find(i => i.id === u.id)!) };
 }
 
-
-export function nestImages(images: Rectangle[], sheetWidth: number): { placedItems: PlacedRectangle[], sheetLength: number } {
+export function nestImages(images: Omit<Rectangle, 'allowRotate'>[], sheetWidth: number): { placedItems: PlacedRectangle[], sheetLength: number } {
   if (images.length === 0) {
     return { placedItems: [], sheetLength: 0 };
   }
 
   const margin = 0.125;
-  const heuristic: MRHeuristic = "BestShortSideFit";
   const itemsToPack = images.map(img => ({
     ...img,
+    w: img.width,
+    h: img.height,
     allowRotate: true,
   }));
   
   let currentItems = [...itemsToPack];
   let placedItems: PlacedRectangle[] = [];
-  let sheetLength = 0;
+  let currentY = 0;
 
-  const MAX_ITERATIONS = 100;
-  let iterations = 0;
-
-  while(currentItems.length > 0 && iterations < MAX_ITERATIONS) {
-    iterations++;
+  while(currentItems.length > 0) {
     const sheetBinWidth = sheetWidth - (margin * 2);
 
-    const { placements, sheetHeight, unplaced } = packMaxRectsOnce(currentItems, { 
-      heuristic, 
+    const { placements, unplaced } = packMaxRectsOnce(currentItems, { 
+      heuristic: "BestShortSideFit",
       spacing: margin,
       sheetWidth: sheetBinWidth 
     });
 
+    if (placements.length === 0 && unplaced.length > 0) {
+        throw new Error("Could not fit all images. An item might be wider than the sheet. Please adjust image dimensions.");
+    }
+    
+    let maxHeightThisBin = 0;
     for(const p of placements) {
       placedItems.push({
         ...p,
-        y: p.y + sheetLength, // adjust y position by current total length
+        y: p.y + currentY, // adjust y position by current total length
       });
+      maxHeightThisBin = Math.max(maxHeightThisBin, p.y + p.height);
     }
 
-    if (placements.length > 0) {
-      sheetLength += sheetHeight;
-    }
-    
-    currentItems = unplaced.map(u => {
-      const original = itemsToPack.find(i => i.id === u.id);
-      if (!original) throw new Error("Unplaced item not found in original list");
-      return original;
-    });
-
-    if(unplaced.length > 0 && placements.length === 0) {
-      // If we are in a state where nothing can be placed, even on a new sheet,
-      // it means an item is too large for the bin width.
-       throw new Error("Could not fit all images. An item might be wider than the sheet. Please adjust image dimensions.");
-    }
-  }
-
-  if (iterations >= MAX_ITERATIONS && currentItems.length > 0) {
-    console.error("Max iterations reached, not all items were placed.", { remaining: currentItems.length });
+    currentY += maxHeightThisBin;
+    currentItems = unplaced;
   }
 
   const finalSheetLength = placedItems.reduce((maxLength, item) => {
@@ -236,3 +230,5 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
 
   return { placedItems: finalPlacements, sheetLength: finalSheetLength };
 }
+
+    
