@@ -208,27 +208,24 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
     return (b.width * b.height) - (a.width * a.height);
   });
   
-  let allPlacedItems: PlacedRectangle[] = [];
-  let unplacedItems: Rectangle[] = [...sortedImages];
-  
-  const totalArea = unplacedItems.reduce((acc, img) => acc + img.width * img.height, 0);
-  let binHeight = Math.max(sheetWidth, totalArea / sheetWidth, ...unplacedItems.map(i => Math.max(i.width, i.height))); 
+  const totalArea = sortedImages.reduce((acc, img) => acc + img.width * img.height, 0);
+  let binHeight = Math.max(sheetWidth, totalArea / sheetWidth, ...sortedImages.map(i => Math.max(i.width, i.height))); 
   
   let iterations = 0;
   const MAX_ITERATIONS = 50;
 
-  while(unplacedItems.length > 0 && iterations < MAX_ITERATIONS) {
+  while(iterations < MAX_ITERATIONS) {
       iterations++;
       
       const packer = new MaxRectsBinPack(sheetWidth, binHeight, true);
-      const newlyPlacedItems: PlacedRectangle[] = [];
-      const stillUnplacedItems: Rectangle[] = [];
+      const placedItems: PlacedRectangle[] = [];
+      let allItemsPlaced = true;
       
-      for(const image of unplacedItems) {
+      for(const image of sortedImages) {
           const rect = packer.insert(image.width, image.height);
           if (rect) {
               const originalImage = images.find(img => img.id === image.id)!;
-              newlyPlacedItems.push({
+              placedItems.push({
                   ...originalImage,
                   x: rect.x + margin / 2,
                   y: rect.y + margin / 2,
@@ -237,31 +234,21 @@ export function nestImages(images: Rectangle[], sheetWidth: number): { placedIte
                   rotated: rect.rotated,
               });
           } else {
-              stillUnplacedItems.push(image);
+              allItemsPlaced = false;
+              break;
           }
       }
 
-      if (stillUnplacedItems.length > 0) {
-          // If items are left, grow the bin and try again from the beginning
-          binHeight *= 1.5; // Grow by 50%
-          allPlacedItems = [];
-          unplacedItems = [...sortedImages]; // Reset to the full sorted list
-      } else {
-          // All items were placed in this iteration
-          allPlacedItems = newlyPlacedItems;
-          unplacedItems = [];
+      if (allItemsPlaced) {
+        const finalSheetLength = placedItems.reduce((maxLength, item) => {
+            return Math.max(maxLength, item.y + item.height);
+        }, 0) + margin;
+        
+        return { placedItems, sheetLength: finalSheetLength };
       }
+       
+      binHeight *= 1.5; // Grow by 50% and try again
   }
 
-  if (iterations >= MAX_ITERATIONS && unplacedItems.length > 0) {
-      // This should not happen with the growing logic, but it's a safeguard.
-      throw new Error("Could not fit all images. The items might be too large for the selected sheet width.");
-  }
-  
-  const finalSheetLength = allPlacedItems.reduce((maxLength, item) => {
-    return Math.max(maxLength, item.y + item.height);
-  }, 0) + margin;
-
-
-  return { placedItems: allPlacedItems, sheetLength: finalSheetLength };
+  throw new Error("Could not fit all images. The items might be too large for the selected sheet width, even after expanding the sheet.");
 }
