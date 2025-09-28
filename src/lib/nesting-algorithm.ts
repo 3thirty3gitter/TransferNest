@@ -5,7 +5,7 @@
 import type { NestedLayout } from '@/app/schema';
 
 // ---------- Types ----------
-// Types used by the new, correct algorithm provided by the user.
+// Types used by the new, correct algorithm.
 
 type Rectangle = {
   id: string;
@@ -26,9 +26,8 @@ type MRHeuristic = "BestAreaFit" | "BestShortSideFit" | "BestLongSideFit" | "Con
 
 type MRConfig = { heuristic: MRHeuristic; spacing: number; sheetWidth: number };
 
-// ---------- MaxRects Bin Packing (Dense) - User Provided Correct Implementation ----------
-// This is a direct, line-for-line implementation of the code provided by the user to ensure correctness.
-// It correctly calculates free space and prevents overlaps.
+// ---------- MaxRects Bin Packing (Dense) ----------
+// A robust implementation of the MaxRects algorithm for efficient packing.
 
 function packMaxRectsOnce(
   items: Array<{ w: number; h: number; id: string; name: string; allowRotate: boolean; url: string }>,
