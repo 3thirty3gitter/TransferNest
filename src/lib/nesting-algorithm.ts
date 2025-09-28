@@ -1,17 +1,19 @@
 
 'use client';
 
+import type { NestedLayout } from '@/app/schema';
+
 // ---------- Types ----------
+// Types used by the new, correct algorithm provided by the user.
 
 type Rectangle = {
   id: string;
   url: string;
   width: number; // in inches
   height: number; // in inches
-  allowRotate: boolean;
 };
 
-type PlacedRectangle = Rectangle & {
+export type PlacedRectangle = Rectangle & {
   x: number;
   y: number;
   rotated: boolean;
@@ -21,269 +23,213 @@ type MRRect = { x: number; y: number; w: number; h: number };
 
 type MRHeuristic = "BestAreaFit" | "BestShortSideFit" | "BestLongSideFit" | "ContactPoint";
 
-// ---------- MaxRects Bin Packing (dense) ----------
-// A correct implementation of the algorithm by Jukka Jylänki.
+type MRConfig = { heuristic: MRHeuristic; spacing: number; sheetWidth: number };
 
-class MaxRectsBinPack {
-  private binWidth: number;
-  private binHeight: number;
-  private allowRotate: boolean;
-  private usedRectangles: MRRect[] = [];
-  private freeRectangles: MRRect[];
-  private heuristic: MRHeuristic;
+// ---------- MaxRects Bin Packing (Dense) - User Provided Correct Implementation ----------
+// This is a direct, line-for-line implementation of the code provided by the user to ensure correctness.
+// It correctly calculates free space and prevents overlaps.
 
-  constructor(width: number, height: number, heuristic: MRHeuristic = "BestShortSideFit", allowRotate = true) {
-    this.binWidth = width;
-    this.binHeight = height;
-    this.allowRotate = allowRotate;
-    this.heuristic = heuristic;
-    this.freeRectangles = [{ x: 0, y: 0, w: width, h: height }];
-  }
+function packMaxRectsOnce(
+  items: Array<{ w: number; h: number; id: string; name: string; allowRotate: boolean }>,
+  cfg: MRConfig
+): { placements: PlacedRectangle[]; sheetHeight: number } {
+  const { spacing, sheetWidth, heuristic } = cfg;
+  const H_MAX = 200000; // virtual tall bin
+  const pad = Math.max(0, Math.round(spacing));
+  const wants = items.map(it => ({ ...it, W: Math.max(1, Math.round(it.w + pad)), H: Math.max(1, Math.round(it.h + pad)) }));
 
-  insert(width: number, height: number): MRRect | null {
-    let bestNode: { x: number; y: number; w: number; h: number; score1: number; score2: number; } | null = null;
-    let bestScore1 = Infinity;
-    let bestScore2 = Infinity;
+  let free: MRRect[] = [{ x: 0, y: 0, w: Math.max(1, Math.round(sheetWidth)), h: H_MAX }];
+  const used: Array<{ r: MRRect; item: typeof wants[number]; rotated: boolean }> = [];
 
-    for (let i = 0; i < this.freeRectangles.length; ++i) {
-        const freeRect = this.freeRectangles[i];
-
-        // Try to place the rectangle in its original orientation
-        if (freeRect.w >= width && freeRect.h >= height) {
-            const { score1, score2 } = this.calculateScores(freeRect, width, height);
-            if (score1 < bestScore1 || (score1 === bestScore1 && score2 < bestScore2)) {
-                bestScore1 = score1;
-                bestScore2 = score2;
-                bestNode = { x: freeRect.x, y: freeRect.y, w: width, h: height, score1, score2 };
-            }
-        }
-
-        // If rotation is allowed, try to place the rectangle rotated
-        if (this.allowRotate && freeRect.w >= height && freeRect.h >= width) {
-            const { score1, score2 } = this.calculateScores(freeRect, height, width);
-            if (score1 < bestScore1 || (score1 === bestScore1 && score2 < bestScore2)) {
-                bestScore1 = score1;
-                bestScore2 = score2;
-                bestNode = { x: freeRect.x, y: freeRect.y, w: height, h: width, score1, score2 };
-            }
-        }
-    }
-    
-    if (!bestNode) {
-        return null;
-    }
-    
-    const newNode: MRRect = { x: bestNode.x, y: bestNode.y, w: bestNode.w, h: bestNode.h };
-    this.placeRect(newNode);
-    return newNode;
-  }
-  
-  private calculateScores(freeRect: MRRect, width: number, height: number): { score1: number; score2: number } {
-    switch (this.heuristic) {
-      case "BestShortSideFit":
-        return {
-          score1: Math.min(freeRect.w - width, freeRect.h - height),
-          score2: Math.max(freeRect.w - width, freeRect.h - height)
-        };
-      case "BestLongSideFit":
-        return {
-          score1: Math.max(freeRect.w - width, freeRect.h - height),
-          score2: Math.min(freeRect.w - width, freeRect.h - height)
-        };
-      case "BestAreaFit":
-         return {
-          score1: (freeRect.w * freeRect.h) - (width * height),
-          score2: Math.min(freeRect.w - width, freeRect.h - height)
-        };
-      case "ContactPoint":
-        // The more contact points, the better the score (lower is better)
-        return {
-            score1: -this.getContactScore(freeRect, width, height),
-            score2: Math.min(freeRect.w - width, freeRect.h - height)
-        }
-      default: // Default to BestShortSideFit
-        return {
-          score1: Math.min(freeRect.w - width, freeRect.h - height),
-          score2: Math.max(freeRect.w - width, freeRect.h - height)
-        };
-    }
-  }
-
-  private getContactScore(freeRect: MRRect, width: number, height: number): number {
+  function contactPointScore(x: number, y: number, w: number, h: number) {
     let score = 0;
-    if (freeRect.x === 0 || freeRect.x + width === this.binWidth) score += height;
-    if (freeRect.y === 0 || freeRect.y + height === this.binHeight) score += width;
-
-    for (const used of this.usedRectangles) {
-        if (used.x === freeRect.x + width || used.x + used.w === freeRect.x) {
-            score += Math.max(0, Math.min(freeRect.y + height, used.y + used.h) - Math.max(freeRect.y, used.y));
-        }
-        if (used.y === freeRect.y + height || used.y + used.h === freeRect.y) {
-            score += Math.max(0, Math.min(freeRect.x + width, used.x + used.w) - Math.max(freeRect.x, used.x));
-        }
+    for (const u of used) {
+      const r = u.r;
+      if (r.x === x + w || r.x + r.w === x) {
+        const top = Math.max(r.y, y), bottom = Math.min(r.y + r.h, y + h);
+        score += Math.max(0, bottom - top);
+      }
+      if (r.y === y + h || r.y + r.h === y) {
+        const left = Math.max(r.x, x), right = Math.min(r.x + r.w, x + w);
+        score += Math.max(0, right - left);
+      }
     }
+    if (x === 0 || x + w === sheetWidth) score += h; // touch bin sides
     return score;
   }
 
-  private placeRect(node: MRRect) {
-    const newFreeRects: MRRect[] = [];
-    for (let i = 0; i < this.freeRectangles.length; i++) {
-        const freeRect = this.freeRectangles[i];
-        const newRects = this.splitFreeNode(freeRect, node);
-        newFreeRects.push(...newRects);
-    }
-    this.freeRectangles = newFreeRects;
-
-    this.pruneFreeList();
-    this.usedRectangles.push(node);
+  function scoreRect(fr: MRRect, w: number, h: number) {
+    if (w > fr.w || h > fr.h) return null;
+    const leftoverHoriz = fr.w - w;
+    const leftoverVert = fr.h - h;
+    const shortSideFit = Math.min(leftoverHoriz, leftoverVert);
+    const longSideFit = Math.max(leftoverHoriz, leftoverVert);
+    const a = fr.w * fr.h - w * h; // area fit
+    const c = contactPointScore(fr.x, fr.y, w, h);
+    return { a, shortSideFit, longSideFit, c };
   }
 
-  // This is the corrected splitting logic.
-  private splitFreeNode(freeNode: MRRect, usedNode: MRRect): MRRect[] {
-    // If the rectangles don't even intersect, return the original free node.
-    if (usedNode.x >= freeNode.x + freeNode.w || usedNode.x + usedNode.w <= freeNode.x ||
-        usedNode.y >= freeNode.y + freeNode.h || usedNode.y + usedNode.h <= freeNode.y) {
-        return [freeNode];
+  function choosePosition(w: number, h: number) {
+    let best: { fr: MRRect; x: number; y: number; scoreA: number; scoreB: number } | null = null;
+    for (const fr of free) {
+      const sc = scoreRect(fr, w, h);
+      if (!sc) continue;
+      let sA = 0, sB = 0;
+      if (heuristic === "BestAreaFit") { sA = sc.a; sB = sc.shortSideFit; }
+      else if (heuristic === "BestShortSideFit") { sA = sc.shortSideFit; sB = sc.longSideFit; }
+      else if (heuristic === "BestLongSideFit") { sA = sc.longSideFit; sB = sc.shortSideFit; }
+      else { sA = -sc.c; sB = sc.shortSideFit; } // ContactPoint (maximize c)
+      if (!best || sA < best.scoreA || (sA === best.scoreA && sB < best.scoreB)) {
+        best = { fr, x: fr.x, y: fr.y, scoreA: sA, scoreB: sB };
+      }
     }
-    
-    const newRects: MRRect[] = [];
-
-    // New free rectangle above the used node.
-    if (usedNode.y > freeNode.y) {
-        newRects.push({ x: freeNode.x, y: freeNode.y, w: freeNode.w, h: usedNode.y - freeNode.y });
-    }
-
-    // New free rectangle below the used node.
-    if (usedNode.y + usedNode.h < freeNode.y + freeNode.h) {
-        newRects.push({ x: freeNode.x, y: usedNode.y + usedNode.h, w: freeNode.w, h: freeNode.y + freeNode.h - (usedNode.y + usedNode.h) });
-    }
-
-    // New free rectangle to the left of the used node.
-    if (usedNode.x > freeNode.x) {
-        newRects.push({ x: freeNode.x, y: freeNode.y, w: usedNode.x - freeNode.x, h: freeNode.h });
-    }
-
-    // New free rectangle to the right of the used node.
-    if (usedNode.x + usedNode.w < freeNode.x + freeNode.w) {
-        newRects.push({ x: usedNode.x + usedNode.w, y: freeNode.y, w: freeNode.x + freeNode.w - (usedNode.x + usedNode.w), h: freeNode.h });
-    }
-
-    return newRects;
+    return best && { fr: best.fr, x: best.x, y: best.y };
   }
 
-  private pruneFreeList() {
-    let i = 0;
-    while (i < this.freeRectangles.length) {
-      let j = i + 1;
-      while (j < this.freeRectangles.length) {
-        const rect1 = this.freeRectangles[i];
-        const rect2 = this.freeRectangles[j];
-        if (this.isContained(rect1, rect2)) {
-          this.freeRectangles.splice(i, 1);
-          i--;
-          break; // Restart inner loop
-        }
-        if (this.isContained(rect2, rect1)) {
-          this.freeRectangles.splice(j, 1);
-        } else {
-          j++;
+  function splitFreeNode(f: MRRect, u: MRRect): MRRect[] {
+    const out: MRRect[] = [];
+    if (u.x >= f.x + f.w || u.x + u.w <= f.x || u.y >= f.y + f.h || u.y + u.h <= f.y) return [f];
+    if (u.y > f.y) out.push({ x: f.x, y: f.y, w: f.w, h: u.y - f.y });
+    if (u.y + u.h < f.y + f.h) out.push({ x: f.x, y: u.y + u.h, w: f.w, h: f.y + f.h - (u.y + u.h) });
+    const top = Math.max(f.y, u.y), bottom = Math.min(f.y + f.h, u.y + u.h);
+    if (u.x > f.x) out.push({ x: f.x, y: top, w: u.x - f.x, h: bottom - top });
+    if (u.x + u.w < f.x + f.w) out.push({ x: u.x + u.w, y: top, w: f.x + f.w - (u.x + u.w), h: bottom - top });
+    return out.filter(r => r.w > 0 && r.h > 0);
+  }
+
+  function prune() {
+    for (let i = 0; i < free.length; i++) {
+      for (let j = i + 1; j < free.length; j++) {
+        const a = free[i], b = free[j];
+        if (!a || !b) continue;
+        if (a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h) { free.splice(i, 1); i--; break; }
+        if (b.x >= a.x && b.y >= a.y && b.x + b.w <= a.x + a.w && b.y + b.h <= a.y + a.h) { free.splice(j, 1); j--; }
+      }
+    }
+    let merged = true;
+    while (merged) {
+      merged = false;
+      outer: for (let i = 0; i < free.length; i++) {
+        for (let j = i + 1; j < free.length; j++) {
+          const a = free[i], b = free[j];
+          if (a.y === b.y && a.h === b.h && (a.x + a.w === b.x || b.x + b.w === a.x)) {
+            const nx = Math.min(a.x, b.x); const nw = a.w + b.w; free.splice(j, 1); free[i] = { x: nx, y: a.y, w: nw, h: a.h }; merged = true; break outer;
+          }
+          if (a.x === b.x && a.w === b.w && (a.y + a.h === b.y || b.y + b.h === a.y)) {
+            const ny = Math.min(a.y, b.y); const nh = a.h + b.h; free.splice(j, 1); free[i] = { x: a.x, y: ny, w: a.w, h: nh }; merged = true; break outer;
+          }
         }
       }
-      i++;
     }
   }
 
-  private isContained(a: MRRect, b: MRRect): boolean {
-    return a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
+  const order = [...wants].sort((A, B) => B.W * B.H - A.W * A.H);
+  for (const it of order) {
+    const nat = choosePosition(it.W, it.H);
+    const rot = it.allowRotate ? choosePosition(it.H, it.W) : null;
+    let take = null;
+    if (nat && rot) {
+      take = (nat.y < rot.y || (nat.y === rot.y && nat.x <= rot.x)) 
+        ? { ...nat, rotated: false } 
+        : { ...rot, rotated: true };
+    } else if (nat) {
+      take = { ...nat, rotated: false };
+    } else if (rot) {
+      take = { ...rot, rotated: true };
+    }
+
+    if (!take) { console.warn("MaxRects: couldn't place", it.name); continue; }
+
+    const w = take.rotated ? it.H : it.W;
+    const h = take.rotated ? it.W : it.H;
+    const usedRect: MRRect = { x: take.x, y: take.y, w, h };
+    
+    const newFree: MRRect[] = [];
+    for (const fr of free) newFree.push(...splitFreeNode(fr, usedRect));
+    free = newFree;
+    prune();
+    used.push({ r: usedRect, item: it, rotated: take.rotated });
   }
+
+  const placements: any[] = used.map(u => ({
+    id: u.item.id,
+    x: u.r.x + Math.floor(pad / 2),
+    y: u.r.y + Math.floor(pad / 2),
+    w: u.rotated ? u.item.h : u.item.w,
+    h: u.rotated ? u.item.w : u.item.h,
+    width: u.rotated ? u.item.h : u.item.w,
+    height: u.rotated ? u.item.w : u.item.h,
+    rotated: u.rotated,
+    name: u.item.name,
+    url: u.item.url
+  }));
+  const sheetHeight = placements.length ? Math.max(...placements.map(p => p.y + p.h)) + Math.floor(pad / 2) + spacing : 0;
+  return { placements, sheetHeight: Math.ceil(sheetHeight) };
+}
+
+function packMaxRects(
+  items: Array<{ w: number; h: number; id: string; name: string; allowRotate: boolean; url: string; }>,
+  sheetWidth: number,
+  spacing: number,
+  heuristic: MRHeuristic = "BestShortSideFit",
+  restarts = 8
+): { placements: PlacedRectangle[]; sheetHeight: number } {
+  let best: { placements: PlacedRectangle[]; sheetHeight: number } | null = null;
+  const base = [...items];
+  const rng = (seed: number) => () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  let rnd = rng(items.length * 97 + 13);
+
+  for (let r = 0; r < Math.max(1, restarts); r++) {
+    const shuffled = [...base].sort((a, b) => (b.w * b.h - a.w * a.h) || (rnd() - 0.5));
+    const attempt = packMaxRectsOnce(shuffled, { heuristic, spacing, sheetWidth });
+    if (!best || attempt.sheetHeight < best.sheetHeight) best = attempt;
+  }
+  return best || { placements: [], sheetHeight: 0 };
 }
 
 
-// Wrapper function to use the MaxRectsBinPack class
-export function nestImages(images: Omit<Rectangle, 'allowRotate'>[], sheetWidth: number): { placedItems: PlacedRectangle[], sheetLength: number } {
-  if (images.length === 0) {
-    return { placedItems: [], sheetLength: 0 };
-  }
+// ---------- Bridge to Application Code ----------
 
-  const margin = 0.125;
-  let itemsToPack = images.map(img => ({
-    ...img,
-    w: img.width, // Use original dimensions for item data
-    h: img.height,
-    packW: img.width + margin, // Padded dimensions for packing
-    packH: img.height + margin,
-    allowRotate: true,
-  }));
+export function nestImages(
+    images: { id: string; url: string; width: number; height: number }[],
+    sheetWidth: number
+): { placedItems: NestedLayout; sheetLength: number } {
 
-  const sheetBinWidth = sheetWidth;
-  for (const item of itemsToPack) {
-    const itemTooWide = item.packW > sheetBinWidth;
-    const itemCanRotate = item.allowRotate;
-    const rotatedItemTooWide = item.packH > sheetBinWidth;
-    if (itemTooWide && (!itemCanRotate || (itemCanRotate && rotatedItemTooWide))) {
-      const needed = Math.max(item.packW, itemCanRotate ? item.packH : item.packW) - margin;
-      throw new Error(`Image is too wide for the sheet. Item requires ${needed.toFixed(2)}", but sheet width is only ${sheetWidth.toFixed(2)}". Please adjust image dimensions.`);
+    if (images.length === 0) {
+        return { placedItems: [], sheetLength: 0 };
     }
-  }
 
-  // Sort items by largest dimension to pack big ones first
-  itemsToPack.sort((a, b) => Math.max(b.packW, b.packH) - Math.max(a.packW, a.packH));
+    const margin = 0.125;
+    let itemsToPack = images.map(img => ({
+        ...img,
+        w: img.width,
+        h: img.height,
+        name: img.id,
+        allowRotate: true, // Assuming rotation is always allowed as per UI
+    }));
 
-  let placedItems: PlacedRectangle[] = [];
-  let unplacedItems = [...itemsToPack];
-  let sheetLength = 0;
-  
-  while(unplacedItems.length > 0) {
-      const binHeight = Math.max(sheetLength, 100); // Start with a reasonable height and grow
-      const packer = new MaxRectsBinPack(sheetBinWidth, binHeight, "BestShortSideFit", true);
-      const stillUnplaced: typeof itemsToPack = [];
-      
-      for(const item of unplacedItems) {
-          const node = packer.insert(item.packW, item.packH);
-          if (node) {
-              const isRotated = node.w !== item.packW;
-              placedItems.push({
-                  ...item,
-                  id: item.id,
-                  url: item.url,
-                  x: node.x + margin / 2,
-                  y: node.y + margin / 2,
-                  width: isRotated ? item.height : item.width,
-                  height: isRotated ? item.width : item.height,
-                  rotated: isRotated,
-                  allowRotate: item.allowRotate,
-              });
-          } else {
-              stillUnplaced.push(item);
-          }
-      }
-      
-      if (stillUnplaced.length === 0) {
-          break; // All items placed
-      }
+    // Check if any image is too wide for the sheet
+    for (const item of itemsToPack) {
+        const itemTooWide = item.w + margin > sheetWidth;
+        const rotatedItemTooWide = item.h + margin > sheetWidth;
+        if (itemTooWide && rotatedItemTooWide) {
+            const needed = Math.min(item.w, item.h) + margin;
+            throw new Error(`Image is too wide for the sheet. Item requires ${needed.toFixed(2)}", but sheet width is only ${sheetWidth.toFixed(2)}". Please adjust image dimensions.`);
+        }
+    }
+    
+    // Use the robust user-provided packing function
+    const result = packMaxRects(itemsToPack, sheetWidth, margin, "BestShortSideFit", 8);
 
-      if (stillUnplaced.length === unplacedItems.length) {
-          // If no items could be placed in this iteration, it means the bin is full.
-          // We need to calculate the current max height and start a new bin from there.
-          let currentMaxY = 0;
-          for(const p of placedItems) {
-              currentMaxY = Math.max(currentMaxY, p.y + (p.rotated ? p.width : p.height) + margin/2);
-          }
-          sheetLength = currentMaxY;
-          // To avoid infinite loops with items that can't be placed, we should already have thrown an error.
-          // But as a safeguard:
-          console.error("Algorithm stalled. Could not place remaining items. Check item dimensions.", stillUnplaced);
-          throw new Error("Could not fit all items. Please check image dimensions.");
-      }
-      
-      unplacedItems = stillUnplaced;
-  }
-
-  let finalSheetLength = 0;
-  for(const p of placedItems) {
-    const pHeight = p.rotated ? p.width : p.height;
-    finalSheetLength = Math.max(finalSheetLength, p.y + pHeight + margin/2);
-  }
-
-  return { placedItems, sheetLength: finalSheetLength };
+    const finalPlacements = result.placements.map(p => ({
+        id: p.id,
+        url: itemsToPack.find(i => i.id === p.id)?.url || '',
+        x: p.x,
+        y: p.y,
+        width: p.width,
+        height: p.height,
+        rotated: p.rotated,
+    }));
+    
+    return { placedItems: finalPlacements, sheetLength: result.sheetHeight };
 }
