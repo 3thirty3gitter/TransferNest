@@ -1,7 +1,7 @@
 
 'use client';
 
-import { ShoppingCart, User, LogOut } from 'lucide-react';
+import { ShoppingCart, User, LogOut, TestTube2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
@@ -38,6 +38,12 @@ export default function Header() {
         <div className="flex items-center gap-2 sm:gap-4">
           <Button asChild variant="ghost">
              <Link href="/nesting-tool">Nesting Tool</Link>
+          </Button>
+           <Button asChild variant="ghost" className="hidden sm:inline-flex">
+             <Link href="/nesting-tester">
+                <TestTube2 className="mr-2 h-4 w-4" />
+                Nesting Tester
+             </Link>
           </Button>
           <Button variant="ghost" size="icon" aria-label="Shopping Cart">
             <ShoppingCart className="h-6 w-6" />
