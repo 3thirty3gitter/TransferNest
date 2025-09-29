@@ -389,7 +389,7 @@ class MaxRectsBinPack {
 // This is the stateless wrapper function that connects the UI to the packing algorithm.
 
 export function nestImages(
-  images: { id: string; url: string; width: number; height: number }[],
+  images: { id: string; url: string; width: number; height: number, copies: number }[],
   sheetWidth: number
 ): { placedItems: NestedLayout; sheetLength: number } {
   
@@ -403,12 +403,15 @@ export function nestImages(
 
   const margin = 0.2;
 
-  // Add margin to images for packing and sort them by largest dimension (a proven heuristic).
-  const processedItems = itemsToPack.map((img: any) => ({
-    ...img,
-    widthWithMargin: img.width + margin,
-    heightWithMargin: img.height + margin,
-  })).sort((a: any, b: any) => Math.max(b.width, b.height) - Math.max(a.width, a.height));
+  // Create the full list of items to pack, respecting the 'copies' attribute.
+  const processedItems = itemsToPack.flatMap((img: any) => 
+    Array.from({ length: img.copies || 1 }, (_, i) => ({
+      ...img,
+      id: `${img.id}-${i}`, // Unique ID for each copy
+      widthWithMargin: img.width + margin,
+      heightWithMargin: img.height + margin,
+    }))
+  ).sort((a: any, b: any) => Math.max(b.width, b.height) - Math.max(a.width, a.height));
   
   const placedItems: NestedLayout = [];
   let maxSheetY = 0;
