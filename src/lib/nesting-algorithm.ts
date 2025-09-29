@@ -35,28 +35,22 @@ export function nestImages(
     }
 
     const margin = 0.2;
-    const itemsToPack = images.map(img => ({
+    // Create a deep copy of the images to avoid mutating the original state. This is the fix.
+    const itemsToPack = JSON.parse(JSON.stringify(images)).map((img: any) => ({
+        ...img,
         w: img.width,
         h: img.height,
-        id: img.id,
-        url: img.url,
         name: img.id,
         allowRotate: true,
     }));
 
+
     // Check if any image is too wide for the sheet and scale it down if necessary
     for (const item of itemsToPack) {
-        if (item.w > sheetWidth && item.h > sheetWidth) {
-             const needed = Math.min(item.w, item.h);
-             throw new Error(`Image is too wide for the sheet. Item requires ${needed.toFixed(2)}", but sheet width is only ${sheetWidth.toFixed(2)}". Please adjust image dimensions.`);
-        }
         if (item.w > sheetWidth && (!item.allowRotate || item.h > sheetWidth)) {
             const scaleRatio = sheetWidth / item.w;
-            const originalItemInPack = itemsToPack.find(i => i.id === item.id);
-            if (originalItemInPack) {
-              originalItemInPack.w = sheetWidth;
-              originalItemInPack.h = item.h * scaleRatio;
-            }
+            item.w = sheetWidth;
+            item.h = item.h * scaleRatio;
         }
     }
 
