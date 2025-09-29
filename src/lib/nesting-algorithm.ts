@@ -22,21 +22,20 @@ type MRRect = { x: number; y: number; w: number; h: number };
 
 type MRHeuristic = "BestAreaFit" | "BestShortSideFit" | "BestLongSideFit" | "ContactPoint";
 
-type MRConfig = { heuristic: MRHeuristic; spacing: number; sheetWidth: number };
-
 // ---------- MaxRects Bin Packing (Dense) ----------
 // A robust implementation of the MaxRects algorithm for efficient packing.
 
 function packMaxRectsOnce(
   items: Array<{ w: number; h: number; id: string; name: string; allowRotate: boolean; url: string }>,
-  cfg: MRConfig
+  cfgSheetWidth: number,
+  spacing: number,
+  heuristic: MRHeuristic
 ): { placements: PlacedRectangle[]; sheetHeight: number } {
-  const { spacing, sheetWidth, heuristic } = cfg;
   const H_MAX = 200000; // virtual tall bin
-  const pad = Math.max(0, Math.round(spacing));
-  const wants = items.map(it => ({ ...it, W: Math.max(1, Math.round(it.w + pad)), H: Math.max(1, Math.round(it.h + pad)) }));
+  const pad = Math.max(0, spacing);
+  const wants = items.map(it => ({ ...it, W: it.w + pad, H: it.h + pad }));
 
-  let free: MRRect[] = [{ x: 0, y: 0, w: Math.max(1, Math.round(sheetWidth)), h: H_MAX }];
+  let free: MRRect[] = [{ x: 0, y: 0, w: cfgSheetWidth, h: H_MAX }];
   const used: Array<{ r: MRRect; item: typeof wants[number]; rotated: boolean }> = [];
 
   function contactPointScore(x: number, y: number, w: number, h: number) {
@@ -52,7 +51,7 @@ function packMaxRectsOnce(
         score += Math.max(0, right - left);
       }
     }
-    if (x === 0 || x + w === sheetWidth) score += h; // touch bin sides
+    if (x === 0 || x + w === cfgSheetWidth) score += h; // touch bin sides
     return score;
   }
 
@@ -121,22 +120,31 @@ function packMaxRectsOnce(
     }
   }
 
-  const order = [...wants].sort((A, B) => B.W * B.H - A.W * A.H);
+  const order = [...wants].sort((A, B) => Math.max(B.W, B.H) - Math.max(A.W, A.H) || Math.min(B.W, B.H) - Math.min(A.W, A.H));
+
   for (const it of order) {
     const nat = choosePosition(it.W, it.H);
-    const rot = it.allowRotate ? choosePosition(it.H, it.W) : null;
+    const rot = it.allowRotate && it.W !== it.H ? choosePosition(it.H, it.W) : null;
     let take = null;
+
     if (nat && rot) {
-      take = (nat.y < rot.y || (nat.y === rot.y && nat.x <= rot.x)) 
-        ? { ...nat, rotated: false } 
-        : { ...rot, rotated: true };
+      if (nat.y < rot.y) {
+        take = { ...nat, rotated: false };
+      } else if (rot.y < nat.y) {
+        take = { ...rot, rotated: true };
+      } else {
+        take = nat.x <= rot.x ? { ...nat, rotated: false } : { ...rot, rotated: true };
+      }
     } else if (nat) {
       take = { ...nat, rotated: false };
     } else if (rot) {
       take = { ...rot, rotated: true };
     }
 
-    if (!take) { console.warn("MaxRects: couldn't place", it.name); continue; }
+    if (!take) { 
+      console.warn("MaxRects: couldn't place", it.name); 
+      continue; 
+    }
 
     const w = take.rotated ? it.H : it.W;
     const h = take.rotated ? it.W : it.H;
@@ -152,14 +160,15 @@ function packMaxRectsOnce(
   const placements: PlacedRectangle[] = used.map(u => ({
     id: u.item.id,
     url: u.item.url,
-    x: u.r.x + Math.floor(pad / 2),
-    y: u.r.y + Math.floor(pad / 2),
-    width: u.item.w,
-    height: u.item.h,
+    x: u.r.x + (pad / 2),
+    y: u.r.y + (pad / 2),
+    width: u.rotated ? u.item.h : u.item.w,
+    height: u.rotated ? u.item.w : u.item.h,
     rotated: u.rotated,
   }));
-  const sheetHeight = placements.length ? Math.max(...placements.map(p => p.y + p.height)) + Math.floor(pad / 2) + spacing : 0;
-  return { placements, sheetHeight: Math.ceil(sheetHeight) };
+
+  const sheetHeight = placements.length ? Math.max(...placements.map(p => p.y + p.height + (pad / 2))) : 0;
+  return { placements, sheetHeight };
 }
 
 function packMaxRects(
@@ -175,15 +184,12 @@ function packMaxRects(
   let rnd = rng(items.length * 97 + 13);
 
   for (let r = 0; r < Math.max(1, restarts); r++) {
-    const shuffled = [...base].sort((a, b) => (b.w * b.h - a.w * a.h) || (rnd() - 0.5));
-    const attempt = packMaxRectsOnce(shuffled, { heuristic, spacing, sheetWidth });
+    const shuffled = [...base].sort((a, b) => (Math.max(b.w, b.h) - Math.max(a.w, a.h)) || (rnd() - 0.5));
+    const attempt = packMaxRectsOnce(shuffled, sheetWidth, spacing, heuristic);
     if (!best || attempt.sheetHeight < best.sheetHeight) best = attempt;
   }
   return best || { placements: [], sheetHeight: 0 };
 }
-
-
-// ---------- Bridge to Application Code ----------
 
 export function nestImages(
     images: { id: string; url: string; width: number; height: number }[],
@@ -194,37 +200,44 @@ export function nestImages(
         return { placedItems: [], sheetLength: 0 };
     }
 
-    const margin = 0.1;
-    let itemsToPack = images.map(img => ({
-        ...img,
-        w: img.width,
-        h: img.height,
-        name: img.id,
-        allowRotate: true,
-    }));
+    const margin = 0.2;
+    const itemsToPack = images.map(img => {
+        let item = {
+            w: img.width,
+            h: img.height,
+            id: img.id,
+            url: img.url,
+            name: img.id,
+            allowRotate: true,
+        };
 
-    // Check if any image is too wide for the sheet
-    for (const item of itemsToPack) {
-        const itemTooWide = item.w + margin > sheetWidth;
-        const rotatedItemTooWide = item.h + margin > sheetWidth;
-        if (itemTooWide && rotatedItemTooWide) {
-            const needed = Math.min(item.w, item.h) + margin;
-            throw new Error(`Image is too wide for the sheet. Item requires ${needed.toFixed(2)}", but sheet width is only ${sheetWidth.toFixed(2)}". Please adjust image dimensions.`);
+        const aspectRatio = item.w / item.h;
+
+        // If item is too wide, scale it down to fit.
+        // This is a correction from previous versions.
+        if (item.w > sheetWidth && item.h > sheetWidth) {
+             const canRotate = item.allowRotate;
+             const fitsNormal = item.w <= sheetWidth;
+             const fitsRotated = item.h <= sheetWidth;
+
+             if (!fitsNormal && !fitsRotated) {
+                 const needed = canRotate ? Math.min(item.w, item.h) : item.w;
+                 throw new Error(`Image is too wide for the sheet. Item requires ${needed.toFixed(2)}", but sheet width is only ${sheetWidth.toFixed(2)}". Please adjust image dimensions.`);
+             }
         }
-    }
-    
-    // Use the robust user-provided packing function
-    const result = packMaxRects(itemsToPack, sheetWidth, margin, "BestShortSideFit", 8);
+        
+        if (item.w > sheetWidth && item.allowRotate && item.h <= sheetWidth) {
+            // If it fits by rotating, the packing algorithm will handle it.
+        } else if (item.w > sheetWidth) {
+            const scaleRatio = sheetWidth / item.w;
+            item.w = sheetWidth;
+            item.h = item.w / aspectRatio;
+        }
 
-    const finalPlacements = result.placements.map(p => ({
-        id: p.id,
-        url: itemsToPack.find(i => i.id === p.id)?.url || '',
-        x: p.x,
-        y: p.y,
-        width: p.width,
-        height: p.height,
-        rotated: p.rotated,
-    }));
+        return item;
+    });
+
+    const result = packMaxRects(itemsToPack, sheetWidth, margin, "BestShortSideFit", 16);
     
-    return { placedItems: finalPlacements, sheetLength: result.sheetHeight };
+    return { placedItems: result.placements, sheetLength: result.sheetHeight };
 }
