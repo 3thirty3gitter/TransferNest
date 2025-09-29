@@ -41,6 +41,7 @@ export default function CartPage() {
     if (result.success) {
       setCartItems(cartItems.filter(item => item.id !== docId));
       toast({ title: 'Item Removed', description: 'The item has been removed from your cart.' });
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.error });
     }

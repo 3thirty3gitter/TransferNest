@@ -25,38 +25,38 @@ export default function Header() {
   const { user } = useAuth();
   const [cartCount, setCartCount] = useState(0);
 
-  useEffect(() => {
-    async function fetchCartCount() {
-      if (user) {
+  const fetchCartCount = async () => {
+    if (user) {
+      try {
         const items = await getCartItemsAction(user.uid);
         setCartCount(items.length);
-      } else {
+      } catch (error) {
+        console.error("Failed to fetch cart count:", error);
         setCartCount(0);
       }
+    } else {
+      setCartCount(0);
     }
+  };
+  
+  // Fetch cart count on user change
+  useEffect(() => {
     fetchCartCount();
-    // Re-fetch when user changes
   }, [user]);
   
   // This effect will listen for custom events to update the cart count
   // This allows other components to trigger a refresh of the cart count
   useEffect(() => {
-    const handleCartUpdate = async () => {
-      if(user) {
-        const items = await getCartItemsAction(user.uid);
-        setCartCount(items.length);
-      }
-    }
-    window.addEventListener('cartUpdated', handleCartUpdate);
+    window.addEventListener('cartUpdated', fetchCartCount);
     return () => {
-      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener('cartUpdated', fetchCartCount);
     }
-  }, [user]);
+  }, [user]); // Re-add listener if user changes
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setCartCount(0);
+      setCartCount(0); // Clear cart count on sign out
     } catch (error) {
       console.error('Error signing out', error);
     }

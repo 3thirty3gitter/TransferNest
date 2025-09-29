@@ -9,7 +9,7 @@ export async function saveToCart(
   cartItem: Omit<CartItem, 'id' | 'createdAt'>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Validate the cart item against the schema before saving
+    // Validate the cart item against a schema that matches the client-side object
     const validatedCartItem = CartItemSchema.omit({ id: true, createdAt: true }).parse(cartItem);
 
     if (!validatedCartItem.userId) {
