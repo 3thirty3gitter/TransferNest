@@ -38,7 +38,14 @@ class MaxRectsBinPack {
           score2
         );
         break;
-      // Other packing heuristics can be implemented here if needed.
+      case 'BestLongSideFit':
+        newNode = this.findPositionForNewNodeBestLongSideFit(
+          width,
+          height,
+          score2,
+          score1
+        );
+        break;
     }
 
     if (newNode.height === 0 || newNode.width === 0) {
@@ -113,6 +120,56 @@ class MaxRectsBinPack {
     }
     return bestNode;
   }
+  
+  findPositionForNewNodeBestLongSideFit(
+    width,
+    height,
+    bestShortSideFit,
+    bestLongSideFit
+  ) {
+    let bestNode = { x: 0, y: 0, width: 0, height: 0, rotated: false };
+    bestLongSideFit.value = Infinity;
+
+    for (let i = 0; i < this.freeRectangles.length; i++) {
+        // Try to place the rectangle in upright (non-flipped) orientation.
+        if (this.freeRectangles[i].width >= width && this.freeRectangles[i].height >= height) {
+            let leftoverHoriz = Math.abs(this.freeRectangles[i].width - width);
+            let leftoverVert = Math.abs(this.freeRectangles[i].height - height);
+            let shortSideFit = Math.min(leftoverHoriz, leftoverVert);
+            let longSideFit = Math.max(leftoverHoriz, leftoverVert);
+
+            if (longSideFit < bestLongSideFit.value || (longSideFit === bestLongSideFit.value && shortSideFit < bestShortSideFit.value)) {
+                bestNode.x = this.freeRectangles[i].x;
+                bestNode.y = this.freeRectangles[i].y;
+                bestNode.width = width;
+                bestNode.height = height;
+                bestNode.rotated = false;
+                bestShortSideFit.value = shortSideFit;
+                bestLongSideFit.value = longSideFit;
+            }
+        }
+
+        // Try to place the rectangle rotated.
+        if (this.allowRotations && this.freeRectangles[i].width >= height && this.freeRectangles[i].height >= width) {
+            let leftoverHoriz = Math.abs(this.freeRectangles[i].width - height);
+            let leftoverVert = Math.abs(this.freeRectangles[i].height - width);
+            let shortSideFit = Math.min(leftoverHoriz, leftoverVert);
+            let longSideFit = Math.max(leftoverHoriz, leftoverVert);
+
+            if (longSideFit < bestLongSideFit.value || (longSideFit === bestLongSideFit.value && shortSideFit < bestShortSideFit.value)) {
+                bestNode.x = this.freeRectangles[i].x;
+                bestNode.y = this.freeRectangles[i].y;
+                bestNode.width = height;
+                bestNode.height = width;
+                bestNode.rotated = true;
+                bestShortSideFit.value = shortSideFit;
+                bestLongSideFit.value = longSideFit;
+            }
+        }
+    }
+    return bestNode;
+  }
+
 
   placeRectangle(node) {
     let numRectanglesToProcess = this.freeRectangles.length;
@@ -219,7 +276,8 @@ export const VIRTUAL_SHEET_HEIGHT = 20000;
 export function nestImages(
   images, // Array of { id, url, width, height, copies }
   sheetWidth,
-  virtualHeight = VIRTUAL_SHEET_HEIGHT
+  virtualHeight = VIRTUAL_SHEET_HEIGHT,
+  method = 'BestShortSideFit'
 ) {
   // Create a deep copy to ensure the function is stateless.
   const itemsToPack = JSON.parse(JSON.stringify(images));
@@ -246,7 +304,7 @@ export function nestImages(
   let maxSheetY = 0;
 
   for (const item of allItems) {
-    const rect = packer.insert(item.widthWithMargin, item.heightWithMargin);
+    const rect = packer.insert(item.widthWithMargin, item.heightWithMargin, method);
 
     if (rect) {
       placedItems.push({

@@ -23,6 +23,7 @@ type TestConfig = {
   maxDim: number;
   minCopies: number;
   maxCopies: number;
+  method: 'BestShortSideFit' | 'BestLongSideFit';
 };
 
 type TestStats = {
@@ -58,6 +59,7 @@ const initialState: State = {
     maxDim: 12,
     minCopies: 1,
     maxCopies: 5,
+    method: 'BestShortSideFit',
   },
   stats: {
     totalIterations: 0,
@@ -140,7 +142,7 @@ export default function NestingTesterPage() {
       }));
 
       // 2. Run nesting algorithm
-      const result = nestImages(images, config.sheetWidth, VIRTUAL_SHEET_HEIGHT * 2);
+      const result = nestImages(images, config.sheetWidth, VIRTUAL_SHEET_HEIGHT * 2, config.method);
 
       // 3. Calculate efficiency
       const efficiency = calculateOccupancy(result.placedItems, config.sheetWidth, result.sheetLength);
@@ -181,7 +183,7 @@ export default function NestingTesterPage() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [state, toast]);
+  }, [state.isRunning, state.isPaused, state.config, state.stats, state.bestResult, state.worstResult]);
 
 
   const handleStart = () => dispatch({ type: 'START_TEST' });
@@ -190,10 +192,10 @@ export default function NestingTesterPage() {
   const handleReset = () => dispatch({ type: 'RESET_TEST' });
   
   const handleConfigChange = (key: string, value: string | number) => {
-    const numericValue = typeof value === 'string' ? parseFloat(value) : value;
-    if (!isNaN(numericValue)) {
-        dispatch({ type: 'UPDATE_CONFIG', payload: { [key]: numericValue } });
-    }
+    const numericValue = typeof value === 'string' && key !== 'method' ? parseFloat(value) : value;
+    if (key !== 'method' && isNaN(numericValue as number)) return;
+
+    dispatch({ type: 'UPDATE_CONFIG', payload: { [key]: numericValue } });
   };
 
   const progress = state.stats.totalIterations > 0 ? (state.stats.currentIteration / state.stats.totalIterations) * 100 : 0;
@@ -232,6 +234,16 @@ export default function NestingTesterPage() {
                             <SelectContent>
                                 <SelectItem value="13">13 inches</SelectItem>
                                 <SelectItem value="17">17 inches</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label>Packing Heuristic</Label>
+                        <Select value={state.config.method} onValueChange={v => handleConfigChange('method', v)} disabled={state.isRunning}>
+                            <SelectTrigger><SelectValue/></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="BestShortSideFit">Best Short Side Fit</SelectItem>
+                                <SelectItem value="BestLongSideFit">Best Long Side Fit</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
