@@ -1,3 +1,4 @@
+
 import Header from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart } from 'lucide-react';
@@ -151,6 +152,7 @@ export default function Home() {
                         src="https://picsum.photos/600/400" 
                         alt="Colorful DTF transfers on a t-shirt"
                         fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
                         className="object-cover"
                         data-ai-hint="colorful t-shirt"
                       />
