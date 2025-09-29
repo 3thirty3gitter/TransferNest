@@ -236,7 +236,7 @@ export default function NestingTesterPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Max Dimension</Label>
-                            <Input type="number" value={state.config.maxDim} onChange={e => handleConfigChange('maxDim', e.target.value)} disabled={stateisRunning}/>
+                            <Input type="number" value={state.config.maxDim} onChange={e => handleConfigChange('maxDim', e.target.value)} disabled={state.isRunning}/>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -340,3 +340,5 @@ export default function NestingTesterPage() {
     </div>
   );
 }
+
+    
