@@ -105,7 +105,7 @@ function reducer(state: State, action: Action): State {
         const newImages = [...state.images];
         newImages.splice(index + 1, 0, newImage);
         
-        return { ...state, images: newImages };
+        return { ...state, images: newImages, nestedLayout: [] };
     }
     case 'SET_SHEET_WIDTH':
       return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0 };
