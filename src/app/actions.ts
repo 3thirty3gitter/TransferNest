@@ -3,10 +3,10 @@
 
 import { z } from 'zod';
 import { type CartItem, CartItemSchema } from '@/app/schema';
-import { addCartItem, getCartItems, removeCartItem } from '@/services/firestore';
+import { getCartItems, removeCartItem, addCartItem } from '@/services/firestore';
 
 export async function saveToCart(
-  cartItem: Omit<CartItem, 'id'>
+  cartItem: Omit<CartItem, 'id' | 'createdAt'>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Validate the cart item against the schema before saving

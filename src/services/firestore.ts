@@ -5,9 +5,9 @@ import type { CartItem } from '@/app/schema';
 
 /**
  * Adds a new item to the user's cart in Firestore.
- * @param item - The complete cart item object, validated against CartItemSchema.
+ * @param item - The cart item object, without id.
  */
-export async function addCartItem(item: Omit<CartItem, 'id'>) {
+export async function addCartItem(item: Omit<CartItem, 'id' | 'createdAt'>) {
   try {
     const cartCollectionRef = collection(db, 'cartItems');
     await addDoc(cartCollectionRef, {

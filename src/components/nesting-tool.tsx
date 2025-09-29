@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
 import { nestImages } from '@/lib/nesting-algorithm';
+import { serverTimestamp } from 'firebase/firestore';
 
 export type ManagedImage = {
   id: string;
@@ -359,7 +360,7 @@ export default function NestingTool() {
 
     dispatch({ type: 'START_SAVING' });
 
-    const cartItem: Omit<CartItem, 'id'> = {
+    const cartItem: Omit<CartItem, 'id' | 'createdAt'> = {
       userId: user.uid,
       sheetWidth: state.sheetWidth,
       sheetLength: state.sheetLength,
