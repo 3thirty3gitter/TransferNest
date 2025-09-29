@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useReducer, useCallback, useMemo } from 'react';
@@ -359,6 +360,7 @@ export default function NestingTool() {
     dispatch({ type: 'START_SAVING' });
 
     const cartItem = {
+      userId: user.uid,
       sheetWidth: state.sheetWidth,
       sheetLength: state.sheetLength,
       price: price,
