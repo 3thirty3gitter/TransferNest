@@ -70,7 +70,7 @@ export default function Home() {
                 </div>
                 <h3 className="mt-4 text-xl font-headline font-semibold">Wholesale Pricing</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Maximize your profits with our competitive gang sheet pricing. The more you print, the more you save.
+                  Pay by the inch and save. Just $0.45/linear inch for 13" sheets and $0.59/linear inch for 17" sheets.
                 </p>
               </div>
             </div>

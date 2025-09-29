@@ -334,7 +334,7 @@ export default function NestingTool() {
   
   const price = useMemo(() => {
     if(state.sheetLength === 0) return 0;
-    const rate = state.sheetWidth === 13 ? 2.00 : 2.50;
+    const rate = state.sheetWidth === 13 ? 0.45 : 0.59;
     return state.sheetLength * rate;
   }, [state.sheetLength, state.sheetWidth]);
 
