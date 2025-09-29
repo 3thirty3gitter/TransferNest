@@ -5,7 +5,7 @@ import { useState, useReducer, useCallback, useMemo } from 'react';
 import ImageManager from '@/components/image-manager';
 import SheetConfig from '@/components/sheet-config';
 import SheetPreview from '@/components/sheet-preview';
-import type { NestedLayout } from '@/app/schema';
+import type { NestedLayout, CartItem } from '@/app/schema';
 import { saveToCart } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft } from 'lucide-react';
@@ -15,7 +15,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
 import { nestImages } from '@/lib/nesting-algorithm';
-import { serverTimestamp } from 'firebase/firestore';
 
 export type ManagedImage = {
   id: string;
@@ -360,7 +359,7 @@ export default function NestingTool() {
 
     dispatch({ type: 'START_SAVING' });
 
-    const cartItem = {
+    const cartItem: Omit<CartItem, 'id'> = {
       userId: user.uid,
       sheetWidth: state.sheetWidth,
       sheetLength: state.sheetLength,
@@ -376,6 +375,8 @@ export default function NestingTool() {
         title: "Added to Cart!",
         description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
       });
+      // Dispatch a custom event to notify the header to update the cart count
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
     } else {
       dispatch({ type: 'SET_ERROR', payload: result.error || 'An unknown error occurred.' });
       toast({

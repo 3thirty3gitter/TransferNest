@@ -16,14 +16,47 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useEffect, useState } from 'react';
+import { getCartItemsAction } from '@/app/actions';
+import { Badge } from '../ui/badge';
 
 
 export default function Header() {
   const { user } = useAuth();
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    async function fetchCartCount() {
+      if (user) {
+        const items = await getCartItemsAction(user.uid);
+        setCartCount(items.length);
+      } else {
+        setCartCount(0);
+      }
+    }
+    fetchCartCount();
+    // Re-fetch when user changes
+  }, [user]);
+  
+  // This effect will listen for custom events to update the cart count
+  // This allows other components to trigger a refresh of the cart count
+  useEffect(() => {
+    const handleCartUpdate = async () => {
+      if(user) {
+        const items = await getCartItemsAction(user.uid);
+        setCartCount(items.length);
+      }
+    }
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    }
+  }, [user]);
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
+      setCartCount(0);
     } catch (error) {
       console.error('Error signing out', error);
     }
@@ -45,8 +78,13 @@ export default function Header() {
                 Nesting Tester
              </Link>
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Shopping Cart">
-            <ShoppingCart className="h-6 w-6" />
+          <Button asChild variant="ghost" size="icon" aria-label="Shopping Cart" className="relative">
+            <Link href="/cart">
+                <ShoppingCart className="h-6 w-6" />
+                {cartCount > 0 && (
+                    <Badge variant="destructive" className="absolute -right-2 -top-2 h-5 w-5 justify-center p-0">{cartCount}</Badge>
+                )}
+            </Link>
           </Button>
           {user ? (
             <DropdownMenu>
