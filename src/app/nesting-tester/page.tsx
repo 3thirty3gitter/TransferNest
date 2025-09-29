@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useReducer, useCallback, useMemo } from 'react';
+import { useState, useReducer, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -93,6 +93,8 @@ function reducer(state: State, action: any): State {
       return { ...state, isPaused: true };
     case 'RESUME_TEST':
       return { ...state, isPaused: false };
+    case 'STOP_TEST':
+      return { ...state, isRunning: false, isPaused: false };
     case 'RESET_TEST':
       return { ...initialState, config: state.config };
     case 'UPDATE_STATS':
@@ -112,70 +114,79 @@ const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 export default function NestingTesterPage() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const runTestIteration = useCallback(() => {
-    const { config, stats } = state;
-    if (stats.currentIteration >= config.iterations || state.isPaused) {
-        if(stats.currentIteration >= config.iterations) {
-            dispatch({ type: 'PAUSE_TEST' });
-        }
-      return;
+  useEffect(() => {
+    let animationFrameId: number;
+
+    const runTestIteration = () => {
+      if (state.isPaused || !state.isRunning) {
+        return;
+      }
+      
+      const { config, stats } = state;
+      
+      if (stats.currentIteration >= config.iterations) {
+        dispatch({ type: 'STOP_TEST' });
+        toast({ title: 'Test Complete!', description: `${config.iterations} iterations completed.`});
+        return;
+      }
+
+      // 1. Generate random images
+      const images = Array.from({ length: config.numUniqueImages }, (_, i) => ({
+        id: `img-${i}`,
+        url: 'https://placehold.co/300x300/e2e8f0/e2e8f0', // Placeholder, not rendered
+        width: rand(config.minDim, config.maxDim),
+        height: rand(config.minDim, config.maxDim),
+        copies: Math.round(rand(config.minCopies, config.maxCopies)),
+      }));
+
+      // 2. Run nesting algorithm
+      const result = nestImages(images, config.sheetWidth, VIRTUAL_SHEET_HEIGHT * 2);
+
+      // 3. Calculate efficiency
+      const efficiency = calculateOccupancy(result.placedItems, config.sheetWidth, result.sheetLength);
+
+      // 4. Update stats
+      const newIteration = stats.currentIteration + 1;
+      const newAvgEfficiency = (stats.avgEfficiency * stats.currentIteration + efficiency) / newIteration;
+      
+      let newBestResult = state.bestResult;
+      if (!state.bestResult || efficiency > state.bestResult.efficiency) {
+        newBestResult = { ...result, efficiency, sheetWidth: config.sheetWidth, layout: result.placedItems };
+        dispatch({ type: 'SET_BEST_RESULT', payload: newBestResult });
+      }
+
+      let newWorstResult = state.worstResult;
+      if (!state.worstResult || efficiency < state.worstResult.efficiency) {
+        newWorstResult = { ...result, efficiency, sheetWidth: config.sheetWidth, layout: result.placedItems };
+        dispatch({ type: 'SET_WORST_RESULT', payload: newWorstResult });
+      }
+
+      dispatch({
+        type: 'UPDATE_STATS',
+        payload: {
+          currentIteration: newIteration,
+          avgEfficiency: newAvgEfficiency,
+          bestEfficiency: newBestResult?.efficiency ?? 0,
+          worstEfficiency: newWorstResult?.efficiency ?? 1,
+        },
+      });
+
+      animationFrameId = requestAnimationFrame(runTestIteration);
+    };
+
+    if (state.isRunning && !state.isPaused) {
+      animationFrameId = requestAnimationFrame(runTestIteration);
     }
 
-    // 1. Generate random images
-    const images = Array.from({ length: config.numUniqueImages }, (_, i) => ({
-      id: `img-${i}`,
-      url: 'https://placehold.co/300x300/e2e8f0/e2e8f0', // Placeholder, not rendered
-      width: rand(config.minDim, config.maxDim),
-      height: rand(config.minDim, config.maxDim),
-      copies: Math.round(rand(config.minCopies, config.maxCopies)),
-    }));
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [state, toast]);
 
-    // 2. Run nesting algorithm
-    const result = nestImages(images, config.sheetWidth, VIRTUAL_SHEET_HEIGHT * 2);
 
-    // 3. Calculate efficiency
-    const efficiency = calculateOccupancy(result.placedItems, config.sheetWidth, result.sheetLength);
-
-    // 4. Update stats
-    const newIteration = stats.currentIteration + 1;
-    const newAvgEfficiency = (stats.avgEfficiency * stats.currentIteration + efficiency) / newIteration;
-
-    let newBestResult = state.bestResult;
-    if (!state.bestResult || efficiency > state.bestResult.efficiency) {
-      newBestResult = { ...result, efficiency, sheetWidth: config.sheetWidth, layout: result.placedItems };
-      dispatch({ type: 'SET_BEST_RESULT', payload: newBestResult });
-    }
-
-    let newWorstResult = state.worstResult;
-    if (!state.worstResult || efficiency < state.worstResult.efficiency) {
-      newWorstResult = { ...result, efficiency, sheetWidth: config.sheetWidth, layout: result.placedItems };
-       dispatch({ type: 'SET_WORST_RESULT', payload: newWorstResult });
-    }
-
-    dispatch({
-      type: 'UPDATE_STATS',
-      payload: {
-        currentIteration: newIteration,
-        avgEfficiency: newAvgEfficiency,
-        bestEfficiency: newBestResult?.efficiency ?? 0,
-        worstEfficiency: newWorstResult?.efficiency ?? 1,
-      },
-    });
-
-    // Schedule next iteration
-    requestAnimationFrame(runTestIteration);
-  }, [state]);
-
-  const handleStart = () => {
-    dispatch({ type: 'START_TEST' });
-    requestAnimationFrame(runTestIteration);
-  };
-  
+  const handleStart = () => dispatch({ type: 'START_TEST' });
   const handlePause = () => dispatch({ type: 'PAUSE_TEST' });
-  const handleResume = () => {
-    dispatch({ type: 'RESUME_TEST' });
-    requestAnimationFrame(runTestIteration);
-  };
+  const handleResume = () => dispatch({ type: 'RESUME_TEST' });
   const handleReset = () => dispatch({ type: 'RESET_TEST' });
   
   const handleConfigChange = (key: string, value: string | number) => {
@@ -186,7 +197,6 @@ export default function NestingTesterPage() {
   };
 
   const progress = state.stats.totalIterations > 0 ? (state.stats.currentIteration / state.stats.totalIterations) * 100 : 0;
-
 
   return (
     <div className="container py-8">
@@ -265,7 +275,7 @@ export default function NestingTesterPage() {
                         <Button onClick={handlePause} variant="secondary" className="w-full"><Pause className="mr-2"/> Pause</Button>
                     )}
                    
-                    <Button onClick={handleReset} variant="outline" disabled={!state.isRunning}><RotateCcw className="mr-2"/> Reset</Button>
+                    <Button onClick={handleReset} variant="outline" disabled={!state.isRunning && state.stats.currentIteration === 0}><RotateCcw className="mr-2"/> Reset</Button>
                 </CardContent>
             </Card>
         </div>
@@ -295,7 +305,7 @@ export default function NestingTesterPage() {
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Worst Efficiency</p>
-                            <p className="text-2xl font-bold text-red-500">{(state.stats.worstEfficiency * 100).toFixed(2)}%</p>
+                            <p className="text-2xl font-bold text-red-500">{(state.stats.worstEfficiency === 1 && state.stats.currentIteration === 0) ? '0.00' : (state.stats.worstEfficiency * 100).toFixed(2)}%</p>
                         </div>
                     </div>
                 </CardContent>
@@ -340,3 +350,5 @@ export default function NestingTesterPage() {
     </div>
   );
 }
+
+    
