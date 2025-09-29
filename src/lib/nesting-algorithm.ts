@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { NestedLayout } from '@/app/schema';
@@ -444,3 +445,5 @@ export function nestImages(
   // Return the list of placed items and the final calculated sheet length.
   return { placedItems, sheetLength: maxSheetY };
 }
+
+    
