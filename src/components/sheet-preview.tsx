@@ -11,7 +11,7 @@ import { useMemo } from 'react';
 type SheetPreviewProps = {
   sheetWidth: number;
   sheetLength: number;
-  nestedLayout: NestedLayout;
+  nestedLayout: NestedLayout | null | undefined;
   isLoading: boolean;
 };
 
@@ -26,7 +26,7 @@ export default function SheetPreview({
   const displayWidth = sheetWidth * PIXELS_PER_INCH;
   const displayHeight = sheetLength > 0 ? sheetLength * PIXELS_PER_INCH : 300;
 
-  const memoizedLayout = useMemo(() => nestedLayout, [nestedLayout]);
+  const memoizedLayout = useMemo(() => nestedLayout || [], [nestedLayout]);
 
   const checkerboardStyle = {
     backgroundImage:
@@ -101,3 +101,5 @@ export default function SheetPreview({
     </Card>
   );
 }
+
+    

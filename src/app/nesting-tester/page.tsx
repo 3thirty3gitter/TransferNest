@@ -107,7 +107,7 @@ function reducer(state: State, action: any): State {
 }
 
 // Helper to generate a random number in a range
-const rand = (min, max) => Math.random() * (max - min) + min;
+const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 
 export default function NestingTesterPage() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -142,13 +142,13 @@ export default function NestingTesterPage() {
 
     let newBestResult = state.bestResult;
     if (!state.bestResult || efficiency > state.bestResult.efficiency) {
-      newBestResult = { ...result, efficiency, sheetWidth: config.sheetWidth };
+      newBestResult = { ...result, efficiency, sheetWidth: config.sheetWidth, layout: result.placedItems };
       dispatch({ type: 'SET_BEST_RESULT', payload: newBestResult });
     }
 
     let newWorstResult = state.worstResult;
     if (!state.worstResult || efficiency < state.worstResult.efficiency) {
-      newWorstResult = { ...result, efficiency, sheetWidth: config.sheetWidth };
+      newWorstResult = { ...result, efficiency, sheetWidth: config.sheetWidth, layout: result.placedItems };
        dispatch({ type: 'SET_WORST_RESULT', payload: newWorstResult });
     }
 
@@ -157,8 +157,8 @@ export default function NestingTesterPage() {
       payload: {
         currentIteration: newIteration,
         avgEfficiency: newAvgEfficiency,
-        bestEfficiency: newBestResult.efficiency,
-        worstEfficiency: newWorstResult.efficiency,
+        bestEfficiency: newBestResult?.efficiency ?? 0,
+        worstEfficiency: newWorstResult?.efficiency ?? 1,
       },
     });
 
@@ -340,5 +340,7 @@ export default function NestingTesterPage() {
     </div>
   );
 }
+
+    
 
     
