@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
 import { nestImages } from '@/lib/nesting-algorithm';
+import { serverTimestamp } from 'firebase/firestore';
 
 export type ManagedImage = {
   id: string;

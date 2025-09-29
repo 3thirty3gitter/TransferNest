@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { serverTimestamp } from 'firebase/firestore';
 
 const NestedImageSchema = z.object({
   id: z.string().optional(), // ID might not be returned, but URL should be
@@ -19,6 +20,7 @@ export const CartItemSchema = z.object({
   sheetLength: z.number(),
   price: z.number(),
   layout: NestedLayoutSchema,
+  createdAt: z.any().optional(),
 });
 
 export type CartItem = z.infer<typeof CartItemSchema>;
