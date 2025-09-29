@@ -12,3 +12,13 @@ const NestedImageSchema = z.object({
 export const NestedLayoutSchema = z.array(NestedImageSchema);
 
 export type NestedLayout = z.infer<typeof NestedLayoutSchema>;
+
+export const CartItemSchema = z.object({
+  userId: z.string(),
+  sheetWidth: z.number(),
+  sheetLength: z.number(),
+  price: z.number(),
+  layout: NestedLayoutSchema,
+});
+
+export type CartItem = z.infer<typeof CartItemSchema>;

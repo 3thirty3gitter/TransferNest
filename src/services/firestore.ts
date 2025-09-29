@@ -1,36 +1,16 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { NestedLayout } from '@/app/schema';
-
-// Define the structure of a cart item
-interface CartItem {
-  userId: string;
-  sheetWidth: number;
-  sheetLength: number;
-  price: number;
-  layout: NestedLayout;
-  createdAt: any; // Using 'any' for serverTimestamp for simplicity
-}
+import type { CartItem } from '@/app/schema';
 
 /**
  * Adds a new item to the user's cart in Firestore.
- * @param userId - The ID of the user.
- * @param item - The cart item details.
+ * @param item - The complete cart item object, validated against CartItemSchema.
  */
-export async function addCartItem(
-  userId: string,
-  item: {
-    sheetWidth: number;
-    sheetLength: number;
-    price: number;
-    layout: NestedLayout;
-  }
-) {
+export async function addCartItem(item: CartItem) {
   try {
     const cartCollectionRef = collection(db, 'cartItems');
     await addDoc(cartCollectionRef, {
-      userId,
       ...item,
       createdAt: serverTimestamp(),
     });

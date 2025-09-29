@@ -1,31 +1,28 @@
 
 'use server';
 
-import { NestedLayoutSchema, type NestedLayout } from '@/app/schema';
+import { type CartItem, CartItemSchema } from '@/app/schema';
 import { addCartItem } from '@/services/firestore';
-import { auth } from '@/lib/firebase';
 
-export async function saveToCart(cartItem: {
-  userId: string;
-  sheetWidth: number;
-  sheetLength: number;
-  price: number;
-  layout: NestedLayout;
-}): Promise<{ success: boolean; error?: string }> {
-  if (!cartItem.userId) {
-    return { success: false, error: 'You must be logged in to add items to the cart.' };
-  }
-
+export async function saveToCart(
+  cartItem: CartItem
+): Promise<{ success: boolean; error?: string }> {
   try {
-    await addCartItem(cartItem.userId, {
-      sheetWidth: cartItem.sheetWidth,
-      sheetLength: cartItem.sheetLength,
-      price: cartItem.price,
-      layout: cartItem.layout,
-    });
+    // Validate the cart item against the schema before saving
+    const validatedCartItem = CartItemSchema.parse(cartItem);
+
+    if (!validatedCartItem.userId) {
+      return { success: false, error: 'You must be logged in to add items to the cart.' };
+    }
+    
+    await addCartItem(validatedCartItem);
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving to cart:', error);
+    // Handle Zod validation errors specifically
+    if (error instanceof z.ZodError) {
+      return { success: false, error: 'Invalid cart item data.' };
+    }
     return { success: false, error: 'Could not save item to cart.' };
   }
 }
