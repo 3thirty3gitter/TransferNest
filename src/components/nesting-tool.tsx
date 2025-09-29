@@ -64,9 +64,9 @@ const initialState: State = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'ADD_IMAGE':
-      return { ...state, images: [...state.images, { ...action.payload, copies: 1 }] };
+      return { ...state, images: [...state.images, { ...action.payload, copies: 1 }], nestedLayout: [], sheetLength: 0 };
     case 'REMOVE_IMAGE':
-      return { ...state, images: state.images.filter((img) => img.id !== action.payload), nestedLayout: [] };
+      return { ...state, images: state.images.filter((img) => img.id !== action.payload), nestedLayout: [], sheetLength: 0 };
     case 'UPDATE_IMAGE': {
         return {
           ...state,
@@ -74,6 +74,7 @@ function reducer(state: State, action: Action): State {
             img.id === action.payload.id ? { ...img, ...action.payload.updates } : img
           ),
           nestedLayout: [],
+          sheetLength: 0,
         };
     }
     case 'TRIM_IMAGE':
@@ -91,13 +92,14 @@ function reducer(state: State, action: Action): State {
             : img
         ),
         nestedLayout: [],
+        sheetLength: 0,
       };
     case 'DUPLICATE_IMAGE': {
         const imageToDuplicate = state.images.find(img => img.id === action.payload);
         if (!imageToDuplicate) return state;
         
         const newImage: ManagedImage = {
-            ...imageToDuplicate,
+            ...imageToDuplicate, // This now correctly copies the current, potentially modified, dimensions
             id: `${new Date().getTime()}-${Math.random()}`,
         };
         
@@ -105,7 +107,7 @@ function reducer(state: State, action: Action): State {
         const newImages = [...state.images];
         newImages.splice(index + 1, 0, newImage);
         
-        return { ...state, images: newImages, nestedLayout: [] };
+        return { ...state, images: newImages, nestedLayout: [], sheetLength: 0 };
     }
     case 'SET_SHEET_WIDTH':
       return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0 };
@@ -158,12 +160,23 @@ export default function NestingTool() {
             return new Promise<Omit<ManagedImage, 'copies'>>((resolve, reject) => {
                 const image = new window.Image();
                 image.onload = () => {
+                    const defaultWidth = 3;
+                    const aspectRatio = image.width / image.height;
+                    const defaultHeight = defaultWidth / aspectRatio;
+
+                    // If an image is wider than the current sheet, scale it down to fit.
+                    const finalWidth = image.width > (state.sheetWidth * 96) // Approx 96dpi for initial check
+                        ? state.sheetWidth - 0.5 // give it some padding
+                        : defaultWidth;
+                    
+                    const finalHeight = finalWidth / aspectRatio;
+
                     resolve({
                         id: `${new Date().getTime()}-${Math.random()}`,
                         url: url,
-                        width: 3, // default width
-                        height: (image.height / image.width) * 3, // maintain aspect ratio
-                        aspectRatio: image.width / image.height,
+                        width: finalWidth,
+                        height: finalHeight,
+                        aspectRatio: aspectRatio,
                         dataAiHint: 'uploaded image',
                     });
                 };
@@ -188,7 +201,6 @@ export default function NestingTool() {
         });
     } finally {
         dispatch({ type: 'SET_UPLOAD_COMPLETE' });
-        // Reset file input to allow re-uploading the same file
         if (event.target) {
             event.target.value = '';
         }
@@ -205,7 +217,6 @@ export default function NestingTool() {
 
     try {
       const image = new window.Image();
-      // This is required for cross-origin images to be used in a canvas.
       image.crossOrigin = 'Anonymous';
 
       image.onload = () => {
@@ -252,7 +263,6 @@ export default function NestingTool() {
 
         const newUrl = trimmedCanvas.toDataURL();
         const newAspectRatio = trimmedWidth / trimmedHeight;
-        // Maintain the original physical width, adjust height based on new aspect ratio
         const newHeight = imageToTrim.width / newAspectRatio;
 
         dispatch({
@@ -303,19 +313,9 @@ export default function NestingTool() {
     }
     dispatch({ type: 'START_NESTING' });
 
-    // Allow UI to update before blocking the main thread for calculation
     setTimeout(() => {
         try {
-            const imagesToNest = state.images.flatMap(image => {
-                return Array.from({ length: image.copies }, (_, i) => ({
-                    id: `${image.id}-${i}`,
-                    url: image.url,
-                    width: image.width,
-                    height: image.height,
-                }));
-            });
-
-            const result = nestImages(imagesToNest, state.sheetWidth);
+            const result = nestImages(state.images, state.sheetWidth);
             dispatch({ type: 'SET_LAYOUT', payload: { layout: result.placedItems, length: result.sheetLength } });
         } catch (e: any) {
             dispatch({ type: 'SET_ERROR', payload: e.message });
