@@ -315,7 +315,7 @@ export default function NestingTool() {
 
     setTimeout(() => {
         try {
-            const result = nestImages(state.images, state.sheetWidth);
+            const result = nestImages(state.images, state.sheetWidth, undefined, 'BestShortSideFit');
             dispatch({ type: 'SET_LAYOUT', payload: { layout: result.placedItems, length: result.sheetLength } });
         } catch (e: any) {
             dispatch({ type: 'SET_ERROR', payload: e.message });
