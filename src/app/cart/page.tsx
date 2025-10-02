@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/auth-context';
-import { getCartItemsAction, removeCartItemAction } from '@/app/actions';
 import type { CartItem } from '@/app/schema';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, ShoppingCart } from 'lucide-react';
@@ -26,8 +25,10 @@ export default function CartPage() {
       if (user) {
         setIsLoading(true);
         try {
-          const items = await getCartItemsAction(user.uid);
-          setCartItems(items);
+          // const items = await getCartItemsAction(user.uid);
+          // setCartItems(items);
+          // Temporarily disabled due to server-side crashes
+          setCartItems([]);
         } catch (error) {
             console.error("Failed to fetch cart items:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load your cart. Please try again.' });
@@ -44,7 +45,9 @@ export default function CartPage() {
   }, [user, toast]);
 
   const handleRemoveItem = async (docId: string) => {
-    const result = await removeCartItemAction(docId);
+    // const result = await removeCartItemAction(docId);
+    // Temporarily disabled
+    const result = { success: false, error: 'This functionality is temporarily disabled.'};
     if (result.success) {
       setCartItems(currentItems => currentItems.filter(item => item.id !== docId));
       toast({ title: 'Item Removed', description: 'The item has been removed from your cart.' });

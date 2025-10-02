@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
-import { getCartItemsAction } from '@/app/actions';
 import { Badge } from '../ui/badge';
 
 
@@ -25,35 +24,9 @@ export default function Header() {
   const { user } = useAuth();
   const [cartCount, setCartCount] = useState(0);
 
-  const fetchCartCount = async () => {
-    if (user) {
-      try {
-        const items = await getCartItemsAction(user.uid);
-        setCartCount(items.length);
-      } catch (error) {
-        console.error("Failed to fetch cart count:", error);
-        setCartCount(0);
-      }
-    } else {
-      setCartCount(0);
-    }
-  };
+  // TODO: Re-implement cart count fetching with a robust client-side data fetching strategy.
+  // The previous implementation using server actions was causing server-side rendering crashes.
   
-  // Fetch cart count on user change
-  useEffect(() => {
-    fetchCartCount();
-  }, [user]);
-  
-  // This effect will listen for custom events to update the cart count
-  // This allows other components to trigger a refresh of the cart count
-  useEffect(() => {
-    const handleCartUpdate = () => fetchCartCount();
-    window.addEventListener('cartUpdated', handleCartUpdate);
-    return () => {
-      window.removeEventListener('cartUpdated', handleCartUpdate);
-    }
-  }, [user]); // Re-add listener if user changes
-
   const handleSignOut = async () => {
     try {
       await signOut(auth);

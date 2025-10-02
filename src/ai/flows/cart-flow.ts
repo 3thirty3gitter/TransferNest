@@ -7,16 +7,14 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { CartFlowInputSchema, CartFlowOutputSchema } from '@/app/schema';
+import { CartFlowInputSchema, CartFlowOutputSchema, CartItemSchema } from '@/app/schema';
 import * as admin from 'firebase-admin';
-import { getApps } from 'firebase-admin/app';
 
-// Ensure Firebase Admin is initialized only once.
-if (!getApps().length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-  });
+// Initialize Firebase Admin SDK idempotently
+if (admin.apps.length === 0) {
+  admin.initializeApp();
 }
+
 const db = admin.firestore();
 
 export type CartFlowInput = z.infer<typeof CartFlowInputSchema>;
