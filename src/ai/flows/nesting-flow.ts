@@ -22,16 +22,9 @@ import {
 export type NestingAgentInput = z.infer<typeof NestingAgentInputSchema>;
 export type NestingAgentOutput = z.infer<typeof NestingAgentOutputSchema>;
 
-// This is the primary function that the client will call.
-export async function runNestingAgentAction(
-  input: NestingAgentInput
-): Promise<NestingAgentOutput> {
-  return nestingAgentFlow(input);
-}
-
-const nestingAgentFlow = ai.defineFlow(
+export const runNestingAgentFlow = ai.defineFlow(
   {
-    name: 'nestingAgentFlow',
+    name: 'runNestingAgentFlow',
     inputSchema: NestingAgentInputSchema,
     outputSchema: NestingAgentOutputSchema,
   },

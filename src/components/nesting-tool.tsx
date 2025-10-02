@@ -6,7 +6,7 @@ import ImageManager from '@/components/image-manager';
 import SheetConfig from '@/components/sheet-config';
 import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout, CartItem } from '@/app/schema';
-import { saveToCartAction } from '@/ai/flows/cart-flow';
+import { saveToCartAction, runNestingAgentAction } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Loader2, Wand2, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
-import { runNestingAgentAction } from '@/ai/flows/nesting-flow';
 
 export type ManagedImage = {
   id: string;
@@ -198,6 +197,7 @@ export default function NestingTool() {
         });
 
     } catch (error: any) {
+        dispatch({ type: 'SET_ERROR', payload: error.message });
         toast({
             variant: "destructive",
             title: "Upload Failed",
@@ -410,7 +410,7 @@ export default function NestingTool() {
           </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-1 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-4 flex flex-col gap-8 self-start">
+        <div className="lg:col-span-1 flex flex-col gap-8 self-start">
           <ImageManager
             images={state.images}
             onFileChange={handleFileChange}

@@ -18,7 +18,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState, useCallback } from 'react';
 import { Badge } from '../ui/badge';
-import { getCartItemsAction } from '@/ai/flows/cart-flow';
+import { getCartItemsAction } from '@/app/actions';
 
 
 export default function Header() {
@@ -56,7 +56,7 @@ export default function Header() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setCartCount(0); // Clear cart count on sign out
+      // No need to manually clear cart count, the effect will re-run with a null user
     } catch (error) {
       console.error('Error signing out', error);
     }

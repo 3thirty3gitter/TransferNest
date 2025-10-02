@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { ArrowLeft, Loader2, ShoppingCart } from 'lucide-react';
 import CartItemRow from '@/components/cart-item-row';
 import { useToast } from '@/hooks/use-toast';
-import { getCartItemsAction, removeCartItemAction } from '@/ai/flows/cart-flow';
+import { getCartItemsAction, removeCartItemAction } from '@/app/actions';
 
 export default function CartPage() {
   const { user } = useAuth();
@@ -36,6 +36,7 @@ export default function CartPage() {
             setIsLoading(false);
         }
       } else {
+        // If there's no user, clear cart and stop loading
         setIsLoading(false);
         setCartItems([]);
       }

@@ -18,43 +18,7 @@ if (admin.apps.length === 0) {
 
 const db = admin.firestore();
 
-export type CartFlowInput = z.infer<typeof CartFlowInputSchema>;
-export type CartFlowOutput = z.infer<typeof CartFlowOutputSchema>;
-
-/**
- * Saves a new item to the user's cart.
- */
-export async function saveToCartAction(
-  item: Omit<CartItem, 'id' | 'createdAt'>
-): Promise<{ success: boolean; docId?: string; error?: string; }> {
-  if (!item) {
-      return { success: false, error: 'Cart item is required.' };
-  }
-  return saveToCartFlow({ item });
-}
-
-/**
- * Retrieves all cart items for a given user.
- */
-export async function getCartItemsAction(userId: string): Promise<CartItem[]> {
-  if (!userId) return [];
-  // The Genkit flow returns data that is already serialized,
-  // so we can safely cast it to the expected client-side type.
-  return getCartItemsFlow(userId) as Promise<CartItem[]>;
-}
-
-/**
- * Removes a specific item from a user's cart.
- */
-export async function removeCartItemAction(docId: string): Promise<{ success: boolean; error?: string }> {
-  if (!docId) {
-    return { success: false, error: 'Document ID is required.' };
-  }
-  return removeCartItemFlow(docId);
-}
-
-
-const saveToCartFlow = ai.defineFlow(
+export const saveToCartFlow = ai.defineFlow(
   {
     name: 'saveToCartFlow',
     inputSchema: CartFlowInputSchema,
@@ -76,8 +40,7 @@ const saveToCartFlow = ai.defineFlow(
   }
 );
 
-
-const getCartItemsFlow = ai.defineFlow(
+export const getCartItemsFlow = ai.defineFlow(
   {
     name: 'getCartItemsFlow',
     inputSchema: z.string(), // User ID
@@ -112,7 +75,7 @@ const getCartItemsFlow = ai.defineFlow(
   }
 );
 
-const removeCartItemFlow = ai.defineFlow(
+export const removeCartItemFlow = ai.defineFlow(
   {
     name: 'removeCartItemFlow',
     inputSchema: z.string(), // Document ID
