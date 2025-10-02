@@ -23,7 +23,9 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ input }),
+      // Handle both object and primitive inputs.
+      // The Genkit API expects primitives directly, but objects wrapped in an 'input' key.
+      body: typeof input === 'string' ? JSON.stringify(input) : JSON.stringify({ input }),
        // Important for server-to-server fetch in Next.js to avoid caching issues
       cache: 'no-store',
     });
@@ -36,8 +38,9 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
     
     const result = await response.json();
     
-    // The flow output is nested under the 'output' key
-    return result.output;
+    // The flow output is nested under the 'output' key for object-based flows,
+    // but might be at the top level for simpler ones. Default to the result itself.
+    return result.output ?? result;
 
   } catch (error) {
     console.error(`An exception occurred while invoking flow ${flowId}:`, error);
