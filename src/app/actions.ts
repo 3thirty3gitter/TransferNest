@@ -3,35 +3,68 @@
 /**
  * @fileOverview This file contains the server actions that act as a bridge
  * between client components and the server-side Genkit flows.
- * Client components should ONLY import actions from this file, never directly
- * from the flows.
+ * Client components should ONLY import actions from this file.
+ * These actions invoke the Genkit flows via an HTTP request, ensuring
+ * that the firebase-admin SDK is completely isolated from the client bundle.
  */
 
-import { saveToCartFlow, getCartItemsFlow, removeCartItemFlow } from '@/ai/flows/cart-flow';
-import { runNestingAgentFlow } from '@/ai/flows/nesting-flow';
 import type { CartItem, NestingAgentInput, NestingAgentOutput } from '@/app/schema';
+
+// This is the absolute URL of the deployed application.
+// In a real production environment, this would come from an environment variable.
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
+
+async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<Output> {
+  const url = `${BASE_URL}/api/genkit/flows/${flowId}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input }),
+       // Important for server-to-server fetch in Next.js to avoid caching issues
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error invoking flow ${flowId}: ${response.status} ${response.statusText}`, errorBody);
+        throw new Error(`Failed to invoke flow. Status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    // The flow output is nested under the 'output' key
+    return result.output;
+
+  } catch (error) {
+    console.error(`An exception occurred while invoking flow ${flowId}:`, error);
+    throw new Error(`Failed to execute the action. Please try again.`);
+  }
+}
+
 
 export async function saveToCartAction(
   item: Omit<CartItem, 'id' | 'createdAt'>
 ): Promise<{ success: boolean; docId?: string; error?: string }> {
-  return await saveToCartFlow({ item });
+  return await invokeFlow('saveToCartFlow', { item });
 }
 
 export async function getCartItemsAction(userId: string): Promise<CartItem[]> {
-    // This check is to prevent the flow from running during build time or in contexts
-    // where the Firebase Admin SDK might not be initialized, causing the 'INTERNAL' error.
     if (!userId) return [];
-    return await getCartItemsFlow(userId);
+    return await invokeFlow('getCartItemsFlow', userId);
 }
 
 export async function removeCartItemAction(
   docId: string
 ): Promise<{ success: boolean; error?: string }> {
-  return await removeCartItemFlow(docId);
+  return await invokeFlow('removeCartItemFlow', docId);
 }
 
 export async function runNestingAgentAction(
   input: NestingAgentInput
 ): Promise<NestingAgentOutput> {
-  return await runNestingAgentFlow(input);
+  return await invokeFlow('runNestingAgentFlow', input);
 }

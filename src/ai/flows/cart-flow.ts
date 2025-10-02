@@ -1,21 +1,16 @@
 
-'use server';
 /**
  * @fileOverview A Genkit flow for managing shopping cart items in Firestore.
  * This file contains server-side logic and should only export async functions.
+ * It is only ever executed in the context of the Genkit API route.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { CartFlowInputSchema, CartFlowOutputSchema, CartItemSchema } from '@/app/schema';
 import * as admin from 'firebase-admin';
-import type { CartItem } from '@/app/schema';
 
-// Initialize Firebase Admin SDK idempotently
-if (admin.apps.length === 0) {
-  admin.initializeApp();
-}
-
+// The admin SDK is initialized in the API route handler, so we can safely get the instance here.
 const db = admin.firestore();
 
 export const saveToCartFlow = ai.defineFlow(
@@ -58,6 +53,7 @@ export const getCartItemsFlow = ai.defineFlow(
 
       return querySnapshot.docs.map(doc => {
           const data = doc.data();
+          const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
           return {
               id: doc.id,
               userId: data.userId,
@@ -65,7 +61,7 @@ export const getCartItemsFlow = ai.defineFlow(
               sheetLength: data.sheetLength,
               price: data.price,
               layout: data.layout,
-              createdAt: data.createdAt.toDate().toISOString(),
+              createdAt: createdAt,
           };
       });
     } catch (error) {

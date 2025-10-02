@@ -13,10 +13,20 @@ import next from '@genkit-ai/next';
 import * as admin from 'firebase-admin';
 import { getApps } from 'firebase-admin/app';
 
+// This is the ONLY place where firebase-admin should be initialized.
+if (getApps().length === 0) {
+  admin.initializeApp();
+}
+
 export const ai = genkit({
   plugins: [googleAI(), next()],
   logLevel: 'debug',
   enableTracingAndMetrics: true,
 });
+
+// All flows are automatically exposed as API endpoints by the `next()` plugin.
+// We just need to import them here so they are registered with Genkit.
+import '@/ai/flows/cart-flow';
+import '@/ai/flows/nesting-flow';
 
 export { GET, POST } from '@genkit-ai/next';
