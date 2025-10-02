@@ -6,7 +6,7 @@ import ImageManager from '@/components/image-manager';
 import SheetConfig from '@/components/sheet-config';
 import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout, CartItem } from '@/app/schema';
-import { saveToCart } from '@/ai/flows/cart-flow';
+import { saveToCartAction } from '@/ai/flows/cart-flow';
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Loader2, Wand2, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
-import { runNestingAgent } from '@/ai/flows/nesting-flow';
+import { runNestingAgentAction } from '@/ai/flows/nesting-flow';
 
 export type ManagedImage = {
   id: string;
@@ -318,7 +318,7 @@ export default function NestingTool() {
     dispatch({ type: 'START_NESTING' });
 
     try {
-        const result = await runNestingAgent({
+        const result = await runNestingAgentAction({
             images: state.images,
             sheetWidth: state.sheetWidth
         });
@@ -376,7 +376,7 @@ export default function NestingTool() {
       layout: state.nestedLayout,
     };
 
-    const result = await saveToCart({ item: cartItem });
+    const result = await saveToCartAction(cartItem);
 
     if (result.success) {
       dispatch({ type: 'SET_SAVE_SUCCESS' });

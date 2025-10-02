@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A specialist AI agent for optimizing 2D nesting of images on a sheet.
@@ -8,7 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import {
   NestingAgentInputSchema,
   NestingAgentOutputSchema,
@@ -22,7 +23,7 @@ export type NestingAgentInput = z.infer<typeof NestingAgentInputSchema>;
 export type NestingAgentOutput = z.infer<typeof NestingAgentOutputSchema>;
 
 // This is the primary function that the client will call.
-export async function runNestingAgent(
+export async function runNestingAgentAction(
   input: NestingAgentInput
 ): Promise<NestingAgentOutput> {
   return nestingAgentFlow(input);

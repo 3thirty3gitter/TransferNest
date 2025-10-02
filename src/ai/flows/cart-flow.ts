@@ -6,9 +6,10 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { CartFlowInputSchema, CartFlowOutputSchema, CartItemSchema } from '@/app/schema';
 import * as admin from 'firebase-admin';
+import type { CartItem } from '@/app/schema';
 
 // Initialize Firebase Admin SDK idempotently
 if (admin.apps.length === 0) {
@@ -23,24 +24,33 @@ export type CartFlowOutput = z.infer<typeof CartFlowOutputSchema>;
 /**
  * Saves a new item to the user's cart.
  */
-export async function saveToCart(
-  input: CartFlowInput
-): Promise<CartFlowOutput> {
-  return saveToCartFlow(input);
+export async function saveToCartAction(
+  item: Omit<CartItem, 'id' | 'createdAt'>
+): Promise<{ success: boolean; docId?: string; error?: string; }> {
+  if (!item) {
+      return { success: false, error: 'Cart item is required.' };
+  }
+  return saveToCartFlow({ item });
 }
 
 /**
  * Retrieves all cart items for a given user.
  */
-export async function getCartItems(userId: string): Promise<any[]> {
-    return getCartItemsFlow(userId);
+export async function getCartItemsAction(userId: string): Promise<CartItem[]> {
+  if (!userId) return [];
+  // The Genkit flow returns data that is already serialized,
+  // so we can safely cast it to the expected client-side type.
+  return getCartItemsFlow(userId) as Promise<CartItem[]>;
 }
 
 /**
  * Removes a specific item from a user's cart.
  */
-export async function removeCartItem(docId: string): Promise<CartFlowOutput> {
-    return removeCartItemFlow(docId);
+export async function removeCartItemAction(docId: string): Promise<{ success: boolean; error?: string }> {
+  if (!docId) {
+    return { success: false, error: 'Document ID is required.' };
+  }
+  return removeCartItemFlow(docId);
 }
 
 

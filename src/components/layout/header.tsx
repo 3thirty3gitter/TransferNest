@@ -16,16 +16,42 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Badge } from '../ui/badge';
+import { getCartItemsAction } from '@/ai/flows/cart-flow';
 
 
 export default function Header() {
   const { user } = useAuth();
   const [cartCount, setCartCount] = useState(0);
 
-  // TODO: Re-implement cart count fetching with a robust client-side data fetching strategy.
-  // The previous implementation using server actions was causing server-side rendering crashes.
+  const fetchCartCount = useCallback(async () => {
+    if (user) {
+      try {
+        const items = await getCartItemsAction(user.uid);
+        setCartCount(items.length);
+      } catch (error) {
+        console.error("Failed to fetch cart count:", error);
+        setCartCount(0);
+      }
+    } else {
+      setCartCount(0);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchCartCount();
+    
+    const handleCartUpdate = () => {
+      fetchCartCount();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, [fetchCartCount]);
   
   const handleSignOut = async () => {
     try {
