@@ -29,4 +29,4 @@ export const ai = genkit({
 import '@/ai/flows/cart-flow';
 import '@/ai/flows/nesting-flow';
 
-export { GET, POST } from '@genkit-ai/next';
+export const { GET, POST } = ai;
