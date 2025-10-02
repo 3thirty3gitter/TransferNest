@@ -6,15 +6,15 @@ import ImageManager from '@/components/image-manager';
 import SheetConfig from '@/components/sheet-config';
 import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout, CartItem } from '@/app/schema';
-import { saveToCart } from '@/app/actions';
+import { saveToCart } from '@/ai/flows/cart-flow';
 import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2, Wand2, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
-import { nestImages } from '@/lib/nesting-algorithm';
+import { runNestingAgent } from '@/ai/flows/nesting-flow';
 
 export type ManagedImage = {
   id: string;
@@ -34,6 +34,8 @@ type State = {
   isLoading: boolean;
   isSaving: boolean;
   isUploading: boolean;
+  nestingStrategy?: string;
+  efficiency: number;
 };
 
 type Action =
@@ -43,7 +45,7 @@ type Action =
   | { type: 'DUPLICATE_IMAGE'; payload: string }
   | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
-  | { type: 'SET_LAYOUT'; payload: { layout: NestedLayout; length: number } }
+  | { type: 'SET_LAYOUT'; payload: { layout: NestedLayout; length: number; strategy: string, efficiency: number } }
   | { type: 'START_SAVING' }
   | { type: 'SET_SAVE_SUCCESS' }
   | { type: 'START_UPLOADING' }
@@ -59,14 +61,15 @@ const initialState: State = {
   isLoading: false,
   isSaving: false,
   isUploading: false,
+  efficiency: 0,
 };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'ADD_IMAGE':
-      return { ...state, images: [...state.images, { ...action.payload, copies: 1 }], nestedLayout: [], sheetLength: 0 };
+      return { ...state, images: [...state.images, { ...action.payload, copies: 1 }], nestedLayout: [], sheetLength: 0, efficiency: 0 };
     case 'REMOVE_IMAGE':
-      return { ...state, images: state.images.filter((img) => img.id !== action.payload), nestedLayout: [], sheetLength: 0 };
+      return { ...state, images: state.images.filter((img) => img.id !== action.payload), nestedLayout: [], sheetLength: 0, efficiency: 0 };
     case 'UPDATE_IMAGE': {
         return {
           ...state,
@@ -75,6 +78,7 @@ function reducer(state: State, action: Action): State {
           ),
           nestedLayout: [],
           sheetLength: 0,
+          efficiency: 0,
         };
     }
     case 'TRIM_IMAGE':
@@ -93,13 +97,14 @@ function reducer(state: State, action: Action): State {
         ),
         nestedLayout: [],
         sheetLength: 0,
+        efficiency: 0,
       };
     case 'DUPLICATE_IMAGE': {
         const imageToDuplicate = state.images.find(img => img.id === action.payload);
         if (!imageToDuplicate) return state;
         
         const newImage: ManagedImage = {
-            ...imageToDuplicate, // This now correctly copies the current, potentially modified, dimensions
+            ...imageToDuplicate,
             id: `${new Date().getTime()}-${Math.random()}`,
         };
         
@@ -107,14 +112,14 @@ function reducer(state: State, action: Action): State {
         const newImages = [...state.images];
         newImages.splice(index + 1, 0, newImage);
         
-        return { ...state, images: newImages, nestedLayout: [], sheetLength: 0 };
+        return { ...state, images: newImages, nestedLayout: [], sheetLength: 0, efficiency: 0 };
     }
     case 'SET_SHEET_WIDTH':
-      return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0 };
+      return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0, efficiency: 0 };
     case 'START_NESTING':
       return { ...state, isLoading: true };
     case 'SET_LAYOUT':
-      return { ...state, nestedLayout: action.payload.layout, sheetLength: action.payload.length, isLoading: false };
+      return { ...state, nestedLayout: action.payload.layout, sheetLength: action.payload.length, nestingStrategy: action.payload.strategy, efficiency: action.payload.efficiency, isLoading: false };
     case 'START_SAVING':
       return { ...state, isSaving: true };
     case 'SET_SAVE_SUCCESS':
@@ -162,8 +167,7 @@ export default function NestingTool() {
                 image.onload = () => {
                     const defaultWidth = 3;
                     const aspectRatio = image.width / image.height;
-                    const defaultHeight = defaultWidth / aspectRatio;
-
+                    
                     // If an image is wider than the current sheet, scale it down to fit.
                     const finalWidth = image.width > (state.sheetWidth * 96) // Approx 96dpi for initial check
                         ? state.sheetWidth - 0.5 // give it some padding
@@ -302,7 +306,7 @@ export default function NestingTool() {
     dispatch({ type: 'SET_SHEET_WIDTH', payload: width });
   }, []);
 
-  const handleArrange = () => {
+  const handleArrange = async () => {
     if (state.images.length === 0) {
       toast({
         variant: "destructive",
@@ -313,19 +317,24 @@ export default function NestingTool() {
     }
     dispatch({ type: 'START_NESTING' });
 
-    setTimeout(() => {
-        try {
-            const result = nestImages(state.images, state.sheetWidth, undefined, 'BestShortSideFit');
-            dispatch({ type: 'SET_LAYOUT', payload: { layout: result.placedItems, length: result.sheetLength } });
-        } catch (e: any) {
-            dispatch({ type: 'SET_ERROR', payload: e.message });
-            toast({
-                variant: "destructive",
-                title: "Layout Error",
-                description: e.message || "An unexpected error occurred while arranging images.",
-            });
-        }
-    }, 10);
+    try {
+        const result = await runNestingAgent({
+            images: state.images,
+            sheetWidth: state.sheetWidth
+        });
+        dispatch({ type: 'SET_LAYOUT', payload: { layout: result.placedItems, length: result.sheetLength, strategy: result.strategy, efficiency: result.areaUtilizationPct } });
+        toast({
+            title: "Layout Optimized!",
+            description: `Agent chose '${result.strategy}' with ${(result.areaUtilizationPct * 100).toFixed(1)}% efficiency.`,
+        });
+    } catch (e: any) {
+        dispatch({ type: 'SET_ERROR', payload: e.message });
+        toast({
+            variant: "destructive",
+            title: "Layout Error",
+            description: e.message || "An unexpected error occurred while arranging images.",
+        });
+    }
   };
 
   const handleUpdateImage = (id: string, updates: Partial<Omit<ManagedImage, 'id' | 'url' | 'aspectRatio'>>) => {
@@ -367,7 +376,7 @@ export default function NestingTool() {
       layout: state.nestedLayout,
     };
 
-    const result = await saveToCart(cartItem);
+    const result = await saveToCart({ item: cartItem });
 
     if (result.success) {
       dispatch({ type: 'SET_SAVE_SUCCESS' });
@@ -375,7 +384,6 @@ export default function NestingTool() {
         title: "Added to Cart!",
         description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
       });
-      // Dispatch a custom event to notify the header to update the cart count
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } else {
       dispatch({ type: 'SET_ERROR', payload: result.error || 'An unknown error occurred.' });
@@ -398,11 +406,11 @@ export default function NestingTool() {
       <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-headline font-bold">Gang Sheet Builder</h1>
           <p className="mt-2 max-w-2xl mx-auto text-muted-foreground">
-              Upload your images, choose a sheet size, and our tool will arrange them for you.
+              Upload your images, choose a sheet size, and our AI agent will arrange them for you.
           </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-1 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:pr-4 flex flex-col gap-8">
+        <div className="lg:col-span-1 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-4 flex flex-col gap-8 self-start">
           <ImageManager
             images={state.images}
             onFileChange={handleFileChange}
@@ -421,6 +429,8 @@ export default function NestingTool() {
             onAddToCart={handleAddToCart}
             isLoading={state.isLoading || state.isSaving}
             hasImages={state.images.length > 0}
+            efficiency={state.efficiency}
+            strategy={state.nestingStrategy}
           />
         </div>
         <div className="lg:col-span-2">

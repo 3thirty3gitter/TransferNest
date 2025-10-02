@@ -6,7 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Wand2, ShoppingCart } from 'lucide-react';
+import { Loader2, Wand2, ShoppingCart, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 
 type SheetConfigProps = {
   sheetWidth: 13 | 17;
@@ -17,6 +24,8 @@ type SheetConfigProps = {
   onAddToCart: () => void;
   isLoading: boolean;
   hasImages: boolean;
+  strategy?: string;
+  efficiency: number;
 };
 
 export default function SheetConfig({
@@ -28,6 +37,8 @@ export default function SheetConfig({
   onAddToCart,
   isLoading,
   hasImages,
+  strategy,
+  efficiency,
 }: SheetConfigProps) {
   return (
     <Card>
@@ -69,6 +80,22 @@ export default function SheetConfig({
         <div className="w-full flex justify-between items-center text-sm">
           <span className="text-muted-foreground">Calculated Length:</span>
           <span className="font-bold">{sheetLength > 0 ? `${sheetLength.toFixed(2)}"` : 'N/A'}</span>
+        </div>
+        <div className="w-full flex justify-between items-center text-sm">
+          <div className="text-muted-foreground flex items-center">
+            <span>Packing Efficiency:</span>
+             <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="ml-1.5 h-4 w-4 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Agent chose <strong>{strategy || 'N/A'}</strong>. Higher is better.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <span className="font-bold">{efficiency > 0 ? `${(efficiency * 100).toFixed(1)}%` : 'N/A'}</span>
         </div>
         <div className="w-full flex justify-between items-baseline">
           <span className="text-muted-foreground">Estimated Price:</span>

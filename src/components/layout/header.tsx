@@ -47,9 +47,10 @@ export default function Header() {
   // This effect will listen for custom events to update the cart count
   // This allows other components to trigger a refresh of the cart count
   useEffect(() => {
-    window.addEventListener('cartUpdated', fetchCartCount);
+    const handleCartUpdate = () => fetchCartCount();
+    window.addEventListener('cartUpdated', handleCartUpdate);
     return () => {
-      window.removeEventListener('cartUpdated', fetchCartCount);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
     }
   }, [user]); // Re-add listener if user changes
 

@@ -31,20 +31,13 @@ class MaxRectsBinPack {
 
     switch (method) {
       case 'BestShortSideFit':
-        newNode = this.findPositionForNewNodeBestShortSideFit(
-          width,
-          height,
-          score1,
-          score2
-        );
+        newNode = this.findPositionForNewNodeBestShortSideFit(width, height, score1, score2);
         break;
       case 'BestLongSideFit':
-        newNode = this.findPositionForNewNodeBestLongSideFit(
-          width,
-          height,
-          score2,
-          score1
-        );
+        newNode = this.findPositionForNewNodeBestLongSideFit(width, height, score2, score1);
+        break;
+      case 'BestAreaFit':
+        newNode = this.findPositionForNewNodeBestAreaFit(width, height, score1, score2);
         break;
     }
 
@@ -54,6 +47,51 @@ class MaxRectsBinPack {
 
     this.placeRectangle(newNode);
     return newNode;
+  }
+  
+  findPositionForNewNodeBestAreaFit(width, height, bestAreaFit, bestShortSideFit) {
+    let bestNode = {x: 0, y: 0, width: 0, height: 0, rotated: false};
+    bestAreaFit.value = Infinity;
+    bestShortSideFit.value = Infinity;
+
+    for(let i = 0; i < this.freeRectangles.length; ++i) {
+        let areaFit = this.freeRectangles[i].width * this.freeRectangles[i].height - width * height;
+
+        // Try to place the rectangle in upright (non-flipped) orientation.
+        if (this.freeRectangles[i].width >= width && this.freeRectangles[i].height >= height) {
+            let leftoverHoriz = Math.abs(this.freeRectangles[i].width - width);
+            let leftoverVert = Math.abs(this.freeRectangles[i].height - height);
+            let shortSideFit = Math.min(leftoverHoriz, leftoverVert);
+
+            if (areaFit < bestAreaFit.value || (areaFit === bestAreaFit.value && shortSideFit < bestShortSideFit.value)) {
+                bestNode.x = this.freeRectangles[i].x;
+                bestNode.y = this.freeRectangles[i].y;
+                bestNode.width = width;
+                bestNode.height = height;
+                bestNode.rotated = false;
+                bestShortSideFit.value = shortSideFit;
+                bestAreaFit.value = areaFit;
+            }
+        }
+
+        // Try to place the rectangle rotated.
+        if (this.allowRotations && this.freeRectangles[i].width >= height && this.freeRectangles[i].height >= width) {
+            let leftoverHoriz = Math.abs(this.freeRectangles[i].width - height);
+            let leftoverVert = Math.abs(this.freeRectangles[i].height - width);
+            let shortSideFit = Math.min(leftoverHoriz, leftoverVert);
+
+            if (areaFit < bestAreaFit.value || (areaFit === bestAreaFit.value && shortSideFit < bestShortSideFit.value)) {
+                bestNode.x = this.freeRectangles[i].x;
+                bestNode.y = this.freeRectangles[i].y;
+                bestNode.width = height;
+                bestNode.height = width;
+                bestNode.rotated = true;
+                bestShortSideFit.value = shortSideFit;
+                bestAreaFit.value = areaFit;
+            }
+        }
+    }
+    return bestNode;
   }
 
   findPositionForNewNodeBestShortSideFit(
@@ -273,34 +311,28 @@ class MaxRectsBinPack {
 
 export const VIRTUAL_SHEET_HEIGHT = 20000;
 
-export function nestImages(
-  images, // Array of { id, url, width, height, copies }
-  sheetWidth,
-  virtualHeight = VIRTUAL_SHEET_HEIGHT,
-  method = 'BestShortSideFit'
+export function executeNesting(
+  images: ManagedImage[],
+  sheetWidth: number,
+  virtualHeight: number = VIRTUAL_SHEET_HEIGHT,
+  method: 'BestShortSideFit' | 'BestLongSideFit' | 'BestAreaFit' = 'BestShortSideFit'
 ) {
-  // Create a deep copy to ensure the function is stateless.
-  const itemsToPack = JSON.parse(JSON.stringify(images));
-
-  // The packer needs a large virtual height to simulate a continuous roll.
   const packer = new MaxRectsBinPack(sheetWidth, virtualHeight, true);
 
   const margin = 0.2;
 
-  // Create the full list of items to pack, respecting the 'copies' attribute.
-  const allItems = itemsToPack.flatMap(img =>
+  const allItems = images.flatMap(img =>
     Array.from({ length: img.copies || 1 }, (_, i) => ({
       ...img,
-      id: `${img.id}-${i}`, // Unique ID for each copy
+      id: `${img.id}-${i}`,
       widthWithMargin: img.width + margin,
       heightWithMargin: img.height + margin,
     }))
   );
 
-  // Sort items by size (largest first) - a proven heuristic for better packing.
   allItems.sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height));
 
-  const placedItems = [];
+  const placedItems: NestedLayout = [];
   let maxSheetY = 0;
 
   for (const item of allItems) {
@@ -321,9 +353,9 @@ export function nestImages(
     }
   }
 
-  const occupancy = packer.occupancy();
+  const areaUtilizationPct = packer.occupancy();
 
-  return { placedItems, sheetLength: maxSheetY, occupancy };
+  return { placedItems, sheetLength: maxSheetY, areaUtilizationPct };
 }
 
 export function calculateOccupancy(placedItems, sheetWidth, sheetLength) {

@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { getCartItemsAction, removeCartItemAction } from '@/app/actions';
 import type { CartItem } from '@/app/schema';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, ShoppingCart, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, ShoppingCart } from 'lucide-react';
 import CartItemRow from '@/components/cart-item-row';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,21 +25,28 @@ export default function CartPage() {
     async function fetchCartItems() {
       if (user) {
         setIsLoading(true);
-        const items = await getCartItemsAction(user.uid);
-        setCartItems(items);
-        setIsLoading(false);
+        try {
+          const items = await getCartItemsAction(user.uid);
+          setCartItems(items);
+        } catch (error) {
+            console.error("Failed to fetch cart items:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not load your cart. Please try again.' });
+            setCartItems([]);
+        } finally {
+            setIsLoading(false);
+        }
       } else {
         setIsLoading(false);
         setCartItems([]);
       }
     }
     fetchCartItems();
-  }, [user]);
+  }, [user, toast]);
 
   const handleRemoveItem = async (docId: string) => {
     const result = await removeCartItemAction(docId);
     if (result.success) {
-      setCartItems(cartItems.filter(item => item.id !== docId));
+      setCartItems(currentItems => currentItems.filter(item => item.id !== docId));
       toast({ title: 'Item Removed', description: 'The item has been removed from your cart.' });
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } else {
