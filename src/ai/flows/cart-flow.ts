@@ -38,10 +38,10 @@ export const saveToCartFlow = ai.defineFlow(
 export const getCartItemsFlow = ai.defineFlow(
   {
     name: 'getCartItemsFlow',
-    inputSchema: z.string(), // User ID
+    inputSchema: z.object({ userId: z.string() }), // User ID is now in an object
     outputSchema: z.array(z.any()), // Array of CartItem-like objects
   },
-  async (userId) => {
+  async ({ userId }) => { // Destructure userId from the input object
     try {
       if (!userId) {
         console.warn('getCartItemsFlow called without a userId.');
@@ -74,10 +74,10 @@ export const getCartItemsFlow = ai.defineFlow(
 export const removeCartItemFlow = ai.defineFlow(
   {
     name: 'removeCartItemFlow',
-    inputSchema: z.string(), // Document ID
+    inputSchema: z.object({ docId: z.string() }), // Document ID is now in an object
     outputSchema: CartFlowOutputSchema,
   },
-  async (docId) => {
+  async ({ docId }) => { // Destructure docId from the input object
      try {
         if (!docId) {
             return { success: false, error: 'Document ID is required.' };

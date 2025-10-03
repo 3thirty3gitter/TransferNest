@@ -23,9 +23,8 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
       headers: {
         'Content-Type': 'application/json',
       },
-      // Handle both object and primitive inputs.
-      // The Genkit API expects primitives directly, but objects wrapped in an 'input' key.
-      body: typeof input === 'string' ? JSON.stringify(input) : JSON.stringify({ input }),
+      // Genkit's Next.js middleware expects all inputs to be wrapped in an `input` object.
+      body: JSON.stringify({ input }),
        // Important for server-to-server fetch in Next.js to avoid caching issues
       cache: 'no-store',
     });
@@ -57,13 +56,15 @@ export async function saveToCartAction(
 
 export async function getCartItemsAction(userId: string): Promise<CartItem[]> {
     if (!userId) return [];
-    return await invokeFlow('getCartItemsFlow', userId);
+    // The invokeFlow helper will wrap this in { input: { userId: ... } }
+    return await invokeFlow('getCartItemsFlow', { userId });
 }
 
 export async function removeCartItemAction(
   docId: string
 ): Promise<{ success: boolean; error?: string }> {
-  return await invokeFlow('removeCartItemFlow', docId);
+  // The invokeFlow helper will wrap this in { input: { docId: ... } }
+  return await invokeFlow('removeCartItemFlow', { docId });
 }
 
 export async function runNestingAgentAction(
