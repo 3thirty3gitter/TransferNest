@@ -20,6 +20,9 @@ import {
   type SortStrategy,
   type PackingMethod,
 } from '@/lib/nesting-algorithm';
+import { getFirestore } from '@/lib/firebase-admin';
+import { admin } from '@/lib/firebase-admin';
+
 
 export type NestingAgentInput = z.infer<typeof NestingAgentInputSchema>;
 export type NestingAgentOutput = z.infer<typeof NestingAgentOutputSchema>;
@@ -91,6 +94,24 @@ export const runNestingAgentFlow = ai.defineFlow(
     if (bestResult.failedCount > 0) {
       output.warning = `${bestResult.failedCount} out of ${bestResult.totalCount} image(s) could not be placed. Try reducing quantities or using a wider sheet.`;
     }
+    
+    // 6. Save session data to Firestore for analysis
+    try {
+        const db = getFirestore();
+        const sessionData = {
+            input: {
+                images: input.images,
+                sheetWidth: input.sheetWidth,
+            },
+            output: output,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        await db.collection('nestingSessions').add(sessionData);
+    } catch (error) {
+        console.error("Failed to save nesting session:", error);
+        // Do not block the user if logging fails. This is a background task.
+    }
+
 
     return output;
   }
