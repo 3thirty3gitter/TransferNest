@@ -5,13 +5,16 @@
     "nextjs": 2,
     "server-actions": 2,
     "genkit": 3,
-    "zod": 1
+    "zod": 1,
+    "nesting": 1,
+    "algorithm": 1,
+    "bug": 1
   },
   "systems": {
     "actions": 2,
     "build-process": 2,
     "genkit-api": 2,
-    "nesting-agent": 1,
-    "data-schema": 1
+    "nesting-agent": 2,
+    "data-schema": 2
   }
 }

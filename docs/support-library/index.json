@@ -52,7 +52,7 @@
     "id": "PM-20240904-1003-nesting-schema",
     "title": "Nesting Agent Schema Mismatch",
     "created_at": "2024-09-04T10:03:00Z",
-    "updated_at": "2024-09-04T10💯:00Z",
+    "updated_at": "2024-09-04T10:03:00Z",
     "severity": "medium",
     "status": "resolved",
     "tags": ["genkit", "zod"],
@@ -62,6 +62,22 @@
     "provenance": {
       "origin_paths": ["docs/support-library/printpilot-support-library.md"],
       "hash": "a50c609c2a688d5e08b1a37c08a9f688a2c262d057778b846e4c70d4f3b063e5"
+    }
+  },
+  {
+    "id": "PM-20240904-1005-rotation-bug",
+    "title": "Nesting Agent Fails to Rotate Images and Creates Invalid Layouts",
+    "created_at": "2024-09-04T10:05:00Z",
+    "updated_at": "2024-09-04T10:05:00Z",
+    "severity": "high",
+    "status": "resolved",
+    "tags": ["nesting", "algorithm", "bug"],
+    "systems": ["nesting-agent", "data-schema"],
+    "projects": ["TransferNest"],
+    "checkpoint": "f124263",
+    "provenance": {
+      "origin_paths": [],
+      "hash": "9f8a3c8e3d6b0a1c9e2b8c5d6a7b0a1c9e2b8c5d6a7b0a1c9e2b8c5d6a7b0a1c"
     }
   }
 ]
