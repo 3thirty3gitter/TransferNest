@@ -79,5 +79,21 @@
       "origin_paths": [],
       "hash": "9f8a3c8e3d6b0a1c9e2b8c5d6a7b0a1c9e2b8c5d6a7b0a1c9e2b8c5d6a7b0a1c"
     }
+  },
+  {
+    "id": "PM-20240905-1100-nesting-efficiency",
+    "title": "Suboptimal Nesting Due to Incomplete Strategy Competition",
+    "created_at": "2024-09-05T11:00:00Z",
+    "updated_at": "2024-09-05T11:00:00Z",
+    "severity": "medium",
+    "status": "resolved",
+    "tags": ["nesting", "algorithm", "efficiency"],
+    "systems": ["nesting-agent", "data-schema"],
+    "projects": ["TransferNest"],
+    "checkpoint": "f124263",
+    "provenance": {
+      "origin_paths": [],
+      "hash": "3d1c4a0e9b6c9a0b0d3e5f2a1b8c7d6a5e4f3b2a1b8c7d6a5e4f3b2a1b8c7d6a"
+    }
   }
 ]

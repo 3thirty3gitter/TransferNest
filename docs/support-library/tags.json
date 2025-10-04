@@ -6,15 +6,16 @@
     "server-actions": 2,
     "genkit": 3,
     "zod": 1,
-    "nesting": 1,
-    "algorithm": 1,
-    "bug": 1
+    "nesting": 2,
+    "algorithm": 2,
+    "bug": 1,
+    "efficiency": 1
   },
   "systems": {
     "actions": 2,
     "build-process": 2,
     "genkit-api": 2,
-    "nesting-agent": 2,
-    "data-schema": 2
+    "nesting-agent": 3,
+    "data-schema": 3
   }
 }
