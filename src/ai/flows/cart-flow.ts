@@ -1,17 +1,13 @@
-
 /**
  * @fileOverview A Genkit flow for managing shopping cart items in Firestore.
- * This file contains server-side logic and should only export async functions.
- * It is only ever executed in the context of the Genkit API route.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { CartFlowInputSchema, CartFlowOutputSchema, CartItemSchema } from '@/app/schema';
-import * as admin from 'firebase-admin';
+import { CartFlowInputSchema, CartFlowOutputSchema } from '@/app/schema';
+import { getFirestore } from '@/lib/firebase-admin';
 
-// The admin SDK is initialized in the API route handler, so we can safely get the instance here.
-const db = admin.firestore();
+const admin = require('firebase-admin');
 
 export const saveToCartFlow = ai.defineFlow(
   {
@@ -21,6 +17,7 @@ export const saveToCartFlow = ai.defineFlow(
   },
   async ({ item }) => {
     try {
+      const db = getFirestore();
       const cartCollectionRef = db.collection('cartItems');
       const docRef = await cartCollectionRef.add({
         ...item,
@@ -38,15 +35,16 @@ export const saveToCartFlow = ai.defineFlow(
 export const getCartItemsFlow = ai.defineFlow(
   {
     name: 'getCartItemsFlow',
-    inputSchema: z.object({ userId: z.string() }), // User ID is now in an object
-    outputSchema: z.array(z.any()), // Array of CartItem-like objects
+    inputSchema: z.object({ userId: z.string() }),
+    outputSchema: z.array(z.any()),
   },
-  async ({ userId }) => { // Destructure userId from the input object
+  async ({ userId }) => {
     try {
       if (!userId) {
         console.warn('getCartItemsFlow called without a userId.');
         return [];
       }
+      const db = getFirestore();
       const cartCollectionRef = db.collection('cartItems');
       const q = cartCollectionRef.where('userId', '==', userId).orderBy('createdAt', 'desc');
       const querySnapshot = await q.get();
@@ -74,14 +72,15 @@ export const getCartItemsFlow = ai.defineFlow(
 export const removeCartItemFlow = ai.defineFlow(
   {
     name: 'removeCartItemFlow',
-    inputSchema: z.object({ docId: z.string() }), // Document ID is now in an object
+    inputSchema: z.object({ docId: z.string() }),
     outputSchema: CartFlowOutputSchema,
   },
-  async ({ docId }) => { // Destructure docId from the input object
+  async ({ docId }) => {
      try {
         if (!docId) {
             return { success: false, error: 'Document ID is required.' };
         }
+        const db = getFirestore();
         const cartItemRef = db.collection('cartItems').doc(docId);
         await cartItemRef.delete();
         return { success: true };

@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 const NestedImageSchema = z.object({
@@ -7,6 +8,7 @@ const NestedImageSchema = z.object({
   y: z.number(),
   width: z.number(),
   height: z.number(),
+  rotated: z.boolean().optional(),
 });
 
 export const NestedLayoutSchema = z.array(NestedImageSchema);
@@ -56,5 +58,9 @@ export const NestingAgentOutputSchema = z.object({
   sheetLength: z.number(),
   areaUtilizationPct: z.number(),
   strategy: z.string(),
+  // Add optional fields for diagnostics to prevent schema errors on partial layouts
+  warning: z.string().optional(),
+  totalCount: z.number().optional(),
+  failedCount: z.number().optional(),
 });
 export type NestingAgentOutput = z.infer<typeof NestingAgentOutputSchema>;

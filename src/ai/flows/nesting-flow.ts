@@ -3,7 +3,7 @@
 /**
  * @fileOverview A specialist AI agent for optimizing 2D nesting of images on a sheet.
  *
- * - nestingAgentFlow - The main flow that runs a competition between packing algorithms.
+ * - runNestingAgentFlow - The main flow that runs the packing algorithm.
  * - NestingAgentInput - The input schema for the agent.
  * - NestingAgentOutput - The output schema for the agent.
  */
@@ -29,38 +29,46 @@ export const runNestingAgentFlow = ai.defineFlow(
     outputSchema: NestingAgentOutputSchema,
   },
   async (input) => {
-    // The agent runs a competition between multiple packing strategies
-    // and returns the most efficient result. This is how it "trains" itself
-    // on each request to find the optimal layout.
-    const packingStrategies: ('BestShortSideFit' | 'BestLongSideFit' | 'BestAreaFit')[] = [
-      'BestShortSideFit',
-      'BestLongSideFit',
-      'BestAreaFit',
-    ];
-
-    let bestResult: NestingAgentOutput | null = null;
-
-    packingStrategies.forEach((strategy) => {
-      const result = executeNesting(
-        input.images,
-        input.sheetWidth,
-        VIRTUAL_SHEET_HEIGHT,
-        strategy
+    // 1. Validate Input
+    if (!input.images || input.images.length === 0) {
+      throw new Error('No images were provided for nesting. Please add images and try again.');
+    }
+    const oversized = input.images.filter(
+      (i) => i.width > input.sheetWidth
+    );
+    if (oversized.length > 0) {
+      throw new Error(
+        'Some images are too large for the sheet. Offending images: ' +
+          oversized.map((i) => `${i.id || i.url} (${i.width}x${i.height})`).join(', ')
       );
-      if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
-        bestResult = {
-          placedItems: result.placedItems,
-          sheetLength: result.sheetLength,
-          areaUtilizationPct: result.areaUtilizationPct,
-          strategy: strategy,
-        };
-      }
-    });
+    }
+    
+    // 2. Execute the Nesting Algorithm
+    const result = executeNesting(
+      input.images,
+      input.sheetWidth,
+      VIRTUAL_SHEET_HEIGHT
+    );
 
-    if (!bestResult) {
-      throw new Error('Nesting agent failed to produce a valid layout.');
+    // 3. Handle No-Result Scenario
+    if (result.placedItems.length === 0) {
+      throw new Error('Nesting failed to produce any layout. Check image dimensions.');
+    }
+    
+    // 4. Construct Output with Diagnostics
+    const output: NestingAgentOutput = {
+      placedItems: result.placedItems,
+      sheetLength: result.sheetLength,
+      areaUtilizationPct: result.areaUtilizationPct,
+      strategy: result.sortStrategy || 'AREA_DESC', // Default strategy
+      totalCount: result.totalCount,
+      failedCount: result.failedCount,
+    };
+
+    if (result.failedCount > 0) {
+      output.warning = `${result.failedCount} out of ${result.totalCount} image(s) could not be placed. Try reducing quantities or dimensions.`;
     }
 
-    return bestResult;
+    return output;
   }
 );

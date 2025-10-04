@@ -2,19 +2,19 @@
 /**
  * @fileOverview This file contains the server actions that act as a bridge
  * between client components and the server-side Genkit flows.
- * Client components should ONLY import actions from this file.
- * These actions invoke the Genkit flows via an HTTP request, ensuring
- * that the firebase-admin SDK is completely isolated from the client bundle.
  */
 
 import type { CartItem, NestingAgentInput, NestingAgentOutput } from '@/app/schema';
 
-// This is the absolute URL of the deployed application.
-// In a real production environment, this would come from an environment variable.
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
 
 async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<Output> {
-  const url = `${BASE_URL}/api/genkit/flows/${flowId}`;
+  const url = `${BASE_URL}/api/${flowId}`;
+  
+  // Genkit's appRoute expects the data as a direct property, not wrapped
+  const body = {
+    data: input
+  };
   
   try {
     const response = await fetch(url, {
@@ -22,9 +22,7 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
       headers: {
         'Content-Type': 'application/json',
       },
-      // Genkit's Next.js middleware expects all inputs to be wrapped in an `input` object.
-      body: JSON.stringify({ input }),
-       // Important for server-to-server fetch in Next.js to avoid caching issues
+      body: JSON.stringify(body),
       cache: 'no-store',
     });
 
@@ -36,16 +34,14 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
     
     const result = await response.json();
     
-    // The flow output is nested under the 'output' key for object-based flows,
-    // but might be at the top level for simpler ones. Default to the result itself.
-    return result.output ?? result;
+    // Extract the result from Genkit's response format
+    return result.result || result;
 
   } catch (error) {
     console.error(`An exception occurred while invoking flow ${flowId}:`, error);
     throw new Error(`Failed to execute the action. Please try again.`);
   }
 }
-
 
 export async function saveToCartAction(
   item: Omit<CartItem, 'id' | 'createdAt'>
@@ -55,14 +51,12 @@ export async function saveToCartAction(
 
 export async function getCartItemsAction(userId: string): Promise<CartItem[]> {
     if (!userId) return [];
-    // The invokeFlow helper will wrap this in { input: { userId: ... } }
     return await invokeFlow('getCartItemsFlow', { userId });
 }
 
 export async function removeCartItemAction(
   docId: string
 ): Promise<{ success: boolean; error?: string }> {
-  // The invokeFlow helper will wrap this in { input: { docId: ... } }
   return await invokeFlow('removeCartItemFlow', { docId });
 }
 
