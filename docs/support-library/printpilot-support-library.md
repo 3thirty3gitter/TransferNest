@@ -58,7 +58,8 @@ The debugging session began with a series of cascading errors that prevented the
 -   **Error:** `Error: Layout Error: Failed to execute the action. Please try again.`
 -   **Diagnosis:** A similar runtime `fetch` failure occurred with the `runNestingAgentAction`. The `runNestingAgentFlow` had complex logic that could return a payload with additional diagnostic fields (`warning`, `failedCount`, `totalCount`) if not all images could be placed. The `NestingAgentOutputSchema` in `src/app/schema.ts` did not account for these optional fields, causing an output validation error on the server, which terminated the request and caused the `fetch` to fail.
 -   **Resolution:**
-    1.  The `NestingAgentOutputSchema` in `src/app/schema.ts` was updated to include the optional diagnostic fields.
-    2.  The `runNestingAgentFlow` was simplified to remove redundant logic and to reliably return the diagnostic data.
-    3.  The calling component (`nesting-tool.tsx`) was updated to check for and display the `warning` message from the response.
--   **Lesson:** **Schemas must account for all possible success states.** A "successful" API response is one that returns a schema-compliant payload. This includes partial success states (e.g., a partial layout with a warning). Zod schemas must account for all optional fields or variations that a flow might legitimately return.
+    1.  The `NestingAgentOutputSchema` in `src/app/schema.ts` was updated to include the optional diagnostic fields (`warning`, `totalCount`, `failedCount`).
+    2.  The `runNestingAgentFlow` was simplified to remove redundant logic and to reliably return the diagnostic data, even if the layout was partial.
+    3.  The `executeNesting` algorithm was updated to provide the necessary diagnostic counts.
+    4.  The calling component (`nesting-tool.tsx`) was updated to check for and display the `warning` message from the response, improving user feedback.
+-   **Lesson:** **Schemas must account for all possible success states.** A "successful" API response is one that returns a schema-compliant payload. This includes partial success states (e.g., a partial layout with a warning). Zod schemas must account for all optional fields or variations that a flow might legitimately return to avoid validation failures.
