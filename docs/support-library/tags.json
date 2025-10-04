@@ -1,0 +1,17 @@
+
+{
+  "tags": {
+    "firebase-admin": 1,
+    "nextjs": 2,
+    "server-actions": 2,
+    "genkit": 3,
+    "zod": 1
+  },
+  "systems": {
+    "actions": 2,
+    "build-process": 2,
+    "genkit-api": 2,
+    "nesting-agent": 1,
+    "data-schema": 1
+  }
+}

@@ -1,0 +1,67 @@
+
+[
+  {
+    "id": "PM-20240904-1000-sdk-conflict",
+    "title": "TypeError due to SDK Conflict",
+    "created_at": "2024-09-04T10:00:00Z",
+    "updated_at": "2024-09-04T10:00:00Z",
+    "severity": "high",
+    "status": "resolved",
+    "tags": ["firebase-admin", "nextjs", "server-actions"],
+    "systems": ["actions", "build-process"],
+    "projects": ["TransferNest"],
+    "checkpoint": "f124263",
+    "provenance": {
+      "origin_paths": ["docs/support-library/printpilot-support-library.md"],
+      "hash": "4725333f269d05e263d913d80362f689e41b9d0313589a194511559868ab3e31"
+    }
+  },
+  {
+    "id": "PM-20240904-1001-build-error",
+    "title": "Persistent Build Error in Genkit API Route",
+    "created_at": "2024-09-04T10:01:00Z",
+    "updated_at": "2024-09-04T10:01:00Z",
+    "severity": "critical",
+    "status": "resolved",
+    "tags": ["genkit", "nextjs"],
+    "systems": ["genkit-api", "build-process"],
+    "projects": ["TransferNest"],
+    "checkpoint": "f124263",
+    "provenance": {
+      "origin_paths": ["docs/support-library/printpilot-support-library.md"],
+      "hash": "978939c06368d71d3a77839352e85a6a61c77395563919e159670d8a87b1c1b1"
+    }
+  },
+  {
+    "id": "PM-20240904-1002-data-contract",
+    "title": "Runtime Fetch Failure & Data Contracts",
+    "created_at": "2024-09-04T10:02:00Z",
+    "updated_at": "2024-09-04T10:02:00Z",
+    "severity": "high",
+    "status": "resolved",
+    "tags": ["genkit", "server-actions"],
+    "systems": ["actions", "genkit-api"],
+    "projects": ["TransferNest"],
+    "checkpoint": "f124263",
+    "provenance": {
+      "origin_paths": ["docs/support-library/printpilot-support-library.md"],
+      "hash": "37b5f543169d06e232959828557b77ab4640498ac157df4c75d4a13220468e21"
+    }
+  },
+  {
+    "id": "PM-20240904-1003-nesting-schema",
+    "title": "Nesting Agent Schema Mismatch",
+    "created_at": "2024-09-04T10:03:00Z",
+    "updated_at": "2024-09-04T10💯:00Z",
+    "severity": "medium",
+    "status": "resolved",
+    "tags": ["genkit", "zod"],
+    "systems": ["nesting-agent", "data-schema"],
+    "projects": ["TransferNest"],
+    "checkpoint": "f124263",
+    "provenance": {
+      "origin_paths": ["docs/support-library/printpilot-support-library.md"],
+      "hash": "a50c609c2a688d5e08b1a37c08a9f688a2c262d057778b846e4c70d4f3b063e5"
+    }
+  }
+]
