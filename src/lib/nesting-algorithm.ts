@@ -82,37 +82,55 @@ class MaxRectsBinPack {
   }
 
   splitFreeNode(freeNode, usedNode) {
+    // Test if the used rectangle intersects the free rectangle.
     if (usedNode.x >= freeNode.x + freeNode.width || usedNode.x + usedNode.width <= freeNode.x ||
         usedNode.y >= freeNode.y + freeNode.height || usedNode.y + usedNode.height <= freeNode.y)
-      return false;
+        return false;
 
-    if (usedNode.x < freeNode.x + freeNode.width && usedNode.x + usedNode.width > freeNode.x) {
-      if (usedNode.y > freeNode.y && usedNode.y < freeNode.y + freeNode.height) {
-        let newNode = { ...freeNode };
-        newNode.height = usedNode.y - newNode.y;
+    // Add new free rectangle top of the used node.
+    if (usedNode.y > freeNode.y) {
+        const newNode = {
+            x: freeNode.x,
+            y: freeNode.y,
+            width: freeNode.width,
+            height: usedNode.y - freeNode.y
+        };
         this.freeRectangles.push(newNode);
-      }
-      if (usedNode.y + usedNode.height < freeNode.y + freeNode.height) {
-        let newNode = { ...freeNode };
-        newNode.y = usedNode.y + usedNode.height;
-        newNode.height = freeNode.y + freeNode.height - (usedNode.y + usedNode.height);
-        this.freeRectangles.push(newNode);
-      }
     }
 
-    if (usedNode.y < freeNode.y + freeNode.height && usedNode.y + usedNode.height > freeNode.y) {
-      if (usedNode.x > freeNode.x && usedNode.x < freeNode.x + freeNode.width) {
-        let newNode = { ...freeNode };
-        newNode.width = usedNode.x - newNode.x;
+    // Add new free rectangle bottom of the used node.
+    if (usedNode.y + usedNode.height < freeNode.y + freeNode.height) {
+        const newNode = {
+            x: freeNode.x,
+            y: usedNode.y + usedNode.height,
+            width: freeNode.width,
+            height: (freeNode.y + freeNode.height) - (usedNode.y + usedNode.height)
+        };
         this.freeRectangles.push(newNode);
-      }
-      if (usedNode.x + usedNode.width < freeNode.x + freeNode.width) {
-        let newNode = { ...freeNode };
-        newNode.x = usedNode.x + usedNode.width;
-        newNode.width = freeNode.x + freeNode.width - (usedNode.x + usedNode.width);
-        this.freeRectangles.push(newNode);
-      }
     }
+
+    // Add new free rectangle left of the used node.
+    if (usedNode.x > freeNode.x) {
+        const newNode = {
+            x: freeNode.x,
+            y: freeNode.y,
+            width: usedNode.x - freeNode.x,
+            height: freeNode.height
+        };
+        this.freeRectangles.push(newNode);
+    }
+    
+    // Add new free rectangle right of the used node.
+    if (usedNode.x + usedNode.width < freeNode.x + freeNode.width) {
+        const newNode = {
+            x: usedNode.x + usedNode.width,
+            y: freeNode.y,
+            width: (freeNode.x + freeNode.width) - (usedNode.x + usedNode.width),
+            height: freeNode.height
+        };
+        this.freeRectangles.push(newNode);
+    }
+
     return true;
   }
 
