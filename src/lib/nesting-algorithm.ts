@@ -7,7 +7,6 @@ import type { ManagedImage } from '@/components/nesting-tool';
 /**
  * A simple MaxRects bin packing implementation.
  * This is a simplified version for demonstration purposes.
- * It uses the Best Short Side Fit (BSSF) heuristic.
  */
 class MaxRectsBinPack {
   constructor(width, height) {
@@ -17,8 +16,8 @@ class MaxRectsBinPack {
     this.freeRectangles = [{ x: 0, y: 0, width, height }];
   }
 
-  insert(width, height, method = 'BestShortSideFit') {
-    let bestNode = { score: Infinity };
+  insert(width, height, method) {
+    let bestNode = { score: Infinity, rotated: false };
     
     // Try original orientation
     let node = this.findPositionForNewNode(width, height, method);
@@ -26,7 +25,7 @@ class MaxRectsBinPack {
         bestNode = { ...node, width: width, height: height, rotated: false };
     }
 
-    // Try rotated orientation
+    // Try rotated orientation if the item is not a square
     if (width !== height) {
       let rotatedNode = this.findPositionForNewNode(height, width, method);
       if (rotatedNode.score < bestNode.score) {
@@ -50,9 +49,13 @@ class MaxRectsBinPack {
       if (freeRect.width >= width && freeRect.height >= height) {
         let score = 0;
         if (method === 'BestShortSideFit') {
-          score = Math.min(freeRect.width - width, freeRect.height - height);
+          const leftoverHoriz = freeRect.width - width;
+          const leftoverVert = freeRect.height - height;
+          score = Math.min(leftoverHoriz, leftoverVert);
         } else if (method === 'BestLongSideFit') {
-          score = Math.max(freeRect.width - width, freeRect.height - height);
+           const leftoverHoriz = freeRect.width - width;
+          const leftoverVert = freeRect.height - height;
+          score = Math.max(leftoverHoriz, leftoverVert);
         } else if (method === 'BestAreaFit') {
           score = freeRect.width * freeRect.height - width * height;
         }
@@ -138,12 +141,15 @@ class MaxRectsBinPack {
 
 export const VIRTUAL_SHEET_HEIGHT = 20000;
 export type SortStrategy = 'AREA_DESC' | 'HEIGHT_DESC' | 'WIDTH_DESC' | 'PERIMETER_DESC';
+export type PackingMethod = 'BestShortSideFit' | 'BestLongSideFit' | 'BestAreaFit';
+
 
 export function executeNesting(
   images: ManagedImage[], 
   sheetWidth: number, 
   virtualHeight: number = VIRTUAL_SHEET_HEIGHT,
-  sortStrategy: SortStrategy = 'AREA_DESC'
+  sortStrategy: SortStrategy = 'AREA_DESC',
+  method: PackingMethod = 'BestShortSideFit'
 ) {
   const packer = new MaxRectsBinPack(sheetWidth, virtualHeight);
   const margin = 0.1; // Small margin to prevent rounding errors and overlaps
@@ -162,10 +168,10 @@ export function executeNesting(
       allItems.sort((a, b) => (b.width * b.height) - (a.width * a.height));
       break;
     case 'HEIGHT_DESC':
-      allItems.sort((a, b) => b.height - a.height);
+      allItems.sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height));
       break;
     case 'WIDTH_DESC':
-      allItems.sort((a, b) => b.width - a.width);
+      allItems.sort((a, b) => Math.min(b.width, b.height) - Math.min(a.width, a.height));
       break;
     case 'PERIMETER_DESC':
         allItems.sort((a,b) => (b.width + b.height) - (a.width + a.height));
@@ -181,20 +187,20 @@ export function executeNesting(
     const itemWidthWithMargin = item.width + margin;
     const itemHeightWithMargin = item.height + margin;
 
-    const rect = packer.insert(itemWidthWithMargin, itemHeightWithMargin);
+    const rect = packer.insert(itemWidthWithMargin, itemHeightWithMargin, method);
     
-    if (rect) {
+    if (rect && rect.score !== Infinity) {
       placedItems.push({
         id: item.id,
         url: item.url,
         x: rect.x + margin / 2,
         y: rect.y + margin / 2,
-        width: rect.width - margin,
-        height: rect.height - margin,
+        width: rect.rotated ? item.height : item.width,
+        height: rect.rotated ? item.width : item.height,
         rotated: rect.rotated,
       });
 
-      maxY = Math.max(maxY, rect.y + rect.height);
+      maxY = Math.max(maxY, rect.y + (rect.rotated ? item.width : item.height) + margin);
     } else {
       failedItems.push(item);
     }
@@ -211,6 +217,7 @@ export function executeNesting(
     totalCount: allItems.length,
     failedCount: failedItems.length,
     sortStrategy: sortStrategy,
+    packingMethod: method,
   };
 }
 

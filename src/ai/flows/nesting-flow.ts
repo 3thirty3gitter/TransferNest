@@ -18,10 +18,13 @@ import {
   executeNesting,
   VIRTUAL_SHEET_HEIGHT,
   type SortStrategy,
+  type PackingMethod,
 } from '@/lib/nesting-algorithm';
 
 export type NestingAgentInput = z.infer<typeof NestingAgentInputSchema>;
 export type NestingAgentOutput = z.infer<typeof NestingAgentOutputSchema>;
+
+type NestingResult = ReturnType<typeof executeNesting>;
 
 export const runNestingAgentFlow = ai.defineFlow(
   {
@@ -44,26 +47,30 @@ export const runNestingAgentFlow = ai.defineFlow(
       );
     }
     
-    // 2. Define Strategies for Competition
-    const strategies: SortStrategy[] = ['AREA_DESC', 'HEIGHT_DESC', 'WIDTH_DESC', 'PERIMETER_DESC'];
-    let bestResult: ReturnType<typeof executeNesting> | null = null;
+    // 2. Define Strategies and Methods for Competition
+    const sortStrategies: SortStrategy[] = ['AREA_DESC', 'HEIGHT_DESC', 'WIDTH_DESC', 'PERIMETER_DESC'];
+    const packingMethods: PackingMethod[] = ['BestShortSideFit', 'BestLongSideFit', 'BestAreaFit'];
+
+    let bestResult: NestingResult | null = null;
     
-    // 3. Run Competition
-    for (const strategy of strategies) {
+    // 3. Run Competition across all combinations
+    for (const strategy of sortStrategies) {
+      for (const method of packingMethods) {
         const result = executeNesting(
             input.images,
             input.sheetWidth,
             VIRTUAL_SHEET_HEIGHT,
-            strategy
+            strategy,
+            method,
         );
         
-        // If this result is better than the current best, update it.
         // "Better" means higher utilization or, if equal, shorter length.
         if (!bestResult || 
             result.areaUtilizationPct > bestResult.areaUtilizationPct ||
             (result.areaUtilizationPct === bestResult.areaUtilizationPct && result.sheetLength < bestResult.sheetLength)) {
             bestResult = result;
         }
+      }
     }
 
     // 4. Handle No-Result Scenario
@@ -76,7 +83,7 @@ export const runNestingAgentFlow = ai.defineFlow(
       placedItems: bestResult.placedItems,
       sheetLength: bestResult.sheetLength,
       areaUtilizationPct: bestResult.areaUtilizationPct,
-      strategy: bestResult.sortStrategy,
+      strategy: `${bestResult.sortStrategy} / ${bestResult.packingMethod}`,
       totalCount: bestResult.totalCount,
       failedCount: bestResult.failedCount,
     };
