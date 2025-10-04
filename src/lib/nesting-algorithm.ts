@@ -113,9 +113,9 @@ class MaxRectsBinPack {
     if (usedNode.x > freeNode.x) {
         const newNode = {
             x: freeNode.x,
-            y: freeNode.y,
+            y: usedNode.y,
             width: usedNode.x - freeNode.x,
-            height: freeNode.height
+            height: usedNode.height
         };
         this.freeRectangles.push(newNode);
     }
@@ -124,9 +124,9 @@ class MaxRectsBinPack {
     if (usedNode.x + usedNode.width < freeNode.x + freeNode.width) {
         const newNode = {
             x: usedNode.x + usedNode.width,
-            y: freeNode.y,
+            y: usedNode.y,
             width: (freeNode.x + freeNode.width) - (usedNode.x + usedNode.width),
-            height: freeNode.height
+            height: usedNode.height
         };
         this.freeRectangles.push(newNode);
     }
