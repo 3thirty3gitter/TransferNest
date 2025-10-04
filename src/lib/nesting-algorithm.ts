@@ -21,14 +21,14 @@ class MaxRectsBinPack {
     
     // Try original orientation
     let node = this.findPositionForNewNode(width, height, method);
-    if (node.score < bestNode.score) {
+    if (node.score <= bestNode.score) {
         bestNode = { ...node, width: width, height: height, rotated: false };
     }
 
     // Try rotated orientation if the item is not a square
     if (width !== height) {
       let rotatedNode = this.findPositionForNewNode(height, width, method);
-      if (rotatedNode.score < bestNode.score) {
+      if (rotatedNode.score <= bestNode.score) {
         bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
       }
     }
