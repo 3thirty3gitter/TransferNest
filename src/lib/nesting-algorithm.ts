@@ -23,7 +23,7 @@ class MaxRectsBinPack {
     // Try original orientation
     let node = this.findPositionForNewNode(width, height, method);
     if (node.score < bestNode.score) {
-        bestNode = { ...node, width, height, rotated: false };
+        bestNode = { ...node, width: width, height: height, rotated: false };
     }
 
     // Try rotated orientation
