@@ -1,3 +1,4 @@
+
 // @ts-nocheck
 
 import type { NestedLayout } from '@/app/schema';
@@ -17,25 +18,32 @@ class MaxRectsBinPack {
   }
 
   insert(width, height, method = 'BestShortSideFit') {
-    const node = this.findPositionForNewNode(width, height, method);
+    let bestNode = { score: Infinity };
     
-    // Try rotating the rectangle
-    if (width !== height) {
-      const rotatedNode = this.findPositionForNewNode(height, width, method);
-      if (rotatedNode.score < node.score) {
-        node.width = height;
-        node.height = width;
-      }
+    // Try original orientation
+    let node = this.findPositionForNewNode(width, height, method);
+    if (node.score < bestNode.score) {
+        bestNode = { ...node, width, height, rotated: false };
     }
 
-    if (node.height === 0 || node.width === 0) return null;
+    // Try rotated orientation
+    if (width !== height) {
+      let rotatedNode = this.findPositionForNewNode(height, width, method);
+      if (rotatedNode.score < bestNode.score) {
+        bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
+      }
+    }
     
-    this.placeRectangle(node);
-    return node;
+    if (bestNode.score === Infinity) {
+        return null; // No room
+    }
+    
+    this.placeRectangle(bestNode);
+    return bestNode;
   }
 
   findPositionForNewNode(width, height, method) {
-    let bestNode = { x: 0, y: 0, width: 0, height: 0, score: Infinity };
+    let bestNode = { x: 0, y: 0, score: Infinity };
     
     for (let i = 0; i < this.freeRectangles.length; i++) {
       const freeRect = this.freeRectangles[i];
@@ -50,7 +58,7 @@ class MaxRectsBinPack {
         }
 
         if (score < bestNode.score) {
-          bestNode = { x: freeRect.x, y: freeRect.y, width: width, height: height, score: score };
+          bestNode = { x: freeRect.x, y: freeRect.y, score: score };
         }
       }
     }
@@ -129,37 +137,67 @@ class MaxRectsBinPack {
 }
 
 export const VIRTUAL_SHEET_HEIGHT = 20000;
+export type SortStrategy = 'AREA_DESC' | 'HEIGHT_DESC' | 'WIDTH_DESC' | 'PERIMETER_DESC';
 
-export function executeNesting(images, sheetWidth, virtualHeight = VIRTUAL_SHEET_HEIGHT, packingMethod = 'BestShortSideFit') {
+export function executeNesting(
+  images: ManagedImage[], 
+  sheetWidth: number, 
+  virtualHeight: number = VIRTUAL_SHEET_HEIGHT,
+  sortStrategy: SortStrategy = 'AREA_DESC'
+) {
   const packer = new MaxRectsBinPack(sheetWidth, virtualHeight);
   const margin = 0.1; // Small margin to prevent rounding errors and overlaps
   
   const allItems = images.flatMap(img =>
     Array.from({ length: img.copies || 1 }, (_, i) => ({
       ...img,
+      originalId: img.id,
       id: `${img.id}-copy${i}`,
-      w: img.width + margin,
-      h: img.height + margin,
     }))
-  ).sort((a, b) => (b.w * b.h) - (a.w * a.h)); // Sort by area descending
+  );
 
-  const placedItems = [];
-  const failedItems = [];
+  // Apply the selected sorting strategy
+  switch(sortStrategy) {
+    case 'AREA_DESC':
+      allItems.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+      break;
+    case 'HEIGHT_DESC':
+      allItems.sort((a, b) => b.height - a.height);
+      break;
+    case 'WIDTH_DESC':
+      allItems.sort((a, b) => b.width - a.width);
+      break;
+    case 'PERIMETER_DESC':
+        allItems.sort((a,b) => (b.width + b.height) - (a.width + a.height));
+        break;
+  }
+
+
+  const placedItems: NestedLayout = [];
+  const failedItems: ManagedImage[] = [];
   let maxY = 0;
 
   for (const item of allItems) {
-    const rect = packer.insert(item.w, item.h, packingMethod);
+    const itemWidthWithMargin = item.width + margin;
+    const itemHeightWithMargin = item.height + margin;
+
+    const rect = packer.insert(itemWidthWithMargin, itemHeightWithMargin);
+    
     if (rect) {
-      const rotated = rect.width !== item.w;
       placedItems.push({
         id: item.id,
         url: item.url,
         x: rect.x + margin / 2,
         y: rect.y + margin / 2,
-        width: rotated ? item.height : item.width,
-        height: rotated ? item.width : item.height,
-        rotated: rotated,
+        width: item.width,
+        height: item.height,
+        rotated: rect.rotated,
       });
+      // Adjust width/height if rotated
+      if (rect.rotated) {
+        placedItems[placedItems.length - 1].width = item.height;
+        placedItems[placedItems.length - 1].height = item.width;
+      }
       maxY = Math.max(maxY, rect.y + rect.height);
     } else {
       failedItems.push(item);
@@ -176,7 +214,7 @@ export function executeNesting(images, sheetWidth, virtualHeight = VIRTUAL_SHEET
     areaUtilizationPct: areaUtilizationPct,
     totalCount: allItems.length,
     failedCount: failedItems.length,
-    sortStrategy: 'AREA_DESC',
+    sortStrategy: sortStrategy,
   };
 }
 
