@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 
 import type { NestedLayout } from '@/app/schema';
@@ -18,11 +17,21 @@ class MaxRectsBinPack {
   }
 
   insert(width, height, method = 'BestShortSideFit') {
-    let newNode = this.findPositionForNewNode(width, height, method);
-    if (newNode.height === 0 || newNode.width === 0) return null;
+    const node = this.findPositionForNewNode(width, height, method);
     
-    this.placeRectangle(newNode);
-    return newNode;
+    // Try rotating the rectangle
+    if (width !== height) {
+      const rotatedNode = this.findPositionForNewNode(height, width, method);
+      if (rotatedNode.score < node.score) {
+        node.width = height;
+        node.height = width;
+      }
+    }
+
+    if (node.height === 0 || node.width === 0) return null;
+    
+    this.placeRectangle(node);
+    return node;
   }
 
   findPositionForNewNode(width, height, method) {
@@ -141,14 +150,15 @@ export function executeNesting(images, sheetWidth, virtualHeight = VIRTUAL_SHEET
   for (const item of allItems) {
     const rect = packer.insert(item.w, item.h, packingMethod);
     if (rect) {
+      const rotated = rect.width !== item.w;
       placedItems.push({
         id: item.id,
         url: item.url,
         x: rect.x + margin / 2,
         y: rect.y + margin / 2,
-        width: item.width,
-        height: item.height,
-        rotated: false,
+        width: rotated ? item.height : item.width,
+        height: rotated ? item.width : item.height,
+        rotated: rotated,
       });
       maxY = Math.max(maxY, rect.y + rect.height);
     } else {
