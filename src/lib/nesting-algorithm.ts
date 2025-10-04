@@ -17,7 +17,7 @@ class MaxRectsBinPack {
   }
 
   insert(width, height, method) {
-    let bestNode = { score: Infinity, rotated: false };
+    let bestNode = { score: Infinity, rotated: false, width: 0, height: 0, x: 0, y: 0 };
     
     // Try original orientation
     let node = this.findPositionForNewNode(width, height, method);
@@ -213,12 +213,12 @@ export function executeNesting(
         url: item.url,
         x: rect.x + margin / 2,
         y: rect.y + margin / 2,
-        width: rect.rotated ? item.height : item.width,
-        height: rect.rotated ? item.width : item.height,
+        width: rect.width - margin,
+        height: rect.height - margin,
         rotated: rect.rotated,
       });
 
-      maxY = Math.max(maxY, rect.y + (rect.rotated ? item.width : item.height) + margin);
+      maxY = Math.max(maxY, rect.y + rect.height);
     } else {
       failedItems.push(item);
     }
