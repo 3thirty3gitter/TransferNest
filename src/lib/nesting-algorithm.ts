@@ -189,15 +189,11 @@ export function executeNesting(
         url: item.url,
         x: rect.x + margin / 2,
         y: rect.y + margin / 2,
-        width: item.width,
-        height: item.height,
+        width: rect.width - margin,
+        height: rect.height - margin,
         rotated: rect.rotated,
       });
-      // Adjust width/height if rotated
-      if (rect.rotated) {
-        placedItems[placedItems.length - 1].width = item.height;
-        placedItems[placedItems.length - 1].height = item.width;
-      }
+
       maxY = Math.max(maxY, rect.y + rect.height);
     } else {
       failedItems.push(item);
