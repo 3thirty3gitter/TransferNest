@@ -1,6 +1,7 @@
 
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,8 +19,24 @@ type ImageCardProps = {
 };
 
 export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: ImageCardProps) {
+  const [localWidth, setLocalWidth] = useState(image.width.toFixed(2));
+  const [localHeight, setLocalHeight] = useState(image.height.toFixed(2));
+
+  useEffect(() => {
+    setLocalWidth(image.width.toFixed(2));
+    setLocalHeight(image.height.toFixed(2));
+  }, [image.width, image.height]);
 
   const handleDimensionChange = (dimension: 'width' | 'height', value: string) => {
+    if (dimension === 'width') {
+      setLocalWidth(value);
+    } else {
+      setLocalHeight(value);
+    }
+  };
+  
+  const triggerUpdate = (dimension: 'width' | 'height') => {
+    const value = dimension === 'width' ? localWidth : localHeight;
     const numericValue = parseFloat(value);
     if (!isNaN(numericValue) && numericValue > 0) {
       if (dimension === 'width') {
@@ -33,8 +50,13 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
           width: numericValue * image.aspectRatio,
         });
       }
+    } else {
+      // If input is invalid, revert to last known good state
+      setLocalWidth(image.width.toFixed(2));
+      setLocalHeight(image.height.toFixed(2));
     }
   };
+
 
   const handleCopiesChange = (newCopies: number) => {
     onUpdate(image.id, { copies: Math.max(1, newCopies) });
@@ -82,8 +104,9 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
                 <Input
                     id={`width-${image.id}`}
                     type="number"
-                    value={image.width.toFixed(2)}
+                    value={localWidth}
                     onChange={(e) => handleDimensionChange('width', e.target.value)}
+                    onBlur={() => triggerUpdate('width')}
                     className="h-8"
                 />
                 <span className="text-sm text-muted-foreground">in</span>
@@ -93,8 +116,9 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
                  <Input
                     id={`height-${image.id}`}
                     type="number"
-                    value={image.height.toFixed(2)}
+                    value={localHeight}
                     onChange={(e) => handleDimensionChange('height', e.target.value)}
+                    onBlur={() => triggerUpdate('height')}
                     className="h-8"
                 />
                 <span className="text-sm text-muted-foreground">in</span>
