@@ -8,14 +8,17 @@
     "zod": 1,
     "nesting": 2,
     "algorithm": 2,
-    "bug": 1,
-    "efficiency": 1
+    "bug": 2,
+    "efficiency": 1,
+    "react": 1,
+    "ui": 1
   },
   "systems": {
     "actions": 2,
     "build-process": 2,
     "genkit-api": 2,
     "nesting-agent": 3,
-    "data-schema": 3
+    "data-schema": 3,
+    "ui-components": 1
   }
 }
