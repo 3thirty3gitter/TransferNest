@@ -46,15 +46,14 @@ class MaxRectsBinPack {
     
     for (let i = 0; i < this.freeRectangles.length; i++) {
       const freeRect = this.freeRectangles[i];
+      let score = Infinity;
+
       if (freeRect.width >= width && freeRect.height >= height) {
-        let score = 0;
+        const leftoverHoriz = freeRect.width - width;
+        const leftoverVert = freeRect.height - height;
         if (method === 'BestShortSideFit') {
-          const leftoverHoriz = freeRect.width - width;
-          const leftoverVert = freeRect.height - height;
           score = Math.min(leftoverHoriz, leftoverVert);
         } else if (method === 'BestLongSideFit') {
-           const leftoverHoriz = freeRect.width - width;
-          const leftoverVert = freeRect.height - height;
           score = Math.max(leftoverHoriz, leftoverVert);
         } else if (method === 'BestAreaFit') {
           score = freeRect.width * freeRect.height - width * height;
