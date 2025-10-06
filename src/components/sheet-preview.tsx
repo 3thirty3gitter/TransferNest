@@ -44,13 +44,12 @@ export default function SheetPreview({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="relative w-full bg-muted/50 rounded-lg p-2 border overflow-hidden">
+        <div className="relative w-full bg-muted/50 rounded-lg p-2 border overflow-auto">
           <div
             className="relative bg-white shadow-inner transition-all duration-500"
             style={{
               width: `${displayWidth}px`,
               height: `${displayHeight}px`,
-              maxWidth: '100%',
               ...checkerboardStyle
             }}
           >
@@ -101,5 +100,3 @@ export default function SheetPreview({
     </Card>
   );
 }
-
-    
