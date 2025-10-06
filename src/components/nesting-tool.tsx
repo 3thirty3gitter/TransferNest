@@ -50,6 +50,7 @@ type Action =
   | { type: 'START_UPLOADING' }
   | { type: 'SET_UPLOAD_COMPLETE' }
   | { type: 'TRIM_IMAGE', payload: { id: string; newUrl: string; newWidth: number; newHeight: number; newAspectRatio: number } }
+  | { type: 'SET_IMAGES'; payload: ManagedImage[] }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
@@ -127,6 +128,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, isUploading: true };
     case 'SET_UPLOAD_COMPLETE':
         return { ...state, isUploading: false };
+    case 'SET_IMAGES':
+        return { ...state, images: action.payload, nestedLayout: [], sheetLength: 0, efficiency: 0 };
     case 'SET_ERROR':
       return { ...state, isLoading: false, isSaving: false, isUploading: false };
     default:
@@ -302,28 +305,31 @@ export default function NestingTool() {
     });
   }, []);
 
-  const handleSheetWidthChange = useCallback((width: 13 | 17) => {
-    dispatch({ type: 'SET_SHEET_WIDTH', payload: width });
-    
-    // After changing sheet width, check if any images are now too large and resize them.
-    state.images.forEach(image => {
-        if (image.width > width) {
-            const newWidth = width - 0.5; // Give a small margin
-            const newHeight = newWidth / image.aspectRatio;
-            dispatch({
-                type: 'UPDATE_IMAGE',
-                payload: {
-                    id: image.id,
-                    updates: { width: newWidth, height: newHeight }
-                }
-            });
-            toast({
-                title: 'Image Resized',
-                description: `An image was automatically resized to fit the new ${width}" sheet.`,
-            });
+  const handleSheetWidthChange = useCallback((newWidth: 13 | 17) => {
+    let imagesResized = false;
+    const updatedImages = state.images.map(image => {
+        if (image.width > newWidth) {
+            imagesResized = true;
+            const newImageWidth = newWidth - 0.5; // Give a small margin
+            return {
+                ...image,
+                width: newImageWidth,
+                height: newImageWidth / image.aspectRatio,
+            };
         }
+        return image;
     });
-  }, [state.images]);
+
+    dispatch({ type: 'SET_SHEET_WIDTH', payload: newWidth });
+    dispatch({ type: 'SET_IMAGES', payload: updatedImages });
+
+    if (imagesResized) {
+        toast({
+            title: 'Images Resized',
+            description: `One or more images were automatically resized to fit the new ${newWidth}" sheet.`,
+        });
+    }
+  }, [state.images, toast]);
 
   const handleArrange = async () => {
     if (state.images.length === 0) {
