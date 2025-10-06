@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { NestedLayout } from '@/app/schema';
 import { Loader2, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 
 type SheetPreviewProps = {
   sheetWidth: number;
@@ -15,7 +15,7 @@ type SheetPreviewProps = {
   isLoading: boolean;
 };
 
-const PIXELS_PER_INCH = 40; // Adjust for desired display size
+const PIXELS_PER_INCH = 40; // Base rendering resolution
 
 export default function SheetPreview({
   sheetWidth,
@@ -23,8 +23,27 @@ export default function SheetPreview({
   nestedLayout,
   isLoading,
 }: SheetPreviewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [containerHeight, setContainerHeight] = useState(300);
+
   const displayWidth = sheetWidth * PIXELS_PER_INCH;
   const displayHeight = sheetLength > 0 ? sheetLength * PIXELS_PER_INCH : 300;
+
+  useEffect(() => {
+    const calculateScale = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const newScale = containerWidth < displayWidth ? containerWidth / displayWidth : 1;
+        setScale(newScale);
+        setContainerHeight(displayHeight * newScale);
+      }
+    };
+
+    calculateScale();
+    window.addEventListener('resize', calculateScale);
+    return () => window.removeEventListener('resize', calculateScale);
+  }, [displayWidth, displayHeight]);
 
   const memoizedLayout = useMemo(() => nestedLayout || [], [nestedLayout]);
 
@@ -44,12 +63,17 @@ export default function SheetPreview({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="relative w-full bg-muted/50 rounded-lg p-2 border overflow-auto">
+        <div 
+          ref={containerRef}
+          className="relative w-full bg-muted/50 rounded-lg border"
+          style={{ height: `${containerHeight}px`, transition: 'height 0.5s ease-in-out' }}
+        >
           <div
-            className="relative bg-white shadow-inner transition-all duration-500"
+            className="relative bg-white shadow-inner transition-all duration-500 origin-top-left"
             style={{
               width: `${displayWidth}px`,
               height: `${displayHeight}px`,
+              transform: `scale(${scale})`,
               ...checkerboardStyle
             }}
           >
