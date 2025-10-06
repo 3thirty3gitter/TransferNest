@@ -144,7 +144,7 @@ class MaxRectsBinPack {
     return bestNode;
   }
   
- private splitFreeNode(usedNode: Rect): void {
+  private splitFreeNode(usedNode: Rect): void {
     const newFreeRects: Rect[] = [];
     for (let i = 0; i < this.freeRectangles.length; i++) {
         const free = this.freeRectangles[i];
@@ -179,18 +179,18 @@ class MaxRectsBinPack {
         if (usedNode.x > free.x) {
             newFreeRects.push({
                 x: free.x,
-                y: usedNode.y,
+                y: free.y,
                 width: usedNode.x - free.x,
-                height: usedNode.height
+                height: free.height
             });
         }
         // Right
         if (usedNode.x + usedNode.width < free.x + free.width) {
             newFreeRects.push({
                 x: usedNode.x + usedNode.width,
-                y: usedNode.y,
+                y: free.y,
                 width: (free.x + free.width) - (usedNode.x + usedNode.width),
-                height: usedNode.height
+                height: free.height
             });
         }
     }
