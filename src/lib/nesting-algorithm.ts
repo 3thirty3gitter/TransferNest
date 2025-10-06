@@ -52,6 +52,8 @@ type ExpandedImage = {
   height: number;
 };
 
+type Node = Rect & { score1: number; score2: number };
+
 export type SortStrategy = 'AREA_DESC' | 'PERIMETER_DESC' | 'HEIGHT_DESC' | 'WIDTH_DESC';
 export type PackingMethod = 'BestShortSideFit' | 'BestLongSideFit' | 'BestAreaFit' | 'BottomLeft';
 
@@ -71,71 +73,77 @@ class MaxRectsBinPack {
     this.freeRectangles.push({ x: 0, y: 0, width, height });
   }
 
-  insert(width: number, height: number, method: PackingMethod): Rect | null {
-    let bestNode: Rect & { score1?: number, score2?: number } = { x: 0, y: 0, width: 0, height: 0 };
-    let bestScore1 = Infinity;
-    let bestScore2 = Infinity;
+   private findPositionForNewNode(
+    width: number,
+    height: number,
+    method: PackingMethod
+  ): Node {
+    let bestNode: Node = { x: 0, y: 0, width: 0, height: 0, score1: Infinity, score2: Infinity };
 
-    const tryPlace = (w: number, h: number): Rect | null => {
-        for (const freeRect of this.freeRectangles) {
-            if (freeRect.width >= w && freeRect.height >= h) {
-                let score1: number, score2: number;
-                switch (method) {
-                    case 'BestShortSideFit':
-                        score1 = Math.min(freeRect.width - w, freeRect.height - h);
-                        score2 = Math.max(freeRect.width - w, freeRect.height - h);
-                        break;
-                    case 'BestLongSideFit':
-                        score1 = Math.max(freeRect.width - w, freeRect.height - h);
-                        score2 = Math.min(freeRect.width - w, freeRect.height - h);
-                        break;
-                    case 'BestAreaFit':
-                        score1 = freeRect.width * freeRect.height - w * h;
-                        score2 = Infinity;
-                        break;
-                    case 'BottomLeft':
-                        score1 = freeRect.y + h;
-                        score2 = freeRect.x;
-                        break;
-                }
-
-                if (score1 <= bestScore1 && score2 < bestScore2) {
-                    bestScore1 = score1;
-                    bestScore2 = score2;
-                    bestNode = { x: freeRect.x, y: freeRect.y, width: w, height: h };
-                }
-            }
+    for (const freeRect of this.freeRectangles) {
+      if (freeRect.width >= width && freeRect.height >= height) {
+        let score1: number, score2: number;
+        switch (method) {
+          case 'BestShortSideFit':
+            score1 = Math.min(freeRect.width - width, freeRect.height - height);
+            score2 = Math.max(freeRect.width - width, freeRect.height - height);
+            break;
+          case 'BestLongSideFit':
+            score1 = Math.max(freeRect.width - width, freeRect.height - height);
+            score2 = Math.min(freeRect.width - width, freeRect.height - height);
+            break;
+          case 'BestAreaFit':
+            score1 = freeRect.width * freeRect.height - width * height;
+            score2 = Infinity;
+            break;
+          case 'BottomLeft':
+            score1 = freeRect.y + height;
+            score2 = freeRect.x;
+            break;
         }
-        return null;
-    }
-    
-    // Try original orientation
-    tryPlace(width, height);
-    const originalNode = { ...bestNode };
-    const originalScore1 = bestScore1;
-    const originalScore2 = bestScore2;
 
-    // Reset and try rotated
-    bestScore1 = Infinity;
-    bestScore2 = Infinity;
-    tryPlace(height, width);
-    const rotatedNode = { ...bestNode };
-
-    // If no fit found at all
-    if (originalScore1 === Infinity && bestScore1 === Infinity) {
-        return null;
+        if (score1 < bestNode.score1 || (score1 === bestNode.score1 && score2 < bestNode.score2)) {
+          bestNode = {
+            x: freeRect.x,
+            y: freeRect.y,
+            width: width,
+            height: height,
+            score1,
+            score2,
+          };
+        }
+      }
     }
+    return bestNode;
+  }
+  
+  insert(width: number, height: number, method: PackingMethod): (Rect & { rotated: boolean }) | null {
+    const newNode = this.findPositionForNewNode(width, height, method);
     
+    // Try to rotate
+    const rotatedNode = this.findPositionForNewNode(height, width, method);
+
+    // If both don't fit
+    if (newNode.score1 === Infinity && rotatedNode.score1 === Infinity) {
+      return null;
+    }
+
     let placedNode: Rect & { rotated: boolean };
 
-    // Compare original and rotated results
-    if (originalScore1 <= bestScore1 && originalScore2 < bestScore2) {
-      placedNode = { ...originalNode, rotated: false };
+    // Compare scores. <= allows tie-breaking which is important.
+    if (newNode.score1 <= rotatedNode.score1 && newNode.score2 <= rotatedNode.score2) {
+      placedNode = { ...newNode, rotated: false };
     } else {
       placedNode = { ...rotatedNode, rotated: true };
     }
+
+    if (placedNode.width === 0 || placedNode.height === 0) {
+      return null; // Should not happen with score checks, but as a safeguard.
+    }
     
     this.splitFreeNode(placedNode);
+    this.pruneFreeList();
+
     return placedNode;
   }
 
@@ -148,31 +156,30 @@ class MaxRectsBinPack {
           }
 
           // Top split
-          if (usedNode.y > freeRect.y) {
+          if (usedNode.y > freeRect.y + EPSILON) {
               newFreeRects.push({ x: freeRect.x, y: freeRect.y, width: freeRect.width, height: usedNode.y - freeRect.y });
           }
           // Bottom split
-          if (usedNode.y + usedNode.height < freeRect.y + freeRect.height) {
+          if (usedNode.y + usedNode.height < freeRect.y + freeRect.height - EPSILON) {
               newFreeRects.push({ x: freeRect.x, y: usedNode.y + usedNode.height, width: freeRect.width, height: (freeRect.y + freeRect.height) - (usedNode.y + usedNode.height) });
           }
           // Left split
-          if (usedNode.x > freeRect.x) {
-              newFreeRects.push({ x: freeRect.x, y: freeRect.y, width: usedNode.x - freeRect.x, height: freeRect.height });
+          if (usedNode.x > freeRect.x + EPSILON) {
+              newFreeRects.push({ x: freeRect.x, y: usedNode.y, width: usedNode.x - freeRect.x, height: usedNode.height });
           }
           // Right split
-          if (usedNode.x + usedNode.width < freeRect.x + freeRect.width) {
-              newFreeRects.push({ x: usedNode.x + usedNode.width, y: freeRect.y, width: (freeRect.x + freeRect.width) - (usedNode.x + usedNode.width), height: freeRect.height });
+          if (usedNode.x + usedNode.width < freeRect.x + freeRect.width - EPSILON) {
+              newFreeRects.push({ x: usedNode.x + usedNode.width, y: usedNode.y, width: (freeRect.x + freeRect.width) - (usedNode.x + usedNode.width), height: usedNode.height });
           }
       }
       this.freeRectangles = newFreeRects;
-      this.pruneFreeList();
   }
 
   private isOverlapping(rect1: Rect, rect2: Rect): boolean {
-      return rect1.x < rect2.x + rect2.width &&
-             rect1.x + rect1.width > rect2.x &&
-             rect1.y < rect2.y + rect2.height &&
-             rect1.y + rect1.height > rect2.y;
+      return rect1.x < rect2.x + rect2.width - EPSILON &&
+             rect1.x + rect1.width > rect2.x + EPSILON &&
+             rect1.y < rect2.y + rect2.height - EPSILON &&
+             rect1.y + rect1.height > rect2.y + EPSILON;
   }
 
   private pruneFreeList(): void {
@@ -182,9 +189,9 @@ class MaxRectsBinPack {
         while (j < this.freeRectangles.length) {
             const r1 = this.freeRectangles[i];
             const r2 = this.freeRectangles[j];
-            if (r2.x >= r1.x && r2.y >= r1.y && r2.x + r2.width <= r1.x + r1.width && r2.y + r2.height <= r1.y + r1.height) {
+            if (r2.x >= r1.x - EPSILON && r2.y >= r1.y - EPSILON && r2.x + r2.width <= r1.x + r1.width + EPSILON && r2.y + r2.height <= r1.y + r1.height + EPSILON) {
                 this.freeRectangles.splice(j, 1); // r2 is inside r1
-            } else if (r1.x >= r2.x && r1.y >= r2.y && r1.x + r1.width <= r2.x + r2.width && r1.y + r1.height <= r2.y + r2.height) {
+            } else if (r1.x >= r2.x - EPSILON && r1.y >= r2.y - EPSILON && r1.x + r1.width <= r2.x + r2.width + EPSILON && r1.y + r1.height <= r2.y + r2.height + EPSILON) {
                 this.freeRectangles.splice(i, 1); // r1 is inside r2
                 i--; // Decrement i to re-check the new element at this index
                 break;
