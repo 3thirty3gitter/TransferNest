@@ -85,16 +85,12 @@ class MaxRectsBinPack {
 
     let bestNode: Node = { x: 0, y: 0, width: 0, height: 0, rotated: false, score: Infinity };
 
-    // Compare scores and construct the bestNode with the correct dimensions
     if (node.score <= rotatedNode.score) {
-        // Un-rotated is better or equal
         bestNode = { ...node, width: width, height: height, rotated: false };
     } else {
-        // Rotated is better
         bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
     }
 
-    // If no valid position was found, the score will be Infinity.
     if (bestNode.score === Infinity) {
       return null;
     }
@@ -139,7 +135,7 @@ class MaxRectsBinPack {
                     y: rect.y,
                     width: width,
                     height: height,
-                    rotated: false, // This is temporary, final rotation is set in insert()
+                    rotated: false,
                     score: score,
                 };
             }
@@ -183,18 +179,18 @@ class MaxRectsBinPack {
         if (usedNode.x > free.x) {
             newFreeRects.push({
                 x: free.x,
-                y: free.y,
+                y: usedNode.y,
                 width: usedNode.x - free.x,
-                height: free.height
+                height: usedNode.height
             });
         }
         // Right
         if (usedNode.x + usedNode.width < free.x + free.width) {
             newFreeRects.push({
                 x: usedNode.x + usedNode.width,
-                y: free.y,
+                y: usedNode.y,
                 width: (free.x + free.width) - (usedNode.x + usedNode.width),
-                height: free.height
+                height: usedNode.height
             });
         }
     }
