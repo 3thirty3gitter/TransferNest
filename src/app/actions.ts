@@ -1,17 +1,25 @@
+
 'use server';
 /**
  * @fileOverview This file contains the server actions that act as a bridge
- * between client components and the server-side Genkit flows.
+ * between client components and server-side logic.
  */
 
 import type { CartItem, NestingAgentInput, NestingAgentOutput } from '@/app/schema';
+import {
+  executeNesting,
+  VIRTUAL_SHEET_HEIGHT,
+  type SortStrategy,
+  type PackingMethod,
+} from '@/lib/nesting-algorithm';
 
+
+// --- Cart Actions ---
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
 
 async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<Output> {
   const url = `${BASE_URL}/api/${flowId}`;
   
-  // Genkit's appRoute expects the data as a direct property, not wrapped
   const body = {
     data: input
   };
@@ -34,7 +42,6 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
     
     const result = await response.json();
     
-    // Extract the result from Genkit's response format
     return result.result || result;
 
   } catch (error) {
@@ -60,8 +67,70 @@ export async function removeCartItemAction(
   return await invokeFlow('removeCartItemFlow', { docId });
 }
 
+
+// --- Nesting Action ---
+
 export async function runNestingAgentAction(
   input: NestingAgentInput
 ): Promise<NestingAgentOutput> {
-  return await invokeFlow('runNestingAgentFlow', input);
+  // 1. Validate Input
+  if (!input.images || input.images.length === 0) {
+    throw new Error('No images were provided for nesting. Please add images and try again.');
+  }
+  const oversized = input.images.filter(
+    (i) => (i.width > input.sheetWidth && i.height > input.sheetWidth)
+  );
+  if (oversized.length > 0) {
+    throw new Error(
+      'Some images are too large for the sheet even when rotated. Offending images: ' +
+        oversized.map((i) => `${i.id || i.url} (${i.width}x${i.height})`).join(', ')
+    );
+  }
+  
+  // 2. Define Strategies and Methods for Exhaustive Competition
+  const sortStrategies: SortStrategy[] = ['AREA_DESC', 'HEIGHT_DESC', 'WIDTH_DESC', 'PERIMETER_DESC'];
+  const packingMethods: PackingMethod[] = ['BestShortSideFit', 'BestLongSideFit', 'BestAreaFit', 'BottomLeft'];
+
+  let bestResult: NestingResult | null = null;
+  
+  // 3. Run Exhaustive Competition across all combinations
+  for (const strategy of sortStrategies) {
+    for (const method of packingMethods) {
+      const result = executeNesting(
+          input.images,
+          input.sheetWidth,
+          VIRTUAL_SHEET_HEIGHT,
+          strategy,
+          method
+      );
+      
+      // "Better" means higher utilization or, if equal, shorter length.
+      if (!bestResult || 
+          result.areaUtilizationPct > bestResult.areaUtilizationPct ||
+          (result.areaUtilizationPct === bestResult.areaUtilizationPct && result.sheetLength < bestResult.sheetLength)) {
+          bestResult = result;
+      }
+    }
+  }
+
+  // 4. Handle No-Result Scenario
+  if (!bestResult || bestResult.placedItems.length === 0) {
+    throw new Error('Nesting failed to produce any layout. Check image dimensions.');
+  }
+  
+  // 5. Construct Final Output with Diagnostics
+  const output: NestingAgentOutput = {
+    placedItems: bestResult.placedItems,
+    sheetLength: bestResult.sheetLength,
+    areaUtilizationPct: bestResult.areaUtilizationPct,
+    strategy: `${bestResult.sortStrategy} / ${bestResult.packingMethod}`,
+    totalCount: bestResult.totalCount,
+    failedCount: bestResult.failedCount,
+  };
+
+  if (bestResult.failedCount > 0) {
+    output.warning = `${bestResult.failedCount} out of ${bestResult.totalCount} image(s) could not be placed. Try reducing quantities or using a wider sheet.`;
+  }
+  
+  return output;
 }

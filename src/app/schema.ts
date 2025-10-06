@@ -57,7 +57,7 @@ export const NestingAgentOutputSchema = z.object({
   placedItems: NestedLayoutSchema,
   sheetLength: z.number(),
   areaUtilizationPct: z.number(),
-  strategy: z.string(),
+  strategy: z.string().optional(),
   // Add optional fields for diagnostics to prevent schema errors on partial layouts
   warning: z.string().optional(),
   totalCount: z.number().optional(),

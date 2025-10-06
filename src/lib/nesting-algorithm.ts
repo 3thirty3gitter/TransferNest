@@ -2,8 +2,9 @@
 // src/lib/nesting-algorithm.ts
 
 /**
- * @fileoverview A 2D bin packing algorithm for nesting images onto a sheet.
+ * @fileoverview A robust 2D bin packing algorithm for nesting images onto a sheet.
  * Implements the MaxRects algorithm with multiple heuristics.
+ * This is a complete rewrite to ensure stability and correctness.
  */
 
 // --- Data Contracts ---
@@ -32,8 +33,8 @@ export type NestingResult = {
   areaUtilizationPct: number;
   totalCount: number;
   failedCount: number;
-  sortStrategy: string;
-  packingMethod: string;
+  sortStrategy: SortStrategy;
+  packingMethod: PackingMethod;
 };
 
 // --- Algorithm Internals & Types ---
@@ -44,15 +45,6 @@ type Rect = {
   height: number;
 };
 
-type Node = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotated: boolean;
-  score: number;
-};
-
 type ExpandedImage = {
   id: string;
   url: string;
@@ -61,7 +53,7 @@ type ExpandedImage = {
 };
 
 export type SortStrategy = 'AREA_DESC' | 'PERIMETER_DESC' | 'HEIGHT_DESC' | 'WIDTH_DESC';
-export type PackingMethod = 'BestShortSideFit' | 'BestLongSideFit' | 'BestAreaFit';
+export type PackingMethod = 'BestShortSideFit' | 'BestLongSideFit' | 'BestAreaFit' | 'BottomLeft';
 
 export const VIRTUAL_SHEET_HEIGHT = 100000;
 const ITEM_SPACING = 0.125;
@@ -70,156 +62,138 @@ const EPSILON = 1e-6;
 // --- Main Packer Class ---
 class MaxRectsBinPack {
   private freeRectangles: Rect[] = [];
+  public sheetWidth: number;
+  public sheetHeight: number;
 
   constructor(width: number, height: number) {
+    this.sheetWidth = width;
+    this.sheetHeight = height;
     this.freeRectangles.push({ x: 0, y: 0, width, height });
   }
 
-  insert(
-    width: number,
-    height: number,
-    method: PackingMethod
-  ): Node | null {
-    const node = this.findPositionForNewNode(width, height, method);
-    const rotatedNode = this.findPositionForNewNode(height, width, method);
+  insert(width: number, height: number, method: PackingMethod): Rect | null {
+    let bestNode: Rect & { score1?: number, score2?: number } = { x: 0, y: 0, width: 0, height: 0 };
+    let bestScore1 = Infinity;
+    let bestScore2 = Infinity;
 
-    let bestNode: Node = { x: 0, y: 0, width: 0, height: 0, rotated: false, score: Infinity };
+    const tryPlace = (w: number, h: number): Rect | null => {
+        for (const freeRect of this.freeRectangles) {
+            if (freeRect.width >= w && freeRect.height >= h) {
+                let score1: number, score2: number;
+                switch (method) {
+                    case 'BestShortSideFit':
+                        score1 = Math.min(freeRect.width - w, freeRect.height - h);
+                        score2 = Math.max(freeRect.width - w, freeRect.height - h);
+                        break;
+                    case 'BestLongSideFit':
+                        score1 = Math.max(freeRect.width - w, freeRect.height - h);
+                        score2 = Math.min(freeRect.width - w, freeRect.height - h);
+                        break;
+                    case 'BestAreaFit':
+                        score1 = freeRect.width * freeRect.height - w * h;
+                        score2 = Infinity;
+                        break;
+                    case 'BottomLeft':
+                        score1 = freeRect.y + h;
+                        score2 = freeRect.x;
+                        break;
+                }
 
-    if (node.score <= rotatedNode.score) {
-        bestNode = { ...node, width: width, height: height, rotated: false };
+                if (score1 < bestScore1 || (score1 === bestScore1 && score2 < bestScore2)) {
+                    bestScore1 = score1;
+                    bestScore2 = score2;
+                    bestNode = { x: freeRect.x, y: freeRect.y, width: w, height: h };
+                }
+            }
+        }
+        return null;
+    }
+    
+    // Try original orientation
+    tryPlace(width, height);
+    const originalNode = { ...bestNode };
+    const originalScore1 = bestScore1;
+    const originalScore2 = bestScore2;
+
+    // Reset and try rotated
+    bestScore1 = Infinity;
+    bestScore2 = Infinity;
+    tryPlace(height, width);
+    const rotatedNode = { ...bestNode };
+
+    // If no fit found at all
+    if (originalScore1 === Infinity && bestScore1 === Infinity) {
+        return null;
+    }
+    
+    let placedNode: Rect & { rotated: boolean };
+
+    // Compare original and rotated results
+    if (originalScore1 < bestScore1 || (originalScore1 === bestScore1 && originalScore2 < bestScore2)) {
+      placedNode = { ...originalNode, rotated: false };
     } else {
-        bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
+      placedNode = { ...rotatedNode, rotated: true };
     }
-
-    if (bestNode.score === Infinity) {
-      return null;
-    }
-
-    this.splitFreeNode(bestNode);
-    return bestNode;
+    
+    this.splitFreeNode(placedNode);
+    return placedNode;
   }
 
-   private findPositionForNewNode(
-    width: number,
-    height: number,
-    method: PackingMethod
-  ): Node {
-    let bestNode: Node = {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      rotated: false, 
-      score: Infinity,
-    };
+  private splitFreeNode(usedNode: Rect): void {
+      const newFreeRects: Rect[] = [];
+      for (const freeRect of this.freeRectangles) {
+          if (!this.isOverlapping(usedNode, freeRect)) {
+              newFreeRects.push(freeRect);
+              continue;
+          }
 
-    for (let i = 0; i < this.freeRectangles.length; i++) {
-        const rect = this.freeRectangles[i];
-        if (width <= rect.width + EPSILON && height <= rect.height + EPSILON) {
-            let score: number;
-            switch (method) {
-                case 'BestShortSideFit':
-                    score = Math.min(rect.width - width, rect.height - height);
-                    break;
-                case 'BestLongSideFit':
-                    score = Math.max(rect.width - width, rect.height - height);
-                    break;
-                case 'BestAreaFit':
-                default:
-                    score = rect.width * rect.height - width * height;
-                    break;
-            }
-            if (score <= bestNode.score) {
-                bestNode = {
-                    x: rect.x,
-                    y: rect.y,
-                    width: width,
-                    height: height,
-                    rotated: false,
-                    score: score,
-                };
-            }
-        }
-    }
-    return bestNode;
+          // Top split
+          if (usedNode.y > freeRect.y) {
+              newFreeRects.push({ x: freeRect.x, y: freeRect.y, width: freeRect.width, height: usedNode.y - freeRect.y });
+          }
+          // Bottom split
+          if (usedNode.y + usedNode.height < freeRect.y + freeRect.height) {
+              newFreeRects.push({ x: freeRect.x, y: usedNode.y + usedNode.height, width: freeRect.width, height: (freeRect.y + freeRect.height) - (usedNode.y + usedNode.height) });
+          }
+          // Left split
+          if (usedNode.x > freeRect.x) {
+              newFreeRects.push({ x: freeRect.x, y: freeRect.y, width: usedNode.x - freeRect.x, height: freeRect.height });
+          }
+          // Right split
+          if (usedNode.x + usedNode.width < freeRect.x + freeRect.width) {
+              newFreeRects.push({ x: usedNode.x + usedNode.width, y: freeRect.y, width: (freeRect.x + freeRect.width) - (usedNode.x + usedNode.width), height: freeRect.height });
+          }
+      }
+      this.freeRectangles = newFreeRects;
+      this.pruneFreeList();
   }
-  
- private splitFreeNode(usedNode: Rect): void {
-    const newFreeRects: Rect[] = [];
-    for (let i = 0; i < this.freeRectangles.length; i++) {
-        const free = this.freeRectangles[i];
 
-        const overlapX = usedNode.x < free.x + free.width && usedNode.x + usedNode.width > free.x;
-        const overlapY = usedNode.y < free.y + free.height && usedNode.y + usedNode.height > free.y;
+  private isOverlapping(rect1: Rect, rect2: Rect): boolean {
+      return rect1.x < rect2.x + rect2.width &&
+             rect1.x + rect1.width > rect2.x &&
+             rect1.y < rect2.y + rect2.height &&
+             rect1.y + rect1.height > rect2.y;
+  }
 
-        if (!overlapX || !overlapY) {
-            newFreeRects.push(free);
-            continue;
+  private pruneFreeList(): void {
+    let i = 0;
+    while (i < this.freeRectangles.length) {
+        let j = i + 1;
+        while (j < this.freeRectangles.length) {
+            const r1 = this.freeRectangles[i];
+            const r2 = this.freeRectangles[j];
+            if (r2.x >= r1.x && r2.y >= r1.y && r2.x + r2.width <= r1.x + r1.width && r2.y + r2.height <= r1.y + r1.height) {
+                this.freeRectangles.splice(j, 1); // r2 is inside r1
+            } else if (r1.x >= r2.x && r1.y >= r2.y && r1.x + r1.width <= r2.x + r2.width && r1.y + r1.height <= r2.y + r2.height) {
+                this.freeRectangles.splice(i, 1); // r1 is inside r2
+                i--; // Decrement i to re-check the new element at this index
+                break;
+            } else {
+                j++;
+            }
         }
-
-        // Top
-        if (usedNode.y > free.y && usedNode.y < free.y + free.height) {
-            newFreeRects.push({
-                x: free.x,
-                y: free.y,
-                width: free.width,
-                height: usedNode.y - free.y,
-            });
-        }
-        // Bottom
-        if (usedNode.y + usedNode.height < free.y + free.height) {
-            newFreeRects.push({
-                x: free.x,
-                y: usedNode.y + usedNode.height,
-                width: free.width,
-                height: (free.y + free.height) - (usedNode.y + usedNode.height),
-            });
-        }
-        // Left
-        if (usedNode.x > free.x && usedNode.x < free.x + free.width) {
-            newFreeRects.push({
-                x: free.x,
-                y: free.y,
-                width: usedNode.x - free.x,
-                height: free.height
-            });
-        }
-        // Right
-        if (usedNode.x + usedNode.width < free.x + free.width) {
-            newFreeRects.push({
-                x: usedNode.x + usedNode.width,
-                y: free.y,
-                width: (free.x + free.width) - (usedNode.x + usedNode.width),
-                height: free.height
-            });
-        }
+        i++;
     }
-    this.pruneFreeList(newFreeRects);
-}
-
-  private pruneFreeList(rects: Rect[]): void {
-    const uniqueRects: Rect[] = [];
-    for (let i = 0; i < rects.length; i++) {
-      let isContained = false;
-      for (let j = 0; j < rects.length; j++) {
-        if (i === j) continue;
-        const r1 = rects[i];
-        const r2 = rects[j];
-        if (
-          r1.x >= r2.x - EPSILON &&
-          r1.y >= r2.y - EPSILON &&
-          r1.x + r1.width <= r2.x + r2.width + EPSILON &&
-          r1.y + r1.height <= r2.y + r2.height + EPSILON
-        ) {
-          isContained = true;
-          break;
-        }
-      }
-      if (!isContained) {
-        uniqueRects.push(rects[i]);
-      }
-    }
-    this.freeRectangles = uniqueRects;
   }
 }
 
@@ -252,7 +226,7 @@ function sortImages(images: ExpandedImage[], strategy: SortStrategy): void {
   });
 }
 
-export function calculateOccupancy(placedItems: NestedImage[], sheetWidth: number, sheetLength: number): number {
+function calculateOccupancy(placedItems: NestedImage[], sheetWidth: number, sheetLength: number): number {
     if (sheetWidth <= 0 || sheetLength <= 0 || placedItems.length === 0) {
         return 0;
     }
@@ -277,9 +251,12 @@ export function executeNesting(
   let failedCount = 0;
 
   for (const image of allImages) {
+    const spacedWidth = image.width + ITEM_SPACING;
+    const spacedHeight = image.height + ITEM_SPACING;
+    
     const node = packer.insert(
-      image.width + ITEM_SPACING,
-      image.height + ITEM_SPACING,
+      spacedWidth,
+      spacedHeight,
       packingMethod
     );
 
@@ -299,7 +276,7 @@ export function executeNesting(
   }
 
   const finalSheetLength = placedItems.length > 0
-      ? Math.max(...placedItems.map(item => item.y + item.height))
+      ? Math.max(...placedItems.map(item => item.y + item.height + ITEM_SPACING))
       : 0;
 
   const areaUtilizationPct = calculateOccupancy(placedItems, sheetWidth, finalSheetLength);
