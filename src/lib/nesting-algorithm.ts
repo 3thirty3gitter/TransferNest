@@ -1,3 +1,4 @@
+import { recordNestingRun } from "@/lib/nesting-telemetry";
 // src/lib/nesting-algorithm.ts
 
 // -------- Contracts (as required by host app) --------

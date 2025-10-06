@@ -1,5 +1,6 @@
 
 'use server';
+import { recordNestingRun } from "@/lib/nesting-telemetry";
 /**
  * @fileOverview A specialist AI agent for optimizing 2D nesting of images on a sheet.
  *

@@ -14,6 +14,7 @@ import { executeNesting, calculateOccupancy, VIRTUAL_SHEET_HEIGHT } from '@/lib/
 import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout } from '@/app/schema';
 import { toast } from '@/hooks/use-toast';
+import { recordNestingRun } from "@/lib/nesting-telemetry";
 
 type TestConfig = {
   iterations: number;
@@ -133,7 +134,7 @@ export default function NestingTesterPage() {
       // 1. Generate random images
       const images = Array.from({ length: config.numUniqueImages }, (_, i) => ({
         id: `img-${i}`,
-        url: 'https://placehold.co/300x300/e2e8f0/e2e8f0', // Placeholder, not rendered
+        url: 'https://placehold.co/300x300.png?bg=e2e8f0https://placehold.co/300x300/e2e8f0/e2e8f0text=%20', // Placeholder, not rendered
         width: rand(config.minDim, config.maxDim),
         height: rand(config.minDim, config.maxDim),
         copies: Math.round(rand(config.minCopies, config.maxCopies)),
@@ -143,6 +144,9 @@ export default function NestingTesterPage() {
 
       // 2. Run nesting algorithm
       const result = executeNesting(images, config.sheetWidth, VIRTUAL_SHEET_HEIGHT * 2);
+      
+      // 2.5 Log the result for analysis
+      recordNestingRun({ context: 'tester', sheetWidth: config.sheetWidth, images, result });
 
       // 3. Calculate efficiency
       const efficiency = result.areaUtilizationPct;
@@ -352,6 +356,8 @@ export default function NestingTesterPage() {
     </div>
   );
 }
+
+    
 
     
 

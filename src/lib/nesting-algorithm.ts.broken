@@ -1,3 +1,4 @@
+import { recordNestingRun } from "@/lib/nesting-telemetry";
 // @ts-nocheck
 
 import type { NestedLayout } from '@/app/schema';
