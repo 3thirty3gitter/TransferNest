@@ -102,7 +102,7 @@ class MaxRectsBinPack {
             break;
         }
 
-        if (score1 < bestNode.score1 || (score1 === bestNode.score1 && score2 < bestNode.score2)) {
+        if (score1 <= bestNode.score1 && (score1 < bestNode.score1 || score2 < bestNode.score2)) {
           bestNode = {
             x: freeRect.x,
             y: freeRect.y,
@@ -118,39 +118,43 @@ class MaxRectsBinPack {
   }
   
   insert(width: number, height: number, method: PackingMethod): (Rect & { rotated: boolean }) | null {
-    let bestNode: (Node & { rotated: boolean }) | null = null;
+    // Find the best placement for the original orientation.
+    const newNode = this.findPositionForNewNode(width, height, method);
+
+    // Find the best placement for the rotated orientation.
+    const rotatedNode = this.findPositionForNewNode(height, width, method);
+
+    let useRotated = false;
+    // Check if any placement is possible
+    if (newNode.score1 === Infinity && rotatedNode.score1 === Infinity) {
+        return null; // Cannot fit either way.
+    }
+
+    // Compare scores to decide whether to rotate.
+    if (rotatedNode.score1 < newNode.score1 || (rotatedNode.score1 === newNode.score1 && rotatedNode.score2 < newNode.score2)) {
+        useRotated = true;
+    }
+
+    let finalNode: Node;
+    let placedRect: Rect;
+
+    if (useRotated) {
+        finalNode = rotatedNode;
+        placedRect = { x: finalNode.x, y: finalNode.y, width: height, height: width };
+    } else {
+        finalNode = newNode;
+        placedRect = { x: finalNode.x, y: finalNode.y, width: width, height: height };
+    }
     
-    // Try without rotation
-    const node1 = this.findPositionForNewNode(width, height, method);
-    if (node1.score1 !== Infinity) {
-        bestNode = { ...node1, rotated: false };
-    }
-
-    // Try with rotation
-    const node2 = this.findPositionForNewNode(height, width, method);
-    if (node2.score1 !== Infinity) {
-        const rotatedNode = { ...node2, rotated: true };
-        if (!bestNode || rotatedNode.score1 < bestNode.score1 || (rotatedNode.score1 === bestNode.score1 && rotatedNode.score2 < bestNode.score2)) {
-            bestNode = rotatedNode;
-        }
-    }
-
-    if (!bestNode) {
-        return null; // Cannot fit either way
+    // This check is crucial. If even the best node is invalid, we can't place it.
+    if (finalNode.score1 === Infinity) {
+        return null;
     }
     
-    // The final chosen node for placement, possibly rotated.
-    const placedNode: Rect = {
-        x: bestNode.x,
-        y: bestNode.y,
-        width: bestNode.rotated ? height : width,
-        height: bestNode.rotated ? width : height,
-    };
-
-    this.splitFreeNode(placedNode);
+    this.splitFreeNode(placedRect);
     this.pruneFreeList();
-
-    return { ...placedNode, rotated: bestNode.rotated };
+    
+    return { ...placedRect, rotated: useRotated };
   }
 
   private splitFreeNode(usedNode: Rect): void {
