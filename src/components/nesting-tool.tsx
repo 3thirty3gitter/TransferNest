@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useReducer, useCallback, useMemo } from 'react';
+import { useState, useReducer, useCallback, useMemo, useEffect } from 'react';
 import ImageManager from '@/components/image-manager';
 import SheetConfig from '@/components/sheet-config';
 import SheetPreview from '@/components/sheet-preview';
@@ -29,6 +29,7 @@ type State = {
   images: ManagedImage[];
   nestedLayout: NestedLayout;
   sheetLength: number;
+  sheetWidth: 13 | 17;
   isLoading: boolean;
   isSaving: boolean;
   isUploading: boolean;
@@ -48,18 +49,22 @@ type Action =
   | { type: 'START_UPLOADING' }
   | { type: 'SET_UPLOAD_COMPLETE' }
   | { type: 'TRIM_IMAGE', payload: { id: string; newUrl: string; newWidth: number; newHeight: number; newAspectRatio: number } }
-  | { type: 'RESIZE_IMAGES_FOR_SHEET', payload: { newWidth: number } }
+  | { type: 'SET_SHEET_WIDTH', payload: 13 | 17 }
   | { type: 'SET_ERROR'; payload: string };
 
-const initialState: State = {
-  images: [],
-  nestedLayout: [],
-  sheetLength: 0,
-  isLoading: false,
-  isSaving: false,
-  isUploading: false,
-  efficiency: 0,
-};
+function getInitialState(initialSheetWidth: 13 | 17): State {
+    return {
+        images: [],
+        nestedLayout: [],
+        sheetLength: 0,
+        sheetWidth: initialSheetWidth,
+        isLoading: false,
+        isSaving: false,
+        isUploading: false,
+        efficiency: 0,
+    };
+}
+
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -78,8 +83,10 @@ function reducer(state: State, action: Action): State {
           efficiency: 0,
         };
     }
-    case 'RESIZE_IMAGES_FOR_SHEET': {
-        const { newWidth } = action.payload;
+    case 'SET_SHEET_WIDTH': {
+        const newWidth = action.payload;
+        if (newWidth === state.sheetWidth) return state;
+
         const newImages = state.images.map(img => {
             if (img.width > newWidth) {
                 return {
@@ -90,7 +97,7 @@ function reducer(state: State, action: Action): State {
             }
             return img;
         });
-        return { ...state, images: newImages, nestedLayout: [], sheetLength: 0, efficiency: 0 };
+        return { ...state, images: newImages, sheetWidth: newWidth, nestedLayout: [], sheetLength: 0, efficiency: 0 };
     }
     case 'TRIM_IMAGE':
       return {
@@ -149,15 +156,13 @@ type NestingToolProps = {
 }
 
 export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingToolProps) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, getInitialState(initialSheetWidth));
   const { toast } = useToast()
   const { user } = useAuth();
   const router = useRouter();
-  const [sheetWidth, setSheetWidth] = useState(initialSheetWidth);
 
   const handleSheetWidthChange = useCallback((newWidth: 13 | 17) => {
-    setSheetWidth(newWidth);
-    dispatch({ type: 'RESIZE_IMAGES_FOR_SHEET', payload: { newWidth }});
+    dispatch({ type: 'SET_SHEET_WIDTH', payload: newWidth});
   }, []);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,8 +193,8 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
                     const aspectRatio = image.width / image.height;
                     
                     let finalWidth = defaultWidth;
-                    if (image.width > (sheetWidth * 96)) { // Approx 96dpi for initial check
-                        finalWidth = sheetWidth - 0.5; // give it some padding
+                    if (image.width > (state.sheetWidth * 96)) { // Approx 96dpi for initial check
+                        finalWidth = state.sheetWidth - 0.5; // give it some padding
                     }
                     
                     const finalHeight = finalWidth / aspectRatio;
@@ -336,11 +341,11 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
     try {
         // Automatically resize any images that are too large for the sheet before sending to the agent
         const imagesToNest = state.images.map(img => {
-            if (img.width > sheetWidth && img.height > sheetWidth) {
+            if (img.width > state.sheetWidth && img.height > state.sheetWidth) {
                 toast({
                     variant: "destructive",
                     title: "Image Too Large",
-                    description: `An image is too large to fit on the ${sheetWidth}" sheet, even when rotated. Please resize it.`
+                    description: `An image is too large to fit on the ${state.sheetWidth}" sheet, even when rotated. Please resize it.`
                 });
                 throw new Error("Image too large for sheet.");
             }
@@ -350,7 +355,7 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
 
         const result = await runNestingAgentAction({
             images: imagesToNest,
-            sheetWidth: sheetWidth
+            sheetWidth: state.sheetWidth
         });
         
         dispatch({ type: 'SET_LAYOUT', payload: result });
@@ -380,9 +385,9 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
   
   const price = useMemo(() => {
     if(state.sheetLength === 0) return 0;
-    const rate = sheetWidth === 13 ? 0.45 : 0.59;
+    const rate = state.sheetWidth === 13 ? 0.45 : 0.59;
     return state.sheetLength * rate;
-  }, [state.sheetLength, sheetWidth]);
+  }, [state.sheetLength, state.sheetWidth]);
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -407,7 +412,7 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
 
     const cartItem: Omit<CartItem, 'id' | 'createdAt'> = {
       userId: user.uid,
-      sheetWidth: sheetWidth,
+      sheetWidth: state.sheetWidth,
       sheetLength: state.sheetLength,
       price: price,
       layout: state.nestedLayout,
@@ -419,7 +424,7 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
       dispatch({ type: 'SET_SAVE_SUCCESS' });
       toast({
         title: "Added to Cart!",
-        description: `Your ${sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
+        description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
       });
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } else {
@@ -441,9 +446,9 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
         </Link>
       </Button>
       <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-headline font-bold">{sheetWidth}" Gang Sheet Builder</h1>
+          <h1 className="text-3xl md:text-4xl font-headline font-bold">{state.sheetWidth}" Gang Sheet Builder</h1>
           <p className="mt-2 max-w-2xl mx-auto text-muted-foreground">
-              Upload your images, and our AI agent will arrange them for you on a {sheetWidth}" wide sheet.
+              Upload your images, and our AI agent will arrange them for you on a {state.sheetWidth}" wide sheet.
           </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -458,7 +463,7 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
             isUploading={state.isUploading}
           />
           <SheetConfig
-            sheetWidth={sheetWidth}
+            sheetWidth={state.sheetWidth}
             onSheetWidthChange={handleSheetWidthChange}
             sheetLength={state.sheetLength}
             price={price}
@@ -472,7 +477,7 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
         </div>
         <div className="lg:col-span-2">
           <SheetPreview
-            sheetWidth={sheetWidth}
+            sheetWidth={state.sheetWidth}
             sheetLength={state.sheetLength}
             nestedLayout={state.nestedLayout}
             isLoading={state.isLoading}

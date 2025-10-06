@@ -15,6 +15,7 @@ import {
 
 type SheetConfigProps = {
   sheetWidth: 13 | 17;
+  onSheetWidthChange: (newWidth: 13 | 17) => void;
   sheetLength: number;
   price: number;
   onArrange: () => void;
@@ -27,6 +28,7 @@ type SheetConfigProps = {
 
 export default function SheetConfig({
   sheetWidth,
+  onSheetWidthChange,
   sheetLength,
   price,
   onArrange,
