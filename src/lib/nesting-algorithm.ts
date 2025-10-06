@@ -85,9 +85,12 @@ class MaxRectsBinPack {
 
     let bestNode: Node = { x: 0, y: 0, width: 0, height: 0, rotated: false, score: Infinity };
 
+    // Compare scores and construct the bestNode with the correct dimensions
     if (node.score <= rotatedNode.score) {
+        // Un-rotated is better or equal
         bestNode = { ...node, width: width, height: height, rotated: false };
     } else {
+        // Rotated is better
         bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
     }
 
