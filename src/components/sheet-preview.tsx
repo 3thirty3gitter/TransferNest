@@ -34,7 +34,8 @@ export default function SheetPreview({
     const calculateScale = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const newScale = containerWidth < displayWidth ? containerWidth / displayWidth : 1;
+        // Add a small padding effect by not scaling to the absolute edge
+        const newScale = containerWidth < displayWidth ? (containerWidth - 16) / displayWidth : 1;
         setScale(newScale);
         setContainerHeight(displayHeight * newScale);
       }
@@ -51,6 +52,7 @@ export default function SheetPreview({
     
     return () => {
       if (containerRef.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         resizeObserver.unobserve(containerRef.current);
       }
     };
@@ -76,16 +78,16 @@ export default function SheetPreview({
       <CardContent>
         <div 
           ref={containerRef}
-          className="relative w-full bg-muted/50 rounded-lg border"
+          className="relative w-full bg-muted/50 rounded-lg border flex items-center justify-center"
           style={{ height: `${containerHeight}px`, transition: 'height 0.5s ease-in-out' }}
         >
           <div
-            className="relative bg-white shadow-inner transition-all duration-500 origin-top-left"
+            className="relative bg-white shadow-inner transition-all duration-500"
             style={{
               width: `${displayWidth}px`,
               height: `${displayHeight}px`,
               transform: `scale(${scale})`,
-              transformOrigin: 'top left', // Explicitly set origin
+              transformOrigin: 'center center',
               ...checkerboardStyle
             }}
           >
