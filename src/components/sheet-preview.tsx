@@ -40,9 +40,20 @@ export default function SheetPreview({
       }
     };
 
+    // Initial calculation
     calculateScale();
-    window.addEventListener('resize', calculateScale);
-    return () => window.removeEventListener('resize', calculateScale);
+
+    // Recalculate on resize
+    const resizeObserver = new ResizeObserver(calculateScale);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+    };
   }, [displayWidth, displayHeight]);
 
   const memoizedLayout = useMemo(() => nestedLayout || [], [nestedLayout]);
@@ -74,6 +85,7 @@ export default function SheetPreview({
               width: `${displayWidth}px`,
               height: `${displayHeight}px`,
               transform: `scale(${scale})`,
+              transformOrigin: 'top left', // Explicitly set origin
               ...checkerboardStyle
             }}
           >
