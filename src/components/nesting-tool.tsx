@@ -304,7 +304,26 @@ export default function NestingTool() {
 
   const handleSheetWidthChange = useCallback((width: 13 | 17) => {
     dispatch({ type: 'SET_SHEET_WIDTH', payload: width });
-  }, []);
+    
+    // After changing sheet width, check if any images are now too large and resize them.
+    state.images.forEach(image => {
+        if (image.width > width) {
+            const newWidth = width - 0.5; // Give a small margin
+            const newHeight = newWidth / image.aspectRatio;
+            dispatch({
+                type: 'UPDATE_IMAGE',
+                payload: {
+                    id: image.id,
+                    updates: { width: newWidth, height: newHeight }
+                }
+            });
+            toast({
+                title: 'Image Resized',
+                description: `An image was automatically resized to fit the new ${width}" sheet.`,
+            });
+        }
+    });
+  }, [state.images]);
 
   const handleArrange = async () => {
     if (state.images.length === 0) {
