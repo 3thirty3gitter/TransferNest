@@ -1,309 +1,336 @@
-import { recordNestingRun } from "@/lib/nesting-telemetry";
 // src/lib/nesting-algorithm.ts
 
-// -------- Contracts (as required by host app) --------
+/**
+ * @fileoverview A 2D bin packing algorithm for nesting images onto a sheet.
+ * Implements the MaxRects algorithm with multiple heuristics.
+ */
+
+import { recordNestingEvent } from './nesting-telemetry';
+
+// --- Data Contracts ---
 export type ManagedImage = {
   id: string;
   url: string;
-  width: number;       // inches
-  height: number;      // inches
-  aspectRatio: number; // width / height
+  width: number;
+  height: number;
+  aspectRatio: number;
   copies: number;
 };
 
+export type NestedImage = {
+  id: string;
+  url: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotated: boolean;
+};
+
 export type NestingResult = {
-  placedItems: {
-    id: string;
-    url: string;
-    x: number;       // top-left, inches
-    y: number;       // top-left, inches
-    width: number;   // placed width (no spacing inflation)
-    height: number;  // placed height (no spacing inflation)
-    rotated: boolean;
-  }[];
+  placedItems: NestedImage[];
   sheetLength: number;
-  areaUtilizationPct: number; // ratio in [0..1]
+  areaUtilizationPct: number;
   totalCount: number;
   failedCount: number;
   sortStrategy: string;
   packingMethod: string;
 };
 
-// -------- Tunables (safe defaults) --------
-const SHEET_MARGIN = 0.125; // inches around entire sheet
-const ITEM_SPACING = 0.125; // gap between items (both axes)
-const EPS = 1e-6;
-const r3 = (n: number) => Math.round(n * 1000) / 1000;
+// --- Algorithm Internals & Types ---
+type Rect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
-// -------- Internal types --------
-type Expanded = { id: string; url: string; w: number; h: number; ord: number };
-type Placed = { id: string; url: string; x: number; y: number; w: number; h: number; rotated: boolean };
-type Rect = { x: number; y: number; w: number; h: number };
+type Node = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotated: boolean;
+  score: number;
+};
 
-// -------- Helpers --------
-function expandCopies(images: ManagedImage[]): { items: Expanded[]; total: number } {
-  const items: Expanded[] = [];
-  let total = 0, ord = 0;
-  for (const img of images) {
-    const c = Math.max(0, Math.floor(img.copies || 0));
-    total += c;
-    for (let i = 0; i < c; i++) items.push({ id: img.id, url: img.url, w: img.width, h: img.height, ord: ord++ });
+type ExpandedImage = {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+};
+
+export type SortStrategy = 'AREA_DESC' | 'PERIMETER_DESC' | 'HEIGHT_DESC' | 'WIDTH_DESC';
+export type PackingMethod = 'BestShortSideFit' | 'BestLongSideFit' | 'BestAreaFit';
+
+const VIRTUAL_SHEET_HEIGHT = 100000;
+const ITEM_SPACING = 0.125;
+const EPSILON = 1e-6;
+
+// --- Main Packer Class ---
+class MaxRectsBinPack {
+  private freeRectangles: Rect[] = [];
+
+  constructor(width: number, height: number) {
+    this.freeRectangles.push({ x: 0, y: 0, width, height });
   }
-  return { items, total };
+
+  insert(
+    width: number,
+    height: number,
+    method: PackingMethod
+  ): Node | null {
+    let bestNode: Node = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      rotated: false,
+      score: Infinity,
+    };
+
+    const node = this.findPositionForNewNode(width, height, method);
+    const rotatedNode = this.findPositionForNewNode(height, width, method);
+
+    if (node.score < bestNode.score) {
+      bestNode = { ...node, width, height, rotated: false };
+    }
+    if (rotatedNode.score < bestNode.score) {
+      bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
+    }
+
+    if (bestNode.score === Infinity) {
+      return null;
+    }
+
+    this.splitFreeNode(bestNode);
+    return bestNode;
+  }
+
+  private findPositionForNewNode(
+    width: number,
+    height: number,
+    method: PackingMethod
+  ): Node {
+    let bestNode: Node = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      rotated: false,
+      score: Infinity,
+    };
+
+    for (let i = 0; i < this.freeRectangles.length; i++) {
+      const rect = this.freeRectangles[i];
+      if (width <= rect.width + EPSILON && height <= rect.height + EPSILON) {
+        let score: number;
+        switch (method) {
+          case 'BestShortSideFit':
+            score = Math.min(rect.width - width, rect.height - height);
+            break;
+          case 'BestLongSideFit':
+            score = Math.max(rect.width - width, rect.height - height);
+            break;
+          case 'BestAreaFit':
+          default:
+            score = rect.width * rect.height - width * height;
+            break;
+        }
+
+        if (score < bestNode.score) {
+          bestNode = {
+            x: rect.x,
+            y: rect.y,
+            width: width,
+            height: height,
+            rotated: false, // This is handled in the insert method
+            score: score,
+          };
+        }
+      }
+    }
+    return bestNode;
+  }
+  
+  private splitFreeNode(usedNode: Rect): void {
+    const newFreeRects: Rect[] = [];
+    for (let i = 0; i < this.freeRectangles.length; i++) {
+      const free = this.freeRectangles[i];
+
+      const overlapX = usedNode.x < free.x + free.width && usedNode.x + usedNode.width > free.x;
+      const overlapY = usedNode.y < free.y + free.height && usedNode.y + usedNode.height > free.y;
+
+      if (!overlapX || !overlapY) {
+        newFreeRects.push(free);
+        continue;
+      }
+
+      // Top
+      if (usedNode.y > free.y) {
+        newFreeRects.push({
+          x: free.x,
+          y: free.y,
+          width: free.width,
+          height: usedNode.y - free.y,
+        });
+      }
+      // Bottom
+      if (usedNode.y + usedNode.height < free.y + free.height) {
+        newFreeRects.push({
+          x: free.x,
+          y: usedNode.y + usedNode.height,
+          width: free.width,
+          height: (free.y + free.height) - (usedNode.y + usedNode.height),
+        });
+      }
+      // Left
+      if (usedNode.x > free.x) {
+        newFreeRects.push({
+          x: free.x,
+          y: free.y,
+          width: usedNode.x - free.x,
+          height: free.height,
+        });
+      }
+      // Right
+      if (usedNode.x + usedNode.width < free.x + free.width) {
+        newFreeRects.push({
+          x: usedNode.x + usedNode.width,
+          y: free.y,
+          width: (free.x + free.width) - (usedNode.x + usedNode.width),
+          height: free.height,
+        });
+      }
+    }
+    this.pruneFreeList(newFreeRects);
+  }
+
+  private pruneFreeList(rects: Rect[]): void {
+    const uniqueRects: Rect[] = [];
+    for (let i = 0; i < rects.length; i++) {
+      let isContained = false;
+      for (let j = 0; j < rects.length; j++) {
+        if (i === j) continue;
+        const r1 = rects[i];
+        const r2 = rects[j];
+        if (
+          r1.x >= r2.x - EPSILON &&
+          r1.y >= r2.y - EPSILON &&
+          r1.x + r1.width <= r2.x + r2.width + EPSILON &&
+          r1.y + r1.height <= r2.y + r2.height + EPSILON
+        ) {
+          isContained = true;
+          break;
+        }
+      }
+      if (!isContained) {
+        uniqueRects.push(rects[i]);
+      }
+    }
+    this.freeRectangles = uniqueRects;
+  }
 }
 
-function sortForPacking(items: Expanded[]): void {
-  items.sort((a, b) => {
-    const maxA = Math.max(a.w, a.h), maxB = Math.max(b.w, b.h);
-    if (maxA !== maxB) return maxB - maxA;
-    const areaA = a.w * a.h, areaB = b.w * b.h;
-    if (areaA !== areaB) return areaB - areaA;
-    return a.ord - b.ord;
-  });
-}
-
-function utilization(placed: Placed[], sheetWidth: number, sheetLength: number): number {
-  if (!placed.length || sheetWidth <= 0 || sheetLength <= 0) return 0;
-  const used = placed.reduce((s, p) => s + p.w * p.h, 0);
-  return r3(Math.max(0, Math.min(1, used / (sheetWidth * sheetLength))));
-}
-
-function rectsOverlap(a: Placed, b: Placed): boolean {
-  return !(
-    a.x + a.w <= b.x + EPS ||
-    b.x + b.w <= a.x + EPS ||
-    a.y + a.h <= b.y + EPS ||
-    b.y + b.h <= a.y + EPS
+// --- Helper Functions ---
+function expandImages(images: ManagedImage[]): ExpandedImage[] {
+  return images.flatMap(img =>
+    Array(img.copies).fill(null).map(() => ({
+      id: img.id,
+      url: img.url,
+      width: img.width,
+      height: img.height,
+    }))
   );
 }
 
-function validateNoOverlaps(placed: Placed[]): void {
-  for (let i = 0; i < placed.length; i++)
-    for (let j = i + 1; j < placed.length; j++)
-      if (rectsOverlap(placed[i], placed[j])) placed[j].y = r3(placed[j].y + EPS * 10);
-}
-
-// -------- MaxRects (Growing Height) --------
-function scoreBSSF(free: Rect, w: number, h: number) {
-  const leftoverH = Math.abs(free.h - h);
-  const leftoverW = Math.abs(free.w - w);
-  const shortSideFit = Math.min(leftoverW, leftoverH);
-  const areaFit = free.w * free.h - w * h;
-  return { shortSideFit, areaFit };
-}
-
-function splitFreeRect(free: Rect, used: Rect): Rect[] {
-  const res: Rect[] = [];
-  const ix0 = Math.max(free.x, used.x);
-  const iy0 = Math.max(free.y, used.y);
-  const ix1 = Math.min(free.x + free.w, used.x + used.w);
-  const iy1 = Math.min(free.y + free.h, used.y + used.h);
-  if (ix0 >= ix1 - EPS || iy0 >= iy1 - EPS) return [free];
-
-  if (iy0 > free.y + EPS) res.push({ x: free.x, y: free.y, w: free.w, h: iy0 - free.y });
-  if (free.y + free.h > iy1 + EPS) res.push({ x: free.x, y: iy1, w: free.w, h: free.y + free.h - iy1 });
-  if (ix0 > free.x + EPS) res.push({ x: free.x, y: iy0, w: ix0 - free.x, h: iy1 - iy0 });
-  if (free.x + free.w > ix1 + EPS) res.push({ x: ix1, y: iy0, w: free.x + free.w - ix1, h: iy1 - iy0 });
-
-  return res.filter(r => r.w > EPS && r.h > EPS);
-}
-
-function pruneFreeList(freeRects: Rect[]): Rect[] {
-  const out: Rect[] = [];
-  for (let i = 0; i < freeRects.length; i++) {
-    let contained = false;
-    for (let j = 0; j < freeRects.length; j++) {
-      if (i === j) continue;
-      const a = freeRects[i], b = freeRects[j];
-      if (a.x >= b.x - EPS && a.y >= b.y - EPS &&
-          a.x + a.w <= b.x + b.w + EPS &&
-          a.y + a.h <= b.y + b.h + EPS) { contained = true; break; }
+function sortImages(images: ExpandedImage[], strategy: SortStrategy): void {
+  images.sort((a, b) => {
+    switch (strategy) {
+      case 'AREA_DESC':
+        return (b.width * b.height) - (a.width * a.height);
+      case 'PERIMETER_DESC':
+        return (b.width + b.height) - (a.width + a.height);
+      case 'HEIGHT_DESC':
+        return b.height - a.height;
+      case 'WIDTH_DESC':
+        return b.width - a.width;
+      default:
+        return 0;
     }
-    if (!contained) out.push(freeRects[i]);
-  }
-  return out;
+  });
 }
 
-function tryPlaceMaxRects(freeRects: Rect[], w: number, h: number) {
-  let bestIdx = -1, bestRect: Rect | null = null;
-  let bestSS = Number.POSITIVE_INFINITY, bestArea = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < freeRects.length; i++) {
-    const f = freeRects[i];
-    if (w <= f.w + EPS && h <= f.h + EPS) {
-      const { shortSideFit, areaFit } = scoreBSSF(f, w, h);
-      if (shortSideFit < bestSS - EPS || (Math.abs(shortSideFit - bestSS) <= EPS && areaFit < bestArea - EPS)) {
-        bestIdx = i; bestSS = shortSideFit; bestArea = areaFit;
-        bestRect = { x: f.x, y: f.y, w, h };
-      }
+export function calculateOccupancy(placedItems: NestedImage[], sheetWidth: number, sheetLength: number): number {
+    if (sheetWidth <= 0 || sheetLength <= 0 || placedItems.length === 0) {
+        return 0;
     }
-  }
-  if (bestIdx === -1 || !bestRect) return { placed: null as Rect | null, freeRects };
-  const updated: Rect[] = [];
-  for (let i = 0; i < freeRects.length; i++) {
-    if (i === bestIdx) updated.push(...splitFreeRect(freeRects[i], bestRect));
-    else updated.push(freeRects[i]);
-  }
-  return { placed: bestRect, freeRects: pruneFreeList(updated) };
+    const totalItemArea = placedItems.reduce((acc, item) => acc + item.width * item.height, 0);
+    const totalSheetArea = sheetWidth * sheetLength;
+    return totalItemArea / totalSheetArea;
 }
 
-function growFreeSpaceDown(freeRects: Rect[], growFromY: number, sheetWidth: number, growHeight: number): Rect[] {
-  const band: Rect = { x: SHEET_MARGIN, y: growFromY, w: sheetWidth - 2 * SHEET_MARGIN, h: growHeight };
-  return pruneFreeList([...freeRects, band]);
-}
+// --- Main Exported Function ---
+export function executeNesting(
+  images: ManagedImage[],
+  sheetWidth: number,
+  sheetHeight: number = VIRTUAL_SHEET_HEIGHT,
+  sortStrategy: SortStrategy = 'AREA_DESC',
+  packingMethod: PackingMethod = 'BestShortSideFit'
+): NestingResult {
+  const allImages = expandImages(images);
+  sortImages(allImages, sortStrategy);
 
-// -------- Shelf fallback (FFDH) --------
-function packShelfFFDH(items: Expanded[], sheetWidth: number, startY: number) {
-  const placed: Placed[] = [], failed: Expanded[] = [];
-  let y = startY, shelfH = 0, x = SHEET_MARGIN;
-  const innerW = sheetWidth - 2 * SHEET_MARGIN;
+  const packer = new MaxRectsBinPack(sheetWidth, sheetHeight);
+  const placedItems: NestedImage[] = [];
+  let failedCount = 0;
 
-  for (const it of items) {
-    if (Math.min(it.w, it.h) > innerW + EPS) { failed.push(it); continue; }
-    const opts = [
-      { w: it.w, h: it.h, rot: false },
-      { w: it.h, h: it.w, rot: true },
-    ];
-    let placedHere = false;
-    for (const o of opts.sort((a, b) => a.w - b.w)) {
-      const needW = o.w + (x > SHEET_MARGIN ? ITEM_SPACING : 0);
-      if (needW <= innerW - (x - SHEET_MARGIN) + EPS) {
-        const targetH = shelfH === 0 ? o.h : shelfH;
-        if (o.h <= targetH + EPS) {
-          const px = x === SHEET_MARGIN ? x : x + ITEM_SPACING;
-          placed.push({ id: it.id, url: it.url, x: r3(px), y: r3(y), w: r3(o.w), h: r3(o.h), rotated: o.rot });
-          x = px + o.w; shelfH = Math.max(shelfH, o.h); placedHere = true; break;
-        }
-      }
-    }
-    if (placedHere) continue;
+  for (const image of allImages) {
+    const node = packer.insert(
+      image.width + ITEM_SPACING,
+      image.height + ITEM_SPACING,
+      packingMethod
+    );
 
-    y = r3(y + (shelfH > 0 ? shelfH + ITEM_SPACING : 0));
-    x = SHEET_MARGIN; shelfH = 0;
-
-    const first = opts.sort((a, b) => (b.w - a.w) || (b.h - a.h))[0];
-    if (first.w <= innerW + EPS) {
-      placed.push({ id: it.id, url: it.url, x: r3(x), y: r3(y), w: r3(first.w), h: r3(first.h), rotated: first.rot });
-      x = r3(x + first.w); shelfH = first.h;
+    if (node) {
+      placedItems.push({
+        id: image.id,
+        url: image.url,
+        x: node.x,
+        y: node.y,
+        width: node.rotated ? image.height : image.width,
+        height: node.rotated ? image.width : image.height,
+        rotated: node.rotated,
+      });
     } else {
-      failed.push(it);
-    }
-  }
-  return { placed, endY: r3(y + (shelfH > 0 ? shelfH : 0)), failed };
-}
-
-// -------- Public API: EXACT signature --------
-export function executeNesting(images: ManagedImage[], sheetWidth: number): NestingResult {
-  const { items, total } = expandCopies(images);
-
-  if (!(sheetWidth > 0)) {
-    return {
-      placedItems: [],
-      sheetLength: 0,
-      areaUtilizationPct: 0,
-      totalCount: total,
-      failedCount: total,
-      sortStrategy: "Max-side ↓ then area ↓",
-      packingMethod: "Invalid sheetWidth",
-    };
-  }
-  if (items.length === 0) {
-    return {
-      placedItems: [],
-      sheetLength: 0,
-      areaUtilizationPct: 0,
-      totalCount: total,
-      failedCount: 0,
-      sortStrategy: "Max-side ↓ then area ↓",
-      packingMethod: "MaxRects (growing) + Shelf fallback",
-    };
-  }
-
-  sortForPacking(items);
-  const innerW = Math.max(0, sheetWidth - 2 * SHEET_MARGIN);
-
-  const cannotFit: Expanded[] = [];
-  const candidates: Expanded[] = [];
-  for (const it of items) (Math.min(it.w, it.h) > innerW + EPS ? cannotFit : candidates).push(it);
-
-  const placed: Placed[] = [];
-  let freeRects: Rect[] = [{ x: SHEET_MARGIN, y: SHEET_MARGIN, w: innerW, h: 0 }];
-  let currentBottom = SHEET_MARGIN;
-  const leftovers: Expanded[] = [];
-
-  for (const it of candidates) {
-    const opts = [
-      { w: it.w, h: it.h, rot: false },
-      { w: it.h, h: it.w, rot: true },
-    ];
-
-    let best: { placed: Rect; rot: boolean; real: { w: number; h: number } } | null = null;
-    let bestFR: Rect[] = [];
-
-    for (const o of opts) {
-      const wInfl = o.w + ITEM_SPACING;
-      const hInfl = o.h + ITEM_SPACING;
-
-      let fr = freeRects.slice();
-      let grownBottom = currentBottom;
-
-      if (fr.length === 1 && r3(fr[0].h) === 0) {
-        fr = growFreeSpaceDown(fr, grownBottom, sheetWidth, hInfl);
-        grownBottom = r3(grownBottom + hInfl);
-      }
-
-      let attempt = tryPlaceMaxRects(fr, wInfl, hInfl);
-      if (!attempt.placed) {
-        fr = growFreeSpaceDown(fr, grownBottom, sheetWidth, hInfl);
-        const attempt2 = tryPlaceMaxRects(fr, wInfl, hInfl);
-        if (attempt2.placed) { attempt = attempt2; grownBottom = r3(grownBottom + hInfl); }
-      }
-
-      if (attempt.placed) {
-        const candidate = attempt.placed;
-        const yBottom = candidate.y + candidate.h;
-        if (!best || yBottom < best.placed.y + best.placed.h - EPS) {
-          best = { placed: candidate, rot: o.rot, real: { w: o.w, h: o.h } };
-          bestFR = attempt.freeRects;
-        }
-      }
-    }
-
-    if (best) {
-      placed.push({ id: it.id, url: it.url, x: r3(best.placed.x), y: r3(best.placed.y), w: r3(best.real.w), h: r3(best.real.h), rotated: best.rot });
-      freeRects = bestFR;
-      currentBottom = Math.max(currentBottom, r3(best.placed.y + best.placed.h));
-    } else {
-      leftovers.push(it);
+      failedCount++;
     }
   }
 
-  let endY = currentBottom;
-  let shelfPlaced: Placed[] = [];
-  let shelfFailed: Expanded[] = [];
-  if (leftovers.length > 0) {
-    const bandStart = r3(currentBottom + (placed.length ? ITEM_SPACING : 0));
-    const shelf = packShelfFFDH(leftovers, sheetWidth, bandStart);
-    shelfPlaced = shelf.placed; shelfFailed = shelf.failed; endY = Math.max(endY, shelf.endY);
-  }
+  const finalSheetLength = placedItems.length > 0
+      ? Math.max(...placedItems.map(item => item.y + item.height))
+      : 0;
 
-  const allPlaced = [...placed, ...shelfPlaced];
-  validateNoOverlaps(allPlaced);
-
-  const failedCount = cannotFit.length + shelfFailed.length;
-  const maxBottom = allPlaced.length ? Math.max(...allPlaced.map(p => p.y + p.h)) : SHEET_MARGIN;
-  const sheetLength = r3(Math.max(SHEET_MARGIN * 2, maxBottom + SHEET_MARGIN));
-  const areaUtilizationPct = utilization(allPlaced, sheetWidth, sheetLength);
-
-  return {
-    placedItems: allPlaced.map(p => ({ id: p.id, url: p.url, x: r3(p.x), y: r3(p.y), width: r3(p.w), height: r3(p.h), rotated: p.rotated })),
-    sheetLength,
+  const areaUtilizationPct = calculateOccupancy(placedItems, sheetWidth, finalSheetLength);
+  
+  const result: NestingResult = {
+    placedItems,
+    sheetLength: finalSheetLength,
     areaUtilizationPct,
-    totalCount: total,
+    totalCount: allImages.length,
     failedCount,
-    sortStrategy: "Max-side ↓ then area ↓ (stable)",
-    packingMethod: leftovers.length > 0 ? "MaxRects (growing, BSSF+Area) + Shelf FFDH fallback" : "MaxRects (growing, BSSF+Area)",
+    sortStrategy,
+    packingMethod,
   };
-}
+  
+  // Fire-and-forget telemetry
+  recordNestingEvent({
+    jobId: `live-${Date.now()}`,
+    utilPct: areaUtilizationPct,
+    runtimeMs: 0, // Not measured here, but can be added in the flow
+    ts: Date.now()
+  }).catch(() => {}); // Suppress errors
 
-/** Legacy compatibility: virtual tall sheet (inches). */
-export const VIRTUAL_SHEET_HEIGHT = 1000000;
+  return result;
+}
