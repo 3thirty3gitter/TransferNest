@@ -90,12 +90,12 @@ class MaxRectsBinPack {
     };
 
     const node = this.findPositionForNewNode(width, height, method);
-    const rotatedNode = this.findPositionForNewNode(height, width, method);
-
-    if (node.score <= bestNode.score) {
-      bestNode = { ...node, width, height, rotated: false };
+    if (node.score < bestNode.score) {
+      bestNode = { ...node, width: width, height: height, rotated: false };
     }
-    if (rotatedNode.score <= bestNode.score) {
+
+    const rotatedNode = this.findPositionForNewNode(height, width, method);
+    if (rotatedNode.score < bestNode.score) {
       bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
     }
     
@@ -107,7 +107,7 @@ class MaxRectsBinPack {
     return bestNode;
   }
 
-  private findPositionForNewNode(
+   private findPositionForNewNode(
     width: number,
     height: number,
     method: PackingMethod
@@ -187,18 +187,18 @@ class MaxRectsBinPack {
         if (usedNode.x > free.x) {
             newFreeRects.push({
                 x: free.x,
-                y: usedNode.y,
+                y: free.y,
                 width: usedNode.x - free.x,
-                height: usedNode.height,
+                height: free.height
             });
         }
         // Right
         if (usedNode.x + usedNode.width < free.x + free.width) {
             newFreeRects.push({
                 x: usedNode.x + usedNode.width,
-                y: usedNode.y,
+                y: free.y,
                 width: (free.x + free.width) - (usedNode.x + usedNode.width),
-                height: usedNode.height,
+                height: free.height
             });
         }
     }

@@ -50,13 +50,13 @@ export const runNestingAgentFlow = ai.defineFlow(
       );
     }
     
-    // 2. Define Strategies and Methods for Competition
+    // 2. Define Strategies and Methods for Exhaustive Competition
     const sortStrategies: SortStrategy[] = ['AREA_DESC', 'HEIGHT_DESC', 'WIDTH_DESC', 'PERIMETER_DESC'];
     const packingMethods: PackingMethod[] = ['BestShortSideFit', 'BestLongSideFit', 'BestAreaFit'];
 
     let bestResult: NestingResult | null = null;
     
-    // 3. Run Competition across all combinations
+    // 3. Run Exhaustive Competition across all combinations
     for (const strategy of sortStrategies) {
       for (const method of packingMethods) {
         const result = executeNesting(
@@ -64,7 +64,7 @@ export const runNestingAgentFlow = ai.defineFlow(
             input.sheetWidth,
             VIRTUAL_SHEET_HEIGHT,
             strategy,
-            method,
+            method
         );
         
         // "Better" means higher utilization or, if equal, shorter length.
