@@ -1,7 +1,7 @@
 
 import Header from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart } from 'lucide-react';
+import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/layout/footer';
@@ -23,7 +23,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                <Link href="/nesting-tool">
+                <Link href="/nesting-tool-13">
                   Get Started Now <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -77,51 +77,58 @@ export default function Home() {
           </div>
         </section>
         
-        {/* How It Works Section */}
+        {/* Products Section */}
         <section className="py-16 md:py-24 bg-card">
-          <div className="container">
-            <div className="text-center">
-              <h2 className="text-3xl md:text-4xl font-headline font-bold">
-                Create Your Custom Gang Sheet in 3 Easy Steps
-              </h2>
-              <p className="mt-4 max-w-3xl mx-auto text-muted-foreground text-lg">
-                Our intelligent nesting tool makes it simple to create print-ready gang sheets.
-              </p>
+            <div className="container">
+                <div className="text-center">
+                    <h2 className="text-3xl md:text-4xl font-headline font-bold">
+                        Choose Your Sheet Size
+                    </h2>
+                    <p className="mt-4 max-w-3xl mx-auto text-muted-foreground text-lg">
+                        Our intelligent nesting tool makes it simple to create print-ready gang sheets.
+                    </p>
+                </div>
+                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    {/* 13-inch Product Card */}
+                    <div className="flex flex-col rounded-lg border shadow-sm">
+                        <div className="p-6">
+                            <h3 className="text-2xl font-headline font-semibold">13" DTF Gang Sheet</h3>
+                            <p className="mt-2 text-muted-foreground">Perfect for standard t-shirts, logos, and smaller designs. Our most popular and cost-effective option.</p>
+                        </div>
+                        <div className="p-6 bg-muted/50 flex-grow flex flex-col justify-between">
+                             <div className="mb-6">
+                                <p className="text-sm text-muted-foreground">Starting from</p>
+                                <p><span className="text-4xl font-bold">$0.45</span> / linear inch</p>
+                            </div>
+                            <Button asChild size="lg" className="w-full">
+                                <Link href="/nesting-tool-13">
+                                    <Scissors className="mr-2 h-4 w-4" />
+                                    Build Your 13" Sheet
+                                </Link>
+                            </Button>
+                        </div>
+                    </div>
+                    {/* 17-inch Product Card */}
+                    <div className="flex flex-col rounded-lg border shadow-sm">
+                        <div className="p-6">
+                            <h3 className="text-2xl font-headline font-semibold">17" DTF Gang Sheet</h3>
+                            <p className="mt-2 text-muted-foreground">Ideal for oversized prints, hoodies, and maximizing the number of designs per sheet for large orders.</p>
+                        </div>
+                         <div className="p-6 bg-muted/50 flex-grow flex flex-col justify-between">
+                            <div className="mb-6">
+                                <p className="text-sm text-muted-foreground">Starting from</p>
+                                <p><span className="text-4xl font-bold">$0.59</span> / linear inch</p>
+                            </div>
+                            <Button asChild size="lg" className="w-full">
+                                <Link href="/nesting-tool-17">
+                                     <Scissors className="mr-2 h-4 w-4" />
+                                    Build Your 17" Sheet
+                                </Link>
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div className="relative mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-               <div className="absolute top-1/2 left-0 w-full h-0.5 bg-border -translate-y-1/2"></div>
-               <div className="absolute top-1/2 left-0 w-full flex justify-around -translate-y-1/2">
-                   <div className="w-1/3 h-0.5 bg-primary"></div>
-                   <div className="w-1/3 h-0.5 bg-primary"></div>
-               </div>
-              <div className="relative z-10 flex flex-col items-center text-center">
-                  <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground font-bold text-xl border-4 border-card">1</div>
-                  <UploadCloud className="my-6 h-12 w-12 text-accent"/>
-                  <h3 className="text-xl font-headline font-semibold">Upload Your Designs</h3>
-                  <p className="mt-2 text-muted-foreground">Add all your artwork to our easy-to-use image manager.</p>
-              </div>
-              <div className="relative z-10 flex flex-col items-center text-center">
-                  <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground font-bold text-xl border-4 border-card">2</div>
-                  <Wand2 className="my-6 h-12 w-12 text-accent"/>
-                  <h3 className="text-xl font-headline font-semibold">Arrange Your Sheet</h3>
-                  <p className="mt-2 text-muted-foreground">Use our AI tool to automatically nest your images for maximum efficiency.</p>
-              </div>
-              <div className="relative z-10 flex flex-col items-center text-center">
-                  <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground font-bold text-xl border-4 border-card">3</div>
-                  <ShoppingCart className="my-6 h-12 w-12 text-accent"/>
-                  <h3 className="text-xl font-headline font-semibold">Place Your Order</h3>
-                  <p className="mt-2 text-muted-foreground">Add your completed gang sheet to the cart and check out. It's that simple!</p>
-              </div>
-            </div>
-            <div className="text-center mt-12">
-               <Button asChild size="lg">
-                <Link href="/nesting-tool">
-                  Build Your Gang Sheet
-                  <Wand2 className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
         </section>
 
         {/* Showcase Section */}
@@ -171,7 +178,7 @@ export default function Home() {
             </p>
             <div className="mt-8">
               <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                <Link href="/nesting-tool">
+                <Link href="/nesting-tool-13">
                   Start Your Order <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
