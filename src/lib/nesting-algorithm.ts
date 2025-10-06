@@ -80,25 +80,19 @@ class MaxRectsBinPack {
     height: number,
     method: PackingMethod
   ): Node | null {
-    let bestNode: Node = {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      rotated: false,
-      score: Infinity,
-    };
-
     const node = this.findPositionForNewNode(width, height, method);
-    if (node.score < bestNode.score) {
-      bestNode = { ...node, width: width, height: height, rotated: false };
-    }
-
     const rotatedNode = this.findPositionForNewNode(height, width, method);
-    if (rotatedNode.score < bestNode.score) {
+
+    let bestNode: Node;
+
+    // Compare scores to choose the best placement (rotated or not)
+    if (node.score <= rotatedNode.score) {
+      bestNode = { ...node, width: width, height: height, rotated: false };
+    } else {
       bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
     }
-    
+
+    // If no valid position was found, the score will be Infinity.
     if (bestNode.score === Infinity) {
       return null;
     }
@@ -137,13 +131,13 @@ class MaxRectsBinPack {
                     score = rect.width * rect.height - width * height;
                     break;
             }
-            if (score < bestNode.score) {
+            if (score <= bestNode.score) {
                 bestNode = {
                     x: rect.x,
                     y: rect.y,
                     width: width,
                     height: height,
-                    rotated: false,
+                    rotated: false, // This is temporary, final rotation is set in insert()
                     score: score,
                 };
             }
