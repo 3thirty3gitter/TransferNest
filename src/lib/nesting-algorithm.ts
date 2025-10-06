@@ -64,7 +64,7 @@ type ExpandedImage = {
 export type SortStrategy = 'AREA_DESC' | 'PERIMETER_DESC' | 'HEIGHT_DESC' | 'WIDTH_DESC';
 export type PackingMethod = 'BestShortSideFit' | 'BestLongSideFit' | 'BestAreaFit';
 
-const VIRTUAL_SHEET_HEIGHT = 100000;
+export const VIRTUAL_SHEET_HEIGHT = 100000;
 const ITEM_SPACING = 0.125;
 const EPSILON = 1e-6;
 
@@ -118,7 +118,7 @@ class MaxRectsBinPack {
       y: 0,
       width: 0,
       height: 0,
-      rotated: false,
+      rotated: false, // This is handled in the insert method
       score: Infinity,
     };
 
