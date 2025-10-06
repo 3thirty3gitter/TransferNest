@@ -83,13 +83,12 @@ class MaxRectsBinPack {
     const node = this.findPositionForNewNode(width, height, method);
     const rotatedNode = this.findPositionForNewNode(height, width, method);
 
-    let bestNode: Node;
+    let bestNode: Node = { x: 0, y: 0, width: 0, height: 0, rotated: false, score: Infinity };
 
-    // Compare scores to choose the best placement (rotated or not)
     if (node.score <= rotatedNode.score) {
-      bestNode = { ...node, width: width, height: height, rotated: false };
+        bestNode = { ...node, width: width, height: height, rotated: false };
     } else {
-      bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
+        bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
     }
 
     // If no valid position was found, the score will be Infinity.
