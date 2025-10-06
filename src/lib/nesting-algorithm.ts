@@ -99,7 +99,7 @@ class MaxRectsBinPack {
                         break;
                 }
 
-                if (score1 < bestScore1 || (score1 === bestScore1 && score2 < bestScore2)) {
+                if (score1 <= bestScore1 && score2 < bestScore2) {
                     bestScore1 = score1;
                     bestScore2 = score2;
                     bestNode = { x: freeRect.x, y: freeRect.y, width: w, height: h };
@@ -129,7 +129,7 @@ class MaxRectsBinPack {
     let placedNode: Rect & { rotated: boolean };
 
     // Compare original and rotated results
-    if (originalScore1 < bestScore1 || (originalScore1 === bestScore1 && originalScore2 < bestScore2)) {
+    if (originalScore1 <= bestScore1 && originalScore2 < bestScore2) {
       placedNode = { ...originalNode, rotated: false };
     } else {
       placedNode = { ...rotatedNode, rotated: true };
