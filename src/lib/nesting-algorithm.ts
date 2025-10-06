@@ -97,12 +97,12 @@ class MaxRectsBinPack {
             score2 = Math.min(freeRect.width - width, freeRect.height - height);
             break;
           case 'BottomLeft':
-            score1 = freeRect.y + height;
+            score1 = freeRect.y; // Prioritize lowest Y-coordinate ("up" in the layout)
             score2 = freeRect.x;
             break;
         }
 
-        if (score1 <= bestNode.score1 && (score1 < bestNode.score1 || score2 < bestNode.score2)) {
+        if (score1 < bestNode.score1 || (score1 === bestNode.score1 && score2 < bestNode.score2)) {
           bestNode = {
             x: freeRect.x,
             y: freeRect.y,
@@ -131,6 +131,7 @@ class MaxRectsBinPack {
     }
 
     // Compare scores to decide whether to rotate.
+    // If the rotated node has a better primary score (score1), or an equal primary score but a better secondary score (score2), use it.
     if (rotatedNode.score1 < newNode.score1 || (rotatedNode.score1 === newNode.score1 && rotatedNode.score2 < newNode.score2)) {
         useRotated = true;
     }
