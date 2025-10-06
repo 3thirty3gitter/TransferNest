@@ -11,6 +11,7 @@ import {
   VIRTUAL_SHEET_HEIGHT,
   type SortStrategy,
   type PackingMethod,
+  type NestingResult,
 } from '@/lib/nesting-algorithm';
 
 
