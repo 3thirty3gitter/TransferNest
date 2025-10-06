@@ -1,22 +1,7 @@
-import Header from '@/components/layout/header';
-import Footer from '@/components/layout/footer';
-import NestingTool from '@/components/nesting-tool';
-import { Suspense } from 'react';
 
-function NestingToolFallback() {
-  return <div>Loading...</div>
-}
+import { redirect } from 'next/navigation';
 
 export default function NestingToolPage() {
-  return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
-      <main className="flex-1">
-        <Suspense fallback={<NestingToolFallback/>}>
-          <NestingTool />
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
-  );
+  // This page is now obsolete, redirect to the default 13-inch tool.
+  redirect('/nesting-tool-13');
 }

@@ -3,8 +3,6 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Wand2, ShoppingCart, Info } from 'lucide-react';
 import {
@@ -17,7 +15,6 @@ import {
 
 type SheetConfigProps = {
   sheetWidth: 13 | 17;
-  onSheetWidthChange: (width: 13 | 17) => void;
   sheetLength: number;
   price: number;
   onArrange: () => void;
@@ -30,7 +27,6 @@ type SheetConfigProps = {
 
 export default function SheetConfig({
   sheetWidth,
-  onSheetWidthChange,
   sheetLength,
   price,
   onArrange,
@@ -43,28 +39,14 @@ export default function SheetConfig({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline text-xl">Configure Sheet</CardTitle>
+        <CardTitle className="font-headline text-xl">Nesting Controls</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label className="font-bold">Sheet Width</Label>
-          <RadioGroup
-            value={sheetWidth.toString()}
-            onValueChange={(value) => onSheetWidthChange(parseInt(value) as 13 | 17)}
-            className="mt-2 grid grid-cols-2 gap-4"
-            disabled={isLoading}
-          >
-            {[13, 17].map((width) => (
-              <Label key={width}
-                htmlFor={`width-${width}`}
-                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-              >
-                <RadioGroupItem value={width.toString()} id={`width-${width}`} className="sr-only" />
-                <span className="text-2xl font-bold">{width}"</span>
-                <span className="text-sm text-muted-foreground">Wide</span>
-              </Label>
-            ))}
-          </RadioGroup>
+          <div className="flex justify-between items-center bg-muted p-3 rounded-md">
+            <span className="font-bold">Sheet Width:</span>
+            <span className="text-2xl font-bold text-primary">{sheetWidth}"</span>
+          </div>
         </div>
         <Button onClick={onArrange} disabled={isLoading || !hasImages} className="w-full">
           {isLoading ? (

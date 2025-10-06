@@ -8,7 +8,7 @@ import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout, CartItem, NestingAgentOutput } from '@/app/schema';
 import { saveToCartAction, runNestingAgentAction } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft, Loader2, Wand2, ShoppingCart } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
@@ -27,7 +27,6 @@ export type ManagedImage = {
 
 type State = {
   images: ManagedImage[];
-  sheetWidth: 13 | 17;
   nestedLayout: NestedLayout;
   sheetLength: number;
   isLoading: boolean;
@@ -42,8 +41,6 @@ type Action =
   | { type: 'REMOVE_IMAGE'; payload: string }
   | { type: 'UPDATE_IMAGE'; payload: { id: string; updates: Partial<Omit<ManagedImage, 'id' | 'url' | 'aspectRatio'>> } }
   | { type: 'DUPLICATE_IMAGE'; payload: string }
-  | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
-  | { type: 'RESIZE_IMAGES_FOR_SHEET'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
   | { type: 'SET_LAYOUT'; payload: NestingAgentOutput }
   | { type: 'START_SAVING' }
@@ -55,7 +52,6 @@ type Action =
 
 const initialState: State = {
   images: [],
-  sheetWidth: 13,
   nestedLayout: [],
   sheetLength: 0,
   isLoading: false,
@@ -114,23 +110,6 @@ function reducer(state: State, action: Action): State {
         
         return { ...state, images: newImages, nestedLayout: [], sheetLength: 0, efficiency: 0 };
     }
-    case 'SET_SHEET_WIDTH':
-      return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0, efficiency: 0 };
-    case 'RESIZE_IMAGES_FOR_SHEET': {
-        const newWidth = action.payload;
-        const updatedImages = state.images.map(image => {
-            if (image.width > newWidth) {
-                const newImageWidth = newWidth - 0.5; // Give a small margin
-                return {
-                    ...image,
-                    width: newImageWidth,
-                    height: newImageWidth / image.aspectRatio,
-                };
-            }
-            return image;
-        });
-        return { ...state, sheetWidth: newWidth, images: updatedImages, nestedLayout: [], sheetLength: 0, efficiency: 0 };
-    }
     case 'START_NESTING':
       return { ...state, isLoading: true };
     case 'SET_LAYOUT':
@@ -150,7 +129,11 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-export default function NestingTool() {
+type NestingToolProps = {
+  sheetWidth: 13 | 17;
+}
+
+export default function NestingTool({ sheetWidth }: NestingToolProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { toast } = useToast()
   const { user } = useAuth();
@@ -183,10 +166,10 @@ export default function NestingTool() {
                     const defaultWidth = 3;
                     const aspectRatio = image.width / image.height;
                     
-                    // If an image is wider than the current sheet, scale it down to fit.
-                    const finalWidth = image.width > (state.sheetWidth * 96) // Approx 96dpi for initial check
-                        ? state.sheetWidth - 0.5 // give it some padding
-                        : defaultWidth;
+                    let finalWidth = defaultWidth;
+                    if (image.width > (sheetWidth * 96)) { // Approx 96dpi for initial check
+                        finalWidth = sheetWidth - 0.5; // give it some padding
+                    }
                     
                     const finalHeight = finalWidth / aspectRatio;
 
@@ -318,19 +301,6 @@ export default function NestingTool() {
     });
   }, []);
 
-  const handleSheetWidthChange = useCallback((newWidth: 13 | 17) => {
-    const imagesToResize = state.images.some(image => image.width > newWidth);
-    
-    dispatch({ type: 'RESIZE_IMAGES_FOR_SHEET', payload: newWidth });
-
-    if (imagesToResize) {
-        toast({
-            title: 'Images Resized',
-            description: `One or more images were automatically resized to fit the new ${newWidth}" sheet.`,
-        });
-    }
-  }, [state.images, toast]);
-
   const handleArrange = async () => {
     if (state.images.length === 0) {
       toast({
@@ -343,9 +313,23 @@ export default function NestingTool() {
     dispatch({ type: 'START_NESTING' });
 
     try {
+        // Automatically resize any images that are too large for the sheet before sending to the agent
+        const imagesToNest = state.images.map(img => {
+            if (img.width > sheetWidth && img.height > sheetWidth) {
+                toast({
+                    variant: "destructive",
+                    title: "Image Too Large",
+                    description: `An image is too large to fit on the ${sheetWidth}" sheet, even when rotated. Please resize it.`
+                });
+                throw new Error("Image too large for sheet.");
+            }
+            return img;
+        });
+
+
         const result = await runNestingAgentAction({
-            images: state.images,
-            sheetWidth: state.sheetWidth
+            images: imagesToNest,
+            sheetWidth: sheetWidth
         });
         
         dispatch({ type: 'SET_LAYOUT', payload: result });
@@ -380,9 +364,9 @@ export default function NestingTool() {
   
   const price = useMemo(() => {
     if(state.sheetLength === 0) return 0;
-    const rate = state.sheetWidth === 13 ? 0.45 : 0.59;
+    const rate = sheetWidth === 13 ? 0.45 : 0.59;
     return state.sheetLength * rate;
-  }, [state.sheetLength, state.sheetWidth]);
+  }, [state.sheetLength, sheetWidth]);
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -407,7 +391,7 @@ export default function NestingTool() {
 
     const cartItem: Omit<CartItem, 'id' | 'createdAt'> = {
       userId: user.uid,
-      sheetWidth: state.sheetWidth,
+      sheetWidth: sheetWidth,
       sheetLength: state.sheetLength,
       price: price,
       layout: state.nestedLayout,
@@ -419,7 +403,7 @@ export default function NestingTool() {
       dispatch({ type: 'SET_SAVE_SUCCESS' });
       toast({
         title: "Added to Cart!",
-        description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
+        description: `Your ${sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
       });
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } else {
@@ -441,9 +425,9 @@ export default function NestingTool() {
         </Link>
       </Button>
       <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-headline font-bold">Gang Sheet Builder</h1>
+          <h1 className="text-3xl md:text-4xl font-headline font-bold">{sheetWidth}" Gang Sheet Builder</h1>
           <p className="mt-2 max-w-2xl mx-auto text-muted-foreground">
-              Upload your images, choose a sheet size, and our AI agent will arrange them for you.
+              Upload your images, and our AI agent will arrange them for you on a {sheetWidth}" wide sheet.
           </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -458,8 +442,7 @@ export default function NestingTool() {
             isUploading={state.isUploading}
           />
           <SheetConfig
-            sheetWidth={state.sheetWidth}
-            onSheetWidthChange={handleSheetWidthChange}
+            sheetWidth={sheetWidth}
             sheetLength={state.sheetLength}
             price={price}
             onArrange={handleArrange}
@@ -472,7 +455,7 @@ export default function NestingTool() {
         </div>
         <div className="lg:col-span-2">
           <SheetPreview
-            sheetWidth={state.sheetWidth}
+            sheetWidth={sheetWidth}
             sheetLength={state.sheetLength}
             nestedLayout={state.nestedLayout}
             isLoading={state.isLoading}

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { ShoppingCart, User, LogOut, TestTube2 } from 'lucide-react';
+import { ShoppingCart, User, LogOut, TestTube2, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
@@ -14,6 +14,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState, useCallback } from 'react';
@@ -56,7 +60,6 @@ export default function Header() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      // No need to manually clear cart count, the effect will re-run with a null user
     } catch (error) {
       console.error('Error signing out', error);
     }
@@ -69,9 +72,30 @@ export default function Header() {
           DTF Wholesale Canada
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
-          <Button asChild variant="ghost">
-             <Link href="/nesting-tool">Nesting Tool</Link>
-          </Button>
+           <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost">
+                Nesting Tool
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuContent>
+                <DropdownMenuItem asChild>
+                  <Link href="/nesting-tool-13">
+                    <Scissors className="mr-2 h-4 w-4" />
+                    13" Gang Sheet Builder
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                   <Link href="/nesting-tool-17">
+                    <Scissors className="mr-2 h-4 w-4" />
+                    17" Gang Sheet Builder
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
+          </DropdownMenu>
+
            <Button asChild variant="ghost" className="hidden sm:inline-flex">
              <Link href="/nesting-tester">
                 <TestTube2 className="mr-2 h-4 w-4" />
