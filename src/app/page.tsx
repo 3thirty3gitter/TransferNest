@@ -22,11 +22,6 @@ export default function Home() {
               Vibrant, durable, and ready-to-press Direct-to-Film transfers for your apparel business. Unbeatable quality and pricing, delivered fast.
             </p>
             <div className="mt-8 flex justify-center gap-4">
-              <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                <Link href="/nesting-tool-13">
-                  Get Started Now <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
               <Button asChild size="lg" variant="outline">
                 <Link href="#features">Learn More</Link>
               </Button>
