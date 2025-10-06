@@ -43,6 +43,7 @@ type Action =
   | { type: 'UPDATE_IMAGE'; payload: { id: string; updates: Partial<Omit<ManagedImage, 'id' | 'url' | 'aspectRatio'>> } }
   | { type: 'DUPLICATE_IMAGE'; payload: string }
   | { type: 'SET_SHEET_WIDTH'; payload: 13 | 17 }
+  | { type: 'RESIZE_IMAGES_FOR_SHEET'; payload: 13 | 17 }
   | { type: 'START_NESTING' }
   | { type: 'SET_LAYOUT'; payload: NestingAgentOutput }
   | { type: 'START_SAVING' }
@@ -50,7 +51,6 @@ type Action =
   | { type: 'START_UPLOADING' }
   | { type: 'SET_UPLOAD_COMPLETE' }
   | { type: 'TRIM_IMAGE', payload: { id: string; newUrl: string; newWidth: number; newHeight: number; newAspectRatio: number } }
-  | { type: 'SET_IMAGES'; payload: ManagedImage[] }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
@@ -116,6 +116,21 @@ function reducer(state: State, action: Action): State {
     }
     case 'SET_SHEET_WIDTH':
       return { ...state, sheetWidth: action.payload, nestedLayout: [], sheetLength: 0, efficiency: 0 };
+    case 'RESIZE_IMAGES_FOR_SHEET': {
+        const newWidth = action.payload;
+        const updatedImages = state.images.map(image => {
+            if (image.width > newWidth) {
+                const newImageWidth = newWidth - 0.5; // Give a small margin
+                return {
+                    ...image,
+                    width: newImageWidth,
+                    height: newImageWidth / image.aspectRatio,
+                };
+            }
+            return image;
+        });
+        return { ...state, sheetWidth: newWidth, images: updatedImages, nestedLayout: [], sheetLength: 0, efficiency: 0 };
+    }
     case 'START_NESTING':
       return { ...state, isLoading: true };
     case 'SET_LAYOUT':
@@ -128,8 +143,6 @@ function reducer(state: State, action: Action): State {
       return { ...state, isUploading: true };
     case 'SET_UPLOAD_COMPLETE':
         return { ...state, isUploading: false };
-    case 'SET_IMAGES':
-        return { ...state, images: action.payload, nestedLayout: [], sheetLength: 0, efficiency: 0 };
     case 'SET_ERROR':
       return { ...state, isLoading: false, isSaving: false, isUploading: false };
     default:
@@ -306,24 +319,11 @@ export default function NestingTool() {
   }, []);
 
   const handleSheetWidthChange = useCallback((newWidth: 13 | 17) => {
-    let imagesResized = false;
-    const updatedImages = state.images.map(image => {
-        if (image.width > newWidth) {
-            imagesResized = true;
-            const newImageWidth = newWidth - 0.5; // Give a small margin
-            return {
-                ...image,
-                width: newImageWidth,
-                height: newImageWidth / image.aspectRatio,
-            };
-        }
-        return image;
-    });
+    const imagesToResize = state.images.some(image => image.width > newWidth);
+    
+    dispatch({ type: 'RESIZE_IMAGES_FOR_SHEET', payload: newWidth });
 
-    dispatch({ type: 'SET_SHEET_WIDTH', payload: newWidth });
-    dispatch({ type: 'SET_IMAGES', payload: updatedImages });
-
-    if (imagesResized) {
+    if (imagesToResize) {
         toast({
             title: 'Images Resized',
             description: `One or more images were automatically resized to fit the new ${newWidth}" sheet.`,
