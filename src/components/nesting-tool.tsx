@@ -48,6 +48,7 @@ type Action =
   | { type: 'START_UPLOADING' }
   | { type: 'SET_UPLOAD_COMPLETE' }
   | { type: 'TRIM_IMAGE', payload: { id: string; newUrl: string; newWidth: number; newHeight: number; newAspectRatio: number } }
+  | { type: 'RESIZE_IMAGES_FOR_SHEET', payload: { newWidth: number } }
   | { type: 'SET_ERROR'; payload: string };
 
 const initialState: State = {
@@ -76,6 +77,20 @@ function reducer(state: State, action: Action): State {
           sheetLength: 0,
           efficiency: 0,
         };
+    }
+    case 'RESIZE_IMAGES_FOR_SHEET': {
+        const { newWidth } = action.payload;
+        const newImages = state.images.map(img => {
+            if (img.width > newWidth) {
+                return {
+                    ...img,
+                    width: newWidth - 0.5,
+                    height: (newWidth - 0.5) / img.aspectRatio,
+                };
+            }
+            return img;
+        });
+        return { ...state, images: newImages, nestedLayout: [], sheetLength: 0, efficiency: 0 };
     }
     case 'TRIM_IMAGE':
       return {
@@ -133,11 +148,17 @@ type NestingToolProps = {
   sheetWidth: 13 | 17;
 }
 
-export default function NestingTool({ sheetWidth }: NestingToolProps) {
+export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingToolProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { toast } = useToast()
   const { user } = useAuth();
   const router = useRouter();
+  const [sheetWidth, setSheetWidth] = useState(initialSheetWidth);
+
+  const handleSheetWidthChange = useCallback((newWidth: 13 | 17) => {
+    setSheetWidth(newWidth);
+    dispatch({ type: 'RESIZE_IMAGES_FOR_SHEET', payload: { newWidth }});
+  }, []);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) {
@@ -341,11 +362,6 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
             description: result.warning,
             duration: 5000,
           });
-        } else {
-           toast({
-              title: "Layout Optimized!",
-              description: `Agent chose '${result.strategy}' with ${(result.areaUtilizationPct * 100).toFixed(1)}% efficiency.`,
-          });
         }
 
     } catch (e: any) {
@@ -443,6 +459,7 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
           />
           <SheetConfig
             sheetWidth={sheetWidth}
+            onSheetWidthChange={handleSheetWidthChange}
             sheetLength={state.sheetLength}
             price={price}
             onArrange={handleArrange}
