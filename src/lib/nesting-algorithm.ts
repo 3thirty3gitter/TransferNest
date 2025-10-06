@@ -94,7 +94,7 @@ class MaxRectsBinPack {
             break;
           case 'BestAreaFit':
             score1 = freeRect.width * freeRect.height - width * height;
-            score2 = Infinity;
+            score2 = Math.min(freeRect.width - width, freeRect.height - height);
             break;
           case 'BottomLeft':
             score1 = freeRect.y + height;
@@ -118,59 +118,94 @@ class MaxRectsBinPack {
   }
   
   insert(width: number, height: number, method: PackingMethod): (Rect & { rotated: boolean }) | null {
-    const newNode = this.findPositionForNewNode(width, height, method);
+    let bestNode: (Node & { rotated: boolean }) | null = null;
     
-    // Try to rotate
-    const rotatedNode = this.findPositionForNewNode(height, width, method);
-
-    // If both don't fit
-    if (newNode.score1 === Infinity && rotatedNode.score1 === Infinity) {
-      return null;
+    // Try without rotation
+    const node1 = this.findPositionForNewNode(width, height, method);
+    if (node1.score1 !== Infinity) {
+        bestNode = { ...node1, rotated: false };
     }
 
-    let placedNode: Rect & { rotated: boolean };
-
-    // Compare scores. <= allows tie-breaking which is important.
-    if (newNode.score1 <= rotatedNode.score1 && newNode.score2 <= rotatedNode.score2) {
-      placedNode = { ...newNode, rotated: false };
-    } else {
-      placedNode = { ...rotatedNode, rotated: true };
+    // Try with rotation
+    const node2 = this.findPositionForNewNode(height, width, method);
+    if (node2.score1 !== Infinity) {
+        const rotatedNode = { ...node2, rotated: true };
+        if (!bestNode || rotatedNode.score1 < bestNode.score1 || (rotatedNode.score1 === bestNode.score1 && rotatedNode.score2 < bestNode.score2)) {
+            bestNode = rotatedNode;
+        }
     }
 
-    if (placedNode.width === 0 || placedNode.height === 0) {
-      return null; // Should not happen with score checks, but as a safeguard.
+    if (!bestNode) {
+        return null; // Cannot fit either way
     }
     
+    // The final chosen node for placement, possibly rotated.
+    const placedNode: Rect = {
+        x: bestNode.x,
+        y: bestNode.y,
+        width: bestNode.rotated ? height : width,
+        height: bestNode.rotated ? width : height,
+    };
+
     this.splitFreeNode(placedNode);
     this.pruneFreeList();
 
-    return placedNode;
+    return { ...placedNode, rotated: bestNode.rotated };
   }
 
   private splitFreeNode(usedNode: Rect): void {
       const newFreeRects: Rect[] = [];
-      for (const freeRect of this.freeRectangles) {
-          if (!this.isOverlapping(usedNode, freeRect)) {
-              newFreeRects.push(freeRect);
-              continue;
-          }
-
-          // Top split
-          if (usedNode.y > freeRect.y + EPSILON) {
-              newFreeRects.push({ x: freeRect.x, y: freeRect.y, width: freeRect.width, height: usedNode.y - freeRect.y });
-          }
-          // Bottom split
-          if (usedNode.y + usedNode.height < freeRect.y + freeRect.height - EPSILON) {
-              newFreeRects.push({ x: freeRect.x, y: usedNode.y + usedNode.height, width: freeRect.width, height: (freeRect.y + freeRect.height) - (usedNode.y + usedNode.height) });
-          }
-          // Left split
-          if (usedNode.x > freeRect.x + EPSILON) {
-              newFreeRects.push({ x: freeRect.x, y: usedNode.y, width: usedNode.x - freeRect.x, height: usedNode.height });
-          }
-          // Right split
-          if (usedNode.x + usedNode.width < freeRect.x + freeRect.width - EPSILON) {
-              newFreeRects.push({ x: usedNode.x + usedNode.width, y: usedNode.y, width: (freeRect.x + freeRect.width) - (usedNode.x + usedNode.width), height: usedNode.height });
-          }
+      for (let i = 0; i < this.freeRectangles.length; i++) {
+        const freeRect = this.freeRectangles[i];
+        
+        if (!this.isOverlapping(usedNode, freeRect)) {
+          newFreeRects.push(freeRect);
+          continue;
+        }
+    
+        // New node at the top of the free space.
+        if (usedNode.y > freeRect.y + EPSILON) {
+          const newNode: Rect = {
+            x: freeRect.x,
+            y: freeRect.y,
+            width: freeRect.width,
+            height: usedNode.y - freeRect.y,
+          };
+          newFreeRects.push(newNode);
+        }
+    
+        // New node at the bottom of the free space.
+        if (usedNode.y + usedNode.height < freeRect.y + freeRect.height - EPSILON) {
+          const newNode: Rect = {
+            x: freeRect.x,
+            y: usedNode.y + usedNode.height,
+            width: freeRect.width,
+            height: (freeRect.y + freeRect.height) - (usedNode.y + usedNode.height),
+          };
+          newFreeRects.push(newNode);
+        }
+    
+        // New node on the left of the free space.
+        if (usedNode.x > freeRect.x + EPSILON) {
+          const newNode: Rect = {
+            x: freeRect.x,
+            y: freeRect.y,
+            width: usedNode.x - freeRect.x,
+            height: freeRect.height,
+          };
+          newFreeRects.push(newNode);
+        }
+    
+        // New node on the right of the free space.
+        if (usedNode.x + usedNode.width < freeRect.x + freeRect.width - EPSILON) {
+          const newNode: Rect = {
+            x: usedNode.x + usedNode.width,
+            y: freeRect.y,
+            width: (freeRect.x + freeRect.width) - (usedNode.x + usedNode.width),
+            height: freeRect.height,
+          };
+          newFreeRects.push(newNode);
+        }
       }
       this.freeRectangles = newFreeRects;
   }
