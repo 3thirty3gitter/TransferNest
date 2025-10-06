@@ -14,7 +14,7 @@ import { executeNesting, calculateOccupancy, VIRTUAL_SHEET_HEIGHT } from '@/lib/
 import SheetPreview from '@/components/sheet-preview';
 import type { NestedLayout } from '@/app/schema';
 import { toast } from '@/hooks/use-toast';
-import { recordNestingRun } from "@/lib/nesting-telemetry";
+import { recordNestingEvent } from "@/lib/nesting-telemetry";
 
 type TestConfig = {
   iterations: number;
@@ -143,10 +143,17 @@ export default function NestingTesterPage() {
       }));
 
       // 2. Run nesting algorithm
+      const startTime = performance.now();
       const result = executeNesting(images, config.sheetWidth, VIRTUAL_SHEET_HEIGHT * 2);
+      const endTime = performance.now();
       
       // 2.5 Log the result for analysis
-      recordNestingRun({ context: 'tester', sheetWidth: config.sheetWidth, images, result });
+      recordNestingEvent({
+        jobId: `test-${Date.now()}-${Math.random()}`,
+        utilPct: result.areaUtilizationPct,
+        runtimeMs: endTime - startTime,
+        ts: Date.now(),
+      });
 
       // 3. Calculate efficiency
       const efficiency = result.areaUtilizationPct;
@@ -296,7 +303,7 @@ export default function NestingTesterPage() {
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm text-muted-foreground">
                             <span>Progress</span>
-                            <span>{state.stats.currentIteration} / {state.stats.totalIterations} iterations</span>
+                            <span>{state.stats.currentIteration} / {state.stats.totalIterations}</span>
                         </div>
                         <Progress value={progress} />
                     </div>
@@ -357,8 +364,9 @@ export default function NestingTesterPage() {
   );
 }
 
-    
+
 
     
 
     
+
