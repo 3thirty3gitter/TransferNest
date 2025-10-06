@@ -1,11 +1,10 @@
+
 // src/lib/nesting-algorithm.ts
 
 /**
  * @fileoverview A 2D bin packing algorithm for nesting images onto a sheet.
  * Implements the MaxRects algorithm with multiple heuristics.
  */
-
-import { recordNestingEvent } from './nesting-telemetry';
 
 // --- Data Contracts ---
 export type ManagedImage = {
@@ -93,13 +92,13 @@ class MaxRectsBinPack {
     const node = this.findPositionForNewNode(width, height, method);
     const rotatedNode = this.findPositionForNewNode(height, width, method);
 
-    if (node.score < bestNode.score) {
+    if (node.score <= bestNode.score) {
       bestNode = { ...node, width, height, rotated: false };
     }
-    if (rotatedNode.score < bestNode.score) {
+    if (rotatedNode.score <= bestNode.score) {
       bestNode = { ...rotatedNode, width: height, height: width, rotated: true };
     }
-
+    
     if (bestNode.score === Infinity) {
       return null;
     }
@@ -118,94 +117,93 @@ class MaxRectsBinPack {
       y: 0,
       width: 0,
       height: 0,
-      rotated: false, // This is handled in the insert method
+      rotated: false, 
       score: Infinity,
     };
 
     for (let i = 0; i < this.freeRectangles.length; i++) {
-      const rect = this.freeRectangles[i];
-      if (width <= rect.width + EPSILON && height <= rect.height + EPSILON) {
-        let score: number;
-        switch (method) {
-          case 'BestShortSideFit':
-            score = Math.min(rect.width - width, rect.height - height);
-            break;
-          case 'BestLongSideFit':
-            score = Math.max(rect.width - width, rect.height - height);
-            break;
-          case 'BestAreaFit':
-          default:
-            score = rect.width * rect.height - width * height;
-            break;
+        const rect = this.freeRectangles[i];
+        if (width <= rect.width + EPSILON && height <= rect.height + EPSILON) {
+            let score: number;
+            switch (method) {
+                case 'BestShortSideFit':
+                    score = Math.min(rect.width - width, rect.height - height);
+                    break;
+                case 'BestLongSideFit':
+                    score = Math.max(rect.width - width, rect.height - height);
+                    break;
+                case 'BestAreaFit':
+                default:
+                    score = rect.width * rect.height - width * height;
+                    break;
+            }
+            if (score < bestNode.score) {
+                bestNode = {
+                    x: rect.x,
+                    y: rect.y,
+                    width: width,
+                    height: height,
+                    rotated: false,
+                    score: score,
+                };
+            }
         }
-
-        if (score < bestNode.score) {
-          bestNode = {
-            x: rect.x,
-            y: rect.y,
-            width: width,
-            height: height,
-            rotated: false, // This is handled in the insert method
-            score: score,
-          };
-        }
-      }
     }
     return bestNode;
   }
   
-  private splitFreeNode(usedNode: Rect): void {
+ private splitFreeNode(usedNode: Rect): void {
     const newFreeRects: Rect[] = [];
     for (let i = 0; i < this.freeRectangles.length; i++) {
-      const free = this.freeRectangles[i];
+        const free = this.freeRectangles[i];
 
-      const overlapX = usedNode.x < free.x + free.width && usedNode.x + usedNode.width > free.x;
-      const overlapY = usedNode.y < free.y + free.height && usedNode.y + usedNode.height > free.y;
+        const overlapX = usedNode.x < free.x + free.width && usedNode.x + usedNode.width > free.x;
+        const overlapY = usedNode.y < free.y + free.height && usedNode.y + usedNode.height > free.y;
 
-      if (!overlapX || !overlapY) {
-        newFreeRects.push(free);
-        continue;
-      }
+        if (!overlapX || !overlapY) {
+            newFreeRects.push(free);
+            continue;
+        }
 
-      // Top
-      if (usedNode.y > free.y) {
-        newFreeRects.push({
-          x: free.x,
-          y: free.y,
-          width: free.width,
-          height: usedNode.y - free.y,
-        });
-      }
-      // Bottom
-      if (usedNode.y + usedNode.height < free.y + free.height) {
-        newFreeRects.push({
-          x: free.x,
-          y: usedNode.y + usedNode.height,
-          width: free.width,
-          height: (free.y + free.height) - (usedNode.y + usedNode.height),
-        });
-      }
-      // Left
-      if (usedNode.x > free.x) {
-        newFreeRects.push({
-          x: free.x,
-          y: free.y,
-          width: usedNode.x - free.x,
-          height: free.height,
-        });
-      }
-      // Right
-      if (usedNode.x + usedNode.width < free.x + free.width) {
-        newFreeRects.push({
-          x: usedNode.x + usedNode.width,
-          y: free.y,
-          width: (free.x + free.width) - (usedNode.x + usedNode.width),
-          height: free.height,
-        });
-      }
+        // Top
+        if (usedNode.y > free.y) {
+            newFreeRects.push({
+                x: free.x,
+                y: free.y,
+                width: free.width,
+                height: usedNode.y - free.y,
+            });
+        }
+        // Bottom
+        if (usedNode.y + usedNode.height < free.y + free.height) {
+            newFreeRects.push({
+                x: free.x,
+                y: usedNode.y + usedNode.height,
+                width: free.width,
+                height: (free.y + free.height) - (usedNode.y + usedNode.height),
+            });
+        }
+        // Left
+        if (usedNode.x > free.x) {
+            newFreeRects.push({
+                x: free.x,
+                y: usedNode.y,
+                width: usedNode.x - free.x,
+                height: usedNode.height,
+            });
+        }
+        // Right
+        if (usedNode.x + usedNode.width < free.x + free.width) {
+            newFreeRects.push({
+                x: usedNode.x + usedNode.width,
+                y: usedNode.y,
+                width: (free.x + free.width) - (usedNode.x + usedNode.width),
+                height: usedNode.height,
+            });
+        }
     }
     this.pruneFreeList(newFreeRects);
-  }
+}
 
   private pruneFreeList(rects: Rect[]): void {
     const uniqueRects: Rect[] = [];
@@ -324,13 +322,5 @@ export function executeNesting(
     packingMethod,
   };
   
-  // Fire-and-forget telemetry
-  recordNestingEvent({
-    jobId: `live-${Date.now()}`,
-    utilPct: areaUtilizationPct,
-    runtimeMs: 0, // Not measured here, but can be added in the flow
-    ts: Date.now()
-  }).catch(() => {}); // Suppress errors
-
   return result;
 }
