@@ -19,10 +19,10 @@ import {
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
 
 async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<Output> {
-  const url = `${BASE_URL}/api/${flowId}`;
+  const url = `${BASE_URL}/api/genkit/flows/${flowId}`;
   
   const body = {
-    data: input
+    input
   };
   
   try {
@@ -43,7 +43,7 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
     
     const result = await response.json();
     
-    return result.result || result;
+    return result.output || result;
 
   } catch (error) {
     console.error(`An exception occurred while invoking flow ${flowId}:`, error);

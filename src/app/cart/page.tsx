@@ -64,7 +64,7 @@ export default function CartPage() {
       <Header />
       <main className="flex-1 container py-8">
          <Button asChild variant="ghost" className="mb-4">
-            <Link href="/nesting-tool">
+            <Link href="/nesting-tool-13">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Nesting Tool
             </Link>
@@ -95,7 +95,7 @@ export default function CartPage() {
                                 Looks like you haven’t added any gang sheets yet.
                             </p>
                             <Button asChild className="mt-6">
-                                <Link href="/nesting-tool">Start Building</Link>
+                                <Link href="/nesting-tool-13">Start Building</Link>
                             </Button>
                         </div>
                     )}
