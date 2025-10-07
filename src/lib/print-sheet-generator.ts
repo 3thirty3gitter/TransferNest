@@ -20,17 +20,6 @@ type GenerateSheetParams = {
  */
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-        // Clean up the object URL after the image is loaded
-        URL.revokeObjectURL(img.src);
-        resolve(img);
-    };
-    img.onerror = (err) => {
-        reject(new Error(`Failed to load image from generated blob. Error: ${err}`));
-    };
-    
-    // Fetch the image as a blob to bypass CORS issues
     fetch(src, { mode: 'cors' })
       .then(response => {
         if (!response.ok) {
@@ -39,7 +28,16 @@ function loadImage(src: string): Promise<HTMLImageElement> {
         return response.blob();
       })
       .then(blob => {
-        // Create a local URL for the blob
+        const img = new Image();
+        img.onload = () => {
+          // Do NOT revoke the object URL here, as it might be needed for drawing.
+          // It will be revoked later.
+          resolve(img);
+        };
+        img.onerror = (err) => {
+          URL.revokeObjectURL(img.src); // Clean up if loading fails.
+          reject(new Error(`Failed to load image from generated blob. Error: ${err}`));
+        };
         img.src = URL.createObjectURL(blob);
       })
       .catch(fetchError => {
@@ -47,6 +45,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
       });
   });
 }
+
 
 /**
  * Converts a data URL to a Blob.
@@ -88,9 +87,12 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
     
     // Set a transparent background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const loadedImages: HTMLImageElement[] = [];
 
     try {
         const imageElements = await Promise.all(layout.map(item => loadImage(item.url)));
+        loadedImages.push(...imageElements); // Store loaded images for later cleanup
 
         layout.forEach((item, index) => {
             const img = imageElements[index];
@@ -102,18 +104,16 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
             ctx.save();
             
             if (item.rotated) {
-                 // When rotated, the canvas width is the item's visual height, and canvas height is its visual width
-                const rotatedCanvasWidth = itemHeightPx;
-                const rotatedCanvasHeight = itemWidthPx;
-
-                // Translate to the top-left corner of the destination rectangle
-                ctx.translate(itemXPx, itemYPx);
+                const rotatedCanvasWidth = itemHeightPx; // Visual width is now height
+                const rotatedCanvasHeight = itemWidthPx;  // Visual height is now width
+                
+                // Translate to the center of where the image should be
+                ctx.translate(itemXPx + rotatedCanvasWidth / 2, itemYPx + rotatedCanvasHeight / 2);
                 // Rotate the context
                 ctx.rotate(90 * Math.PI / 180);
-                // The new origin is (0,0). We need to draw the image so its top-left corner
-                // ends up at this origin, but it's rotated. This means drawing at (0, -rotatedCanvasWidth).
-                // The dimensions for drawImage are of the *unrotated* image source.
-                ctx.drawImage(img, 0, -rotatedCanvasWidth, rotatedCanvasHeight, rotatedCanvasWidth);
+                // Draw the image centered at the new (0,0) origin
+                ctx.drawImage(img, -rotatedCanvasHeight / 2, -rotatedCanvasWidth / 2, rotatedCanvasHeight, rotatedCanvasWidth);
+
             } else {
                 ctx.drawImage(img, itemXPx, itemYPx, itemWidthPx, itemHeightPx);
             }
@@ -132,5 +132,12 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
     } catch (error) {
         console.error('Error during print sheet generation:', error);
         throw new Error('Failed to generate or upload the print-ready PNG.');
+    } finally {
+        // **CRITICAL FIX**: Clean up all blob URLs after the drawing process is complete.
+        loadedImages.forEach(img => {
+            if (img.src.startsWith('blob:')) {
+                URL.revokeObjectURL(img.src);
+            }
+        });
     }
 }
