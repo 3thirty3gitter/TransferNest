@@ -5,7 +5,7 @@
  * between client components and server-side logic.
  */
 
-import type { CartItem, NestingAgentInput, NestingAgentOutput } from '@/app/schema';
+import type { CartFlowInput, CartFlowOutput, CartItem, NestingAgentInput, NestingAgentOutput } from '@/app/schema';
 import {
   executeNesting,
   VIRTUAL_SHEET_HEIGHT,
@@ -53,10 +53,9 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
 }
 
 export async function saveToCartAction(
-  input: { item: Omit<CartItem, 'id' | 'createdAt'> }
-): Promise<{ success: boolean; docId?: string; error?: string }> {
-  // The input to the flow is an object { item: ... }
-  return await invokeFlow('saveToCartFlow', input);
+  input: { input: CartFlowInput }
+): Promise<CartFlowOutput> {
+  return await invokeFlow('saveToCartFlow', input.input);
 }
 
 export async function getCartItemsAction(userId: string): Promise<CartItem[]> {

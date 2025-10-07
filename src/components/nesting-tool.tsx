@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useReducer, useCallback, useMemo, useEffect } from 'react';
+import { useState, useReducer, useCallback, useMemo } from 'react';
 import ImageManager from '@/components/image-manager';
 import SheetConfig from '@/components/sheet-config';
 import SheetPreview from '@/components/sheet-preview';
-import type { NestedLayout, CartItem, NestingAgentOutput } from '@/app/schema';
+import type { NestedLayout, CartFlowInput, NestingAgentOutput } from '@/app/schema';
 import { saveToCartAction, runNestingAgentAction } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft } from 'lucide-react';
@@ -14,7 +14,6 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
-import { generateAndUploadPrintSheet } from '@/lib/print-sheet-generator';
 
 export type ManagedImage = {
   id: string;
@@ -412,22 +411,15 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
     dispatch({ type: 'START_SAVING' });
 
     try {
-      const pngUrl = await generateAndUploadPrintSheet({
-        layout: state.nestedLayout,
-        sheetWidth: state.sheetWidth,
-        sheetLength: state.sheetLength,
-        userId: user.uid,
-      });
-
-      const cartItem: Omit<CartItem, 'id' | 'createdAt'> = {
+      const cartInput: CartFlowInput = {
         userId: user.uid,
         sheetWidth: state.sheetWidth,
         sheetLength: state.sheetLength,
         price: price,
-        pngUrl: pngUrl,
+        layout: state.nestedLayout,
       };
 
-      const result = await saveToCartAction({ item: cartItem });
+      const result = await saveToCartAction({ input: cartInput });
 
       if (result.success) {
         dispatch({ type: 'SET_SAVE_SUCCESS' });

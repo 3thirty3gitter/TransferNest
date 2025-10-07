@@ -1,7 +1,7 @@
 
 import { z } from 'zod';
 
-const NestedImageSchema = z.object({
+export const NestedImageSchema = z.object({
   id: z.string().optional(), // ID might not be returned, but URL should be
   url: z.string(),
   x: z.number(),
@@ -20,13 +20,17 @@ export const CartItemSchema = z.object({
   sheetWidth: z.number(),
   sheetLength: z.number(),
   price: z.number(),
-  pngUrl: z.string(), // Changed from layout to pngUrl
+  pngUrl: z.string(),
   createdAt: z.string(), // ISO string date
 });
 export type CartItem = z.infer<typeof CartItemSchema>;
 
 export const CartFlowInputSchema = z.object({
-  item: CartItemSchema.omit({ id: true, createdAt: true }),
+  userId: z.string(),
+  sheetWidth: z.number(),
+  sheetLength: z.number(),
+  price: z.number(),
+  layout: NestedLayoutSchema,
 });
 export type CartFlowInput = z.infer<typeof CartFlowInputSchema>;
 

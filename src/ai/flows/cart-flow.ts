@@ -4,28 +4,33 @@
 'use server';
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { CartItemSchema, CartFlowOutputSchema } from '@/app/schema';
+import { CartFlowInputSchema, CartFlowOutputSchema } from '@/app/schema';
 import { getFirestore } from '@/lib/firebase-admin';
+import { generateAndUploadPrintSheetFlow } from './print-sheet-flow';
 
 const admin = require('firebase-admin');
-
-// This schema matches the payload from saveToCartAction: { item: ... }
-const SaveToCartInputSchema = z.object({
-    item: CartItemSchema.omit({ id: true, createdAt: true }),
-});
 
 export const saveToCartFlow = ai.defineFlow(
   {
     name: 'saveToCartFlow',
-    inputSchema: SaveToCartInputSchema,
+    inputSchema: CartFlowInputSchema,
     outputSchema: CartFlowOutputSchema,
   },
-  async ({ item }) => {
+  async (cartInput) => {
     try {
+      // Step 1: Generate the print sheet PNG and get its URL.
+      const pngUrl = await generateAndUploadPrintSheetFlow(cartInput);
+
+      // Step 2: Save the final cart item with the PNG URL to Firestore.
       const db = getFirestore();
       const cartCollectionRef = db.collection('cartItems');
+      
       const docRef = await cartCollectionRef.add({
-        ...item,
+        userId: cartInput.userId,
+        sheetWidth: cartInput.sheetWidth,
+        sheetLength: cartInput.sheetLength,
+        price: cartInput.price,
+        pngUrl: pngUrl, // Use the generated URL
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -44,7 +49,7 @@ export const getCartItemsFlow = ai.defineFlow(
   {
     name: 'getCartItemsFlow',
     inputSchema: GetCartItemsInputSchema,
-    outputSchema: z.array(CartItemSchema),
+    outputSchema: z.array(z.any()), // Using z.any() as CartItemSchema is client-side
   },
   async ({ userId }) => {
     try {
