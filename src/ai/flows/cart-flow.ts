@@ -4,15 +4,20 @@
 'use server';
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { CartFlowInputSchema, CartFlowOutputSchema } from '@/app/schema';
+import { CartItemSchema, CartFlowOutputSchema } from '@/app/schema';
 import { getFirestore } from '@/lib/firebase-admin';
 
 const admin = require('firebase-admin');
 
+// This schema matches the payload from saveToCartAction: { item: ... }
+const SaveToCartInputSchema = z.object({
+    item: CartItemSchema.omit({ id: true, createdAt: true }),
+});
+
 export const saveToCartFlow = ai.defineFlow(
   {
     name: 'saveToCartFlow',
-    inputSchema: z.object({ item: CartFlowInputSchema.shape.item }),
+    inputSchema: SaveToCartInputSchema,
     outputSchema: CartFlowOutputSchema,
   },
   async ({ item }) => {
@@ -32,11 +37,14 @@ export const saveToCartFlow = ai.defineFlow(
   }
 );
 
+// This schema matches the payload from getCartItemsAction: { userId: ... }
+const GetCartItemsInputSchema = z.object({ userId: z.string() });
+
 export const getCartItemsFlow = ai.defineFlow(
   {
     name: 'getCartItemsFlow',
-    inputSchema: z.object({ userId: z.string() }),
-    outputSchema: z.array(z.any()),
+    inputSchema: GetCartItemsInputSchema,
+    outputSchema: z.array(CartItemSchema),
   },
   async ({ userId }) => {
     try {
@@ -51,6 +59,7 @@ export const getCartItemsFlow = ai.defineFlow(
 
       return querySnapshot.docs.map(doc => {
           const data = doc.data();
+          // Ensure createdAt is always a string
           const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
           return {
               id: doc.id,
@@ -69,10 +78,13 @@ export const getCartItemsFlow = ai.defineFlow(
   }
 );
 
+// This schema matches the payload from removeCartItemAction: { docId: ... }
+const RemoveCartItemInputSchema = z.object({ docId: z.string() });
+
 export const removeCartItemFlow = ai.defineFlow(
   {
     name: 'removeCartItemFlow',
-    inputSchema: z.object({ docId: z.string() }),
+    inputSchema: RemoveCartItemInputSchema,
     outputSchema: CartFlowOutputSchema,
   },
   async ({ docId }) => {

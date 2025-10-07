@@ -22,7 +22,7 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
   const url = `${BASE_URL}/api/genkit/flows/${flowId}`;
   
   const body = {
-    input
+    input: input
   };
   
   try {
@@ -43,6 +43,7 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
     
     const result = await response.json();
     
+    // The flow output is nested under the 'output' key
     return result.output || result;
 
   } catch (error) {
@@ -54,17 +55,20 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
 export async function saveToCartAction(
   item: Omit<CartItem, 'id' | 'createdAt'>
 ): Promise<{ success: boolean; docId?: string; error?: string }> {
+  // The input to the flow is an object { item: ... }
   return await invokeFlow('saveToCartFlow', { item });
 }
 
 export async function getCartItemsAction(userId: string): Promise<CartItem[]> {
     if (!userId) return [];
+    // The input to the flow is an object { userId: ... }
     return await invokeFlow('getCartItemsFlow', { userId });
 }
 
 export async function removeCartItemAction(
   docId: string
 ): Promise<{ success: boolean; error?: string }> {
+  // The input to the flow is an object { docId: ... }
   return await invokeFlow('removeCartItemFlow', { docId });
 }
 
