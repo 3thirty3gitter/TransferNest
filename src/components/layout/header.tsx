@@ -72,36 +72,6 @@ export default function Header() {
           DTF Wholesale Canada
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
-           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost">
-                Nesting Tool
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuContent>
-                <DropdownMenuItem asChild>
-                  <Link href="/nesting-tool-13">
-                    <Scissors className="mr-2 h-4 w-4" />
-                    13" Gang Sheet Builder
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                   <Link href="/nesting-tool-17">
-                    <Scissors className="mr-2 h-4 w-4" />
-                    17" Gang Sheet Builder
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenuPortal>
-          </DropdownMenu>
-
-           <Button asChild variant="ghost" className="hidden sm:inline-flex">
-             <Link href="/nesting-tester">
-                <TestTube2 className="mr-2 h-4 w-4" />
-                Nesting Tester
-             </Link>
-          </Button>
           <Button asChild variant="ghost" size="icon" aria-label="Shopping Cart" className="relative">
             <Link href="/cart">
                 <ShoppingCart className="h-6 w-6" />
