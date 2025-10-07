@@ -20,7 +20,6 @@ type GenerateSheetParams = {
  */
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    // Use fetch to get the image as a blob, which bypasses CORS issues for drawing.
     fetch(src, { mode: 'cors' })
       .then(response => {
         if (!response.ok) {
@@ -30,19 +29,18 @@ function loadImage(src: string): Promise<HTMLImageElement> {
       })
       .then(blob => {
         const img = new Image();
+        const objectUrl = URL.createObjectURL(blob);
         img.onload = () => {
-          // The object URL does not need to be revoked immediately.
-          // It will be revoked after the canvas has been fully drawn.
+          // Do not revoke here, let the caller handle it.
           resolve(img);
         };
         img.onerror = (err) => {
-          URL.revokeObjectURL(img.src); // Clean up if loading fails.
+          URL.revokeObjectURL(objectUrl); // Clean up if loading fails.
           reject(new Error(`Failed to load image from generated blob. Error: ${err}`));
         };
-        img.src = URL.createObjectURL(blob);
+        img.src = objectUrl;
       })
       .catch(fetchError => {
-        // This can happen if there's a network error or the initial fetch fails.
         reject(new Error(`Failed to fetch image: ${src}. Error: ${fetchError.message}`));
       });
   });
@@ -87,14 +85,13 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
         throw new Error('Could not create canvas context');
     }
     
-    // Set a transparent background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const loadedImages: HTMLImageElement[] = [];
 
     try {
         const imageElements = await Promise.all(layout.map(item => loadImage(item.url)));
-        loadedImages.push(...imageElements); // Store loaded images for later cleanup
+        loadedImages.push(...imageElements);
 
         layout.forEach((item, index) => {
             const img = imageElements[index];
@@ -106,13 +103,10 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
             ctx.save();
             
             if (item.rotated) {
-                // For rotated items, translate to the item's top-left corner,
-                // then translate to the rotation center, rotate, and draw.
                 const centerX = itemXPx + itemHeightPx / 2;
                 const centerY = itemYPx + itemWidthPx / 2;
                 ctx.translate(centerX, centerY);
                 ctx.rotate(90 * Math.PI / 180);
-                // Draw the image centered on the new origin.
                 ctx.drawImage(img, -itemWidthPx / 2, -itemHeightPx / 2, itemWidthPx, itemHeightPx);
 
             } else {
@@ -126,19 +120,28 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
         const blob = dataURLtoBlob(dataUrl);
         const file = new File([blob], 'gang-sheet.png', { type: 'image/png' });
 
-        // Use the existing upload service
         const pngUrl = await uploadImage(file, userId);
-        return pngUrl;
-
-    } catch (error) {
-        console.error('Error during print sheet generation:', error);
-        throw new Error('Failed to generate or upload the print-ready PNG.');
-    } finally {
-        // **CRITICAL FIX**: Clean up all blob URLs after the drawing process is complete.
+        
+        // ** THE FIX IS HERE **
+        // Now that the upload is complete, we can safely clean up the blob URLs.
         loadedImages.forEach(img => {
             if (img.src.startsWith('blob:')) {
                 URL.revokeObjectURL(img.src);
             }
         });
+
+        return pngUrl;
+
+    } catch (error) {
+        console.error('Error during print sheet generation:', error);
+        
+        // If an error occurs, ensure we still attempt cleanup.
+        loadedImages.forEach(img => {
+            if (img.src.startsWith('blob:')) {
+                URL.revokeObjectURL(img.src);
+            }
+        });
+
+        throw new Error('Failed to generate or upload the print-ready PNG.');
     }
 }
