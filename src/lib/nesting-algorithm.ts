@@ -97,7 +97,7 @@ class MaxRectsBinPack {
             score2 = Math.min(freeRect.width - width, freeRect.height - height);
             break;
           case 'BottomLeft':
-            score1 = freeRect.y; // Prioritize lowest Y-coordinate ("up" in the layout)
+            score1 = freeRect.y + height;
             score2 = freeRect.x;
             break;
         }
@@ -194,9 +194,9 @@ class MaxRectsBinPack {
         if (usedNode.x > freeRect.x + EPSILON) {
           const newNode: Rect = {
             x: freeRect.x,
-            y: freeRect.y,
+            y: usedNode.y,
             width: usedNode.x - freeRect.x,
-            height: freeRect.height,
+            height: usedNode.height,
           };
           newFreeRects.push(newNode);
         }
@@ -205,9 +205,9 @@ class MaxRectsBinPack {
         if (usedNode.x + usedNode.width < freeRect.x + freeRect.width - EPSILON) {
           const newNode: Rect = {
             x: usedNode.x + usedNode.width,
-            y: freeRect.y,
+            y: usedNode.y,
             width: (freeRect.x + freeRect.width) - (usedNode.x + usedNode.width),
-            height: freeRect.height,
+            height: usedNode.height,
           };
           newFreeRects.push(newNode);
         }
