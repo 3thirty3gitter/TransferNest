@@ -14,19 +14,38 @@ type GenerateSheetParams = {
 };
 
 /**
- * Loads an image from a URL, handling cross-origin issues.
+ * Loads an image from a URL, handling cross-origin issues by fetching it as a blob.
  * @param src The URL of the image to load.
  * @returns A promise that resolves with the loaded HTMLImageElement.
  */
 function loadImage(src: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        // This is crucial for drawing images from Firebase Storage onto a canvas
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = (err) => reject(new Error(`Failed to load image: ${src}. Error: ${err}`));
-        img.src = src;
-    });
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+        // Clean up the object URL after the image is loaded
+        URL.revokeObjectURL(img.src);
+        resolve(img);
+    };
+    img.onerror = (err) => {
+        reject(new Error(`Failed to load image from generated blob. Error: ${err}`));
+    };
+    
+    // Fetch the image as a blob to bypass CORS issues
+    fetch(src, { mode: 'cors' })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        }
+        return response.blob();
+      })
+      .then(blob => {
+        // Create a local URL for the blob
+        img.src = URL.createObjectURL(blob);
+      })
+      .catch(fetchError => {
+        reject(new Error(`Failed to fetch image: ${src}. Error: ${fetchError.message}`));
+      });
+  });
 }
 
 /**
@@ -82,18 +101,19 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
 
             ctx.save();
             
-            // The drawing logic needs to account for rotation
             if (item.rotated) {
-                // If rotated, the original image's width becomes the canvas height and vice versa
-                const originalWidthPx = itemHeightPx;
-                const originalHeightPx = itemWidthPx;
+                 // When rotated, the canvas width is the item's visual height, and canvas height is its visual width
+                const rotatedCanvasWidth = itemHeightPx;
+                const rotatedCanvasHeight = itemWidthPx;
 
-                // Translate to the center of where the image will be
-                ctx.translate(itemXPx + originalHeightPx / 2, itemYPx + originalWidthPx / 2);
-                // Rotate 90 degrees
+                // Translate to the top-left corner of the destination rectangle
+                ctx.translate(itemXPx, itemYPx);
+                // Rotate the context
                 ctx.rotate(90 * Math.PI / 180);
-                 // Draw the image centered at the new origin, using original dimensions
-                ctx.drawImage(img, -originalWidthPx / 2, -originalHeightPx / 2, originalWidthPx, originalHeightPx);
+                // The new origin is (0,0). We need to draw the image so its top-left corner
+                // ends up at this origin, but it's rotated. This means drawing at (0, -rotatedCanvasWidth).
+                // The dimensions for drawImage are of the *unrotated* image source.
+                ctx.drawImage(img, 0, -rotatedCanvasWidth, rotatedCanvasHeight, rotatedCanvasWidth);
             } else {
                 ctx.drawImage(img, itemXPx, itemYPx, itemWidthPx, itemHeightPx);
             }
