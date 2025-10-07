@@ -419,7 +419,7 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
         layout: state.nestedLayout,
       };
 
-      const result = await saveToCartAction({ input: cartInput });
+      const result = await saveToCartAction(cartInput);
 
       if (result.success) {
         dispatch({ type: 'SET_SAVE_SUCCESS' });

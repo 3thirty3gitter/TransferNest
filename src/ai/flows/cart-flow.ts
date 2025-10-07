@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview A Genkit flow for managing shopping cart items in Firestore.
  */
@@ -18,8 +19,14 @@ export const saveToCartFlow = ai.defineFlow(
   },
   async (cartInput) => {
     try {
-      // Step 1: Generate the print sheet PNG and get its URL.
-      const pngUrl = await generateAndUploadPrintSheetFlow(cartInput);
+      // Step 1: Generate the print sheet PNG and get its URL by calling the other flow.
+      // Pass the necessary properties from the cartInput object.
+      const pngUrl = await generateAndUploadPrintSheetFlow({
+        layout: cartInput.layout,
+        sheetWidth: cartInput.sheetWidth,
+        sheetLength: cartInput.sheetLength,
+        userId: cartInput.userId,
+      });
 
       // Step 2: Save the final cart item with the PNG URL to Firestore.
       const db = getFirestore();

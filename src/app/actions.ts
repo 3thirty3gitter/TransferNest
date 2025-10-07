@@ -53,9 +53,9 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
 }
 
 export async function saveToCartAction(
-  input: { input: CartFlowInput }
+  input: CartFlowInput
 ): Promise<CartFlowOutput> {
-  return await invokeFlow('saveToCartFlow', input.input);
+  return await invokeFlow('saveToCartFlow', input);
 }
 
 export async function getCartItemsAction(userId: string): Promise<CartItem[]> {
