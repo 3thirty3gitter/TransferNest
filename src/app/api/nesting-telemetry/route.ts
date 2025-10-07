@@ -1,11 +1,12 @@
 export const runtime = "nodejs";
 import { NextResponse } from "next/server";
-import { recordNestingRun } from "@/lib/nesting-telemetry";
+import { recordNestingEvent } from "@/lib/nesting-telemetry.server";
 
 export async function POST(req: Request) {
   const payload = await req.json(); // { context, sheetWidth, images, result }
   try {
-    recordNestingRun(payload as any);
+    // Assuming payload is of type NestingEvent
+    await recordNestingEvent(payload as any);
   } catch (e) {
     console.error("[api/nesting-telemetry] failed:", e);
   }
