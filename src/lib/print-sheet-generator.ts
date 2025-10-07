@@ -75,23 +75,27 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
 
         layout.forEach((item, index) => {
             const img = imageElements[index];
-            const itemWidth = item.width * PRINT_DPI;
-            const itemHeight = item.height * PRINT_DPI;
-            const itemX = item.x * PRINT_DPI;
-            const itemY = item.y * PRINT_DPI;
+            const itemWidthPx = item.width * PRINT_DPI;
+            const itemHeightPx = item.height * PRINT_DPI;
+            const itemXPx = item.x * PRINT_DPI;
+            const itemYPx = item.y * PRINT_DPI;
 
             ctx.save();
             
             // The drawing logic needs to account for rotation
             if (item.rotated) {
-                // Translate to the center of the rotated image's final position
-                ctx.translate(itemX + itemHeight / 2, itemY + itemWidth / 2);
+                // If rotated, the original image's width becomes the canvas height and vice versa
+                const originalWidthPx = itemHeightPx;
+                const originalHeightPx = itemWidthPx;
+
+                // Translate to the center of where the image will be
+                ctx.translate(itemXPx + originalHeightPx / 2, itemYPx + originalWidthPx / 2);
                 // Rotate 90 degrees
                 ctx.rotate(90 * Math.PI / 180);
-                 // Draw the image centered at the new origin
-                ctx.drawImage(img, -itemWidth / 2, -itemHeight / 2, itemWidth, itemHeight);
+                 // Draw the image centered at the new origin, using original dimensions
+                ctx.drawImage(img, -originalWidthPx / 2, -originalHeightPx / 2, originalWidthPx, originalHeightPx);
             } else {
-                ctx.drawImage(img, itemX, itemY, itemWidth, itemHeight);
+                ctx.drawImage(img, itemXPx, itemYPx, itemWidthPx, itemHeightPx);
             }
             
             ctx.restore();
