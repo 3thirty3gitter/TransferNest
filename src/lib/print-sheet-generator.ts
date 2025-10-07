@@ -20,6 +20,7 @@ type GenerateSheetParams = {
  */
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
+    // Use fetch to get the image as a blob, which bypasses CORS issues for drawing.
     fetch(src, { mode: 'cors' })
       .then(response => {
         if (!response.ok) {
@@ -30,8 +31,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
       .then(blob => {
         const img = new Image();
         img.onload = () => {
-          // Do NOT revoke the object URL here, as it might be needed for drawing.
-          // It will be revoked later.
+          // The object URL does not need to be revoked immediately.
+          // It will be revoked after the canvas has been fully drawn.
           resolve(img);
         };
         img.onerror = (err) => {
@@ -41,6 +42,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
         img.src = URL.createObjectURL(blob);
       })
       .catch(fetchError => {
+        // This can happen if there's a network error or the initial fetch fails.
         reject(new Error(`Failed to fetch image: ${src}. Error: ${fetchError.message}`));
       });
   });
@@ -104,15 +106,14 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
             ctx.save();
             
             if (item.rotated) {
-                const rotatedCanvasWidth = itemHeightPx; // Visual width is now height
-                const rotatedCanvasHeight = itemWidthPx;  // Visual height is now width
-                
-                // Translate to the center of where the image should be
-                ctx.translate(itemXPx + rotatedCanvasWidth / 2, itemYPx + rotatedCanvasHeight / 2);
-                // Rotate the context
+                // For rotated items, translate to the item's top-left corner,
+                // then translate to the rotation center, rotate, and draw.
+                const centerX = itemXPx + itemHeightPx / 2;
+                const centerY = itemYPx + itemWidthPx / 2;
+                ctx.translate(centerX, centerY);
                 ctx.rotate(90 * Math.PI / 180);
-                // Draw the image centered at the new (0,0) origin
-                ctx.drawImage(img, -rotatedCanvasHeight / 2, -rotatedCanvasWidth / 2, rotatedCanvasHeight, rotatedCanvasWidth);
+                // Draw the image centered on the new origin.
+                ctx.drawImage(img, -itemWidthPx / 2, -itemHeightPx / 2, itemWidthPx, itemHeightPx);
 
             } else {
                 ctx.drawImage(img, itemXPx, itemYPx, itemWidthPx, itemHeightPx);
