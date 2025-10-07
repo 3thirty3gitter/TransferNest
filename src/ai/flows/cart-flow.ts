@@ -1,7 +1,7 @@
 /**
  * @fileOverview A Genkit flow for managing shopping cart items in Firestore.
  */
-
+'use server';
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { CartFlowInputSchema, CartFlowOutputSchema } from '@/app/schema';

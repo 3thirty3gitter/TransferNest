@@ -29,6 +29,18 @@ const validate = ajv.compile(RESPONSE_SCHEMA);
 const vertex = new VertexAI({project: PROJECT_ID, location: LOCATION});
 const generativeModel = vertex.getGenerativeModel({model: MODEL_ID});
 
+type MemoryWrite = {
+    lesson: string;
+    tags: string[];
+    importance: "low" | "medium" | "high";
+};
+
+type AISchema = {
+    memory?: {
+        write?: MemoryWrite[];
+    }
+};
+
 export async function multiAgentRespond(opts: {
   userInput: string; maxRetries?: number;
 }) {
@@ -84,10 +96,7 @@ export async function multiAgentRespond(opts: {
       );
     } else {
       try {
-        const writes =
-          ((json as any)?.memory?.write as {
-            lesson: string; tags: string[]; importance: "low"|"medium"|"high";
-          }[]) || [];
+        const writes = (json as AISchema)?.memory?.write || [];
         if (writes.length) await Promise.all(writes.map(w => saveLesson(w)));
       } catch {
         // non-fatal
@@ -111,14 +120,11 @@ export async function multiAgentRespond(opts: {
         ?.map((p: any) => p.text)
         .join("") || "";
 
-    const repairJson = sniffJson(repairText) as any;
+    const repairJson = sniffJson(repairText);
 
     if (repairJson && validate(repairJson)) {
       try {
-        const writes =
-          (repairJson?.memory?.write as {
-            lesson: string; tags: string[]; importance: "low"|"medium"|"high";
-          }[]) || [];
+          const writes = (repairJson as AISchema)?.memory?.write || [];
         if (writes.length) await Promise.all(writes.map(w => saveLesson(w)));
       } catch {}
       return repairJson;
@@ -143,9 +149,7 @@ export async function retrieveTopLessons(
   return scored;
 }
 
-export async function saveLesson(w: {
-  lesson: string; tags: string[]; importance: "low"|"medium"|"high";
-}) {
+export async function saveLesson(w: MemoryWrite) {
   await db.collection("ai_lessons").add({
     ...w,
     createdAt: admin.firestore.FieldValue.serverTimestamp()
