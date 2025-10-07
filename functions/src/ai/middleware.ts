@@ -74,7 +74,7 @@ export async function multiAgentRespond(opts: {
         ?.map((p: any) => p.text)
         .join("") || "";
 
-    const json = sniffJson(text) as any;
+    const json = sniffJson(text);
 
     if (!json) {
       lastError = new Error("Model did not return valid JSON");
@@ -85,7 +85,7 @@ export async function multiAgentRespond(opts: {
     } else {
       try {
         const writes =
-          (json?.memory?.write as {
+          ((json as any)?.memory?.write as {
             lesson: string; tags: string[]; importance: "low"|"medium"|"high";
           }[]) || [];
         if (writes.length) await Promise.all(writes.map(w => saveLesson(w)));
