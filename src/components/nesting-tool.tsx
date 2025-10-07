@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { uploadImage } from '@/services/storage';
+import { generateAndUploadPrintSheet } from '@/lib/print-sheet-generator';
 
 export type ManagedImage = {
   id: string;
@@ -410,29 +411,40 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
 
     dispatch({ type: 'START_SAVING' });
 
-    const cartItem: Omit<CartItem, 'id' | 'createdAt'> = {
-      userId: user.uid,
-      sheetWidth: state.sheetWidth,
-      sheetLength: state.sheetLength,
-      price: price,
-      layout: state.nestedLayout,
-    };
-
-    const result = await saveToCartAction(cartItem);
-
-    if (result.success) {
-      dispatch({ type: 'SET_SAVE_SUCCESS' });
-      toast({
-        title: "Added to Cart!",
-        description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
+    try {
+      const pngUrl = await generateAndUploadPrintSheet({
+        layout: state.nestedLayout,
+        sheetWidth: state.sheetWidth,
+        sheetLength: state.sheetLength,
+        userId: user.uid,
       });
-      window.dispatchEvent(new CustomEvent('cartUpdated'));
-    } else {
-      dispatch({ type: 'SET_ERROR', payload: result.error || 'An unknown error occurred.' });
+
+      const cartItem: Omit<CartItem, 'id' | 'createdAt'> = {
+        userId: user.uid,
+        sheetWidth: state.sheetWidth,
+        sheetLength: state.sheetLength,
+        price: price,
+        pngUrl: pngUrl,
+      };
+
+      const result = await saveToCartAction({ item: cartItem });
+
+      if (result.success) {
+        dispatch({ type: 'SET_SAVE_SUCCESS' });
+        toast({
+          title: "Added to Cart!",
+          description: `Your ${state.sheetWidth}" x ${state.sheetLength.toFixed(2)}" sheet has been saved to your cart.`,
+        });
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+      } else {
+        throw new Error(result.error || 'Could not save the item to your cart.');
+      }
+    } catch (error: any) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error || 'Could not save the item to your cart. Please try again.',
+        variant: "destructive",
+        title: "Cart Error",
+        description: error.message || "An unexpected error occurred while adding to cart.",
       });
     }
   }

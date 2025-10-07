@@ -53,10 +53,10 @@ async function invokeFlow<Input, Output>(flowId: string, input: Input): Promise<
 }
 
 export async function saveToCartAction(
-  item: Omit<CartItem, 'id' | 'createdAt'>
+  input: { item: Omit<CartItem, 'id' | 'createdAt'> }
 ): Promise<{ success: boolean; docId?: string; error?: string }> {
   // The input to the flow is an object { item: ... }
-  return await invokeFlow('saveToCartFlow', { item });
+  return await invokeFlow('saveToCartFlow', input);
 }
 
 export async function getCartItemsAction(userId: string): Promise<CartItem[]> {

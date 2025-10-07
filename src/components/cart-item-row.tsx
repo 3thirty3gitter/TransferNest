@@ -2,9 +2,9 @@
 'use client';
 
 import type { CartItem } from '@/app/schema';
-import SheetPreview from './sheet-preview';
 import { Button } from './ui/button';
 import { Trash2 } from 'lucide-react';
+import Image from 'next/image';
 
 type CartItemRowProps = {
   item: CartItem;
@@ -14,15 +14,14 @@ type CartItemRowProps = {
 export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
   return (
     <div className="flex flex-col md:flex-row gap-4 border p-4 rounded-lg">
-      <div className="w-full md:w-1/3 aspect-video bg-muted rounded-md overflow-hidden relative">
-         <div className="transform scale-[0.2] origin-top-left absolute">
-            <SheetPreview 
-                sheetWidth={item.sheetWidth}
-                sheetLength={item.sheetLength}
-                nestedLayout={item.layout}
-                isLoading={false}
-            />
-         </div>
+      <div className="w-full md:w-48 aspect-video bg-muted rounded-md overflow-hidden relative flex-shrink-0">
+         <Image 
+            src={item.pngUrl}
+            alt={`Gang sheet ${item.id}`}
+            fill
+            sizes="(max-width: 768px) 100vw, 12rem"
+            className="object-contain"
+          />
       </div>
       <div className="flex-1 flex justify-between">
         <div>

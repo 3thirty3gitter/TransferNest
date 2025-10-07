@@ -67,7 +67,7 @@ export const getCartItemsFlow = ai.defineFlow(
               sheetWidth: data.sheetWidth,
               sheetLength: data.sheetLength,
               price: data.price,
-              layout: data.layout,
+              pngUrl: data.pngUrl,
               createdAt: createdAt,
           };
       });

@@ -20,7 +20,7 @@ export const CartItemSchema = z.object({
   sheetWidth: z.number(),
   sheetLength: z.number(),
   price: z.number(),
-  layout: NestedLayoutSchema,
+  pngUrl: z.string(), // Changed from layout to pngUrl
   createdAt: z.string(), // ISO string date
 });
 export type CartItem = z.infer<typeof CartItemSchema>;
