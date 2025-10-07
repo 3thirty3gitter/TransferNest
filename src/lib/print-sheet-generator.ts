@@ -93,8 +93,8 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
         const imageElements = await Promise.all(layout.map(item => loadImage(item.url)));
         loadedImages.push(...imageElements);
 
-        layout.forEach((item, index) => {
-            const img = imageElements[index];
+        imageElements.forEach((img, index) => {
+            const item = layout[index];
             const itemWidthPx = item.width * PRINT_DPI;
             const itemHeightPx = item.height * PRINT_DPI;
             const itemXPx = item.x * PRINT_DPI;
@@ -103,12 +103,13 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
             ctx.save();
             
             if (item.rotated) {
+                // Correct logic for rotation
                 const centerX = itemXPx + itemHeightPx / 2;
                 const centerY = itemYPx + itemWidthPx / 2;
                 ctx.translate(centerX, centerY);
                 ctx.rotate(90 * Math.PI / 180);
+                // Draw with original width/height, but translated/rotated context handles placement
                 ctx.drawImage(img, -itemWidthPx / 2, -itemHeightPx / 2, itemWidthPx, itemHeightPx);
-
             } else {
                 ctx.drawImage(img, itemXPx, itemYPx, itemWidthPx, itemHeightPx);
             }
@@ -120,6 +121,7 @@ export async function generateAndUploadPrintSheet({ layout, sheetWidth, sheetLen
         const blob = dataURLtoBlob(dataUrl);
         const file = new File([blob], 'gang-sheet.png', { type: 'image/png' });
 
+        // Upload the final generated PNG
         const pngUrl = await uploadImage(file, userId);
         
         // ** THE FIX IS HERE **
