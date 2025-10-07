@@ -111,12 +111,12 @@ export async function multiAgentRespond(opts: {
         ?.map((p: any) => p.text)
         .join("") || "";
 
-    const repairJson = sniffJson(repairText);
+    const repairJson = sniffJson(repairText) as any;
 
     if (repairJson && validate(repairJson)) {
       try {
         const writes =
-          ((repairJson as any)?.memory?.write as {
+          (repairJson?.memory?.write as {
             lesson: string; tags: string[]; importance: "low"|"medium"|"high";
           }[]) || [];
         if (writes.length) await Promise.all(writes.map(w => saveLesson(w)));
