@@ -12,7 +12,7 @@ const admin = require('firebase-admin');
 export const saveToCartFlow = ai.defineFlow(
   {
     name: 'saveToCartFlow',
-    inputSchema: CartFlowInputSchema,
+    inputSchema: z.object({ item: CartFlowInputSchema.shape.item }),
     outputSchema: CartFlowOutputSchema,
   },
   async ({ item }) => {
