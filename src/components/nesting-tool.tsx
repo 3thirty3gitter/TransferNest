@@ -249,7 +249,7 @@ export default function NestingTool({ sheetWidth: initialSheetWidth }: NestingTo
       image.crossOrigin = 'Anonymous';
 
       image.onload = () => {
-        const canvas = document.createElement('canvas');
+        const canvas = typeof document !== "undefined" ? document.createElement('canvas');
         canvas.width = image.width;
         canvas.height = image.height;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
