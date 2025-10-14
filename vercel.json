@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "build": {
+    "env": {
+      "NPM_CONFIG_OPTIONAL": "false",
+      "CANVAS_SKIP_INSTALL": "true"
+    }
+  },
+  "installCommand": "npm install --no-optional"
+}
