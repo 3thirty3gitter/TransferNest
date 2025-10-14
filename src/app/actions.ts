@@ -10,3 +10,12 @@ export async function nestImages(images: any[], sheetWidth: number) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
+
+// Cart actions (simplified without AI)
+export async function getCartItemsAction() {
+  return [];
+}
+
+export async function removeCartItemAction(itemId: string) {
+  return { success: true };
+}

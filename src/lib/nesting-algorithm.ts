@@ -31,3 +31,11 @@ export type NestingResult = {
 };
 
 // ... rest of your existing nesting algorithm code without canvas dependency
+
+// Re-export for compatibility
+export function executeEnhancedNesting(
+  images: ManagedImage[],
+  sheetWidth: number
+) {
+  return executeNesting(images, sheetWidth);
+}
