@@ -1,41 +1,27 @@
-
-'use client';
-
-import type { CartItem } from '@/app/schema';
-import { Button } from './ui/button';
-import { Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
-type CartItemRowProps = {
-  item: CartItem;
-  onRemove: (docId: string) => void;
-};
-
-export default function CartItemRow({ item, onRemove }: CartItemRowProps) {
+export default function CartItemRow() {
   return (
-    <div className="flex flex-col md:flex-row gap-4 border p-4 rounded-lg">
-      <div className="w-full md:w-48 aspect-video bg-muted rounded-md overflow-hidden relative flex-shrink-0">
-         <Image 
-            src={item.pngUrl}
-            alt={`Gang sheet ${item.id}`}
-            fill
-            sizes="(max-width: 768px) 100vw, 12rem"
-            className="object-contain"
-          />
+    <div className="flex items-center space-x-4 p-4 border rounded-lg">
+      <div className="w-12 h-12 relative">
+        <Image
+          src="/placeholder-transfer.jpg"
+          alt="Transfer"
+          fill
+          className="object-cover rounded"
+          sizes="(max-width: 768px) 100vw, 12rem"
+        />
       </div>
       <div className="flex-1 flex justify-between">
         <div>
           <h4 className="font-semibold">Custom Gang Sheet</h4>
           <p className="text-sm text-muted-foreground">
-            {item.sheetWidth}" x {item.sheetLength.toFixed(2)}"
+            13" x 19" DTF Transfer Sheet
           </p>
         </div>
-        <div className="flex flex-col items-end justify-between">
-          <p className="font-bold text-lg">${item.price.toFixed(2)}</p>
-          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => onRemove(item.id!)}>
-            <Trash2 className="mr-2 h-4 w-4"/>
-            Remove
-          </Button>
+        <div className="text-right">
+          <p className="font-semibold">$45.99</p>
+          <p className="text-sm text-muted-foreground">Qty: 1</p>
         </div>
       </div>
     </div>

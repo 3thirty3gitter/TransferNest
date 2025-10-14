@@ -1,0 +1,7 @@
+          // Step 1: Generate the print sheet PNG and get its URL by calling the other flow.
+          const printResult = await generateAndUploadPrintSheetFlow({
+            layout: cartInput.layout,
+            sheetWidth: cartInput.sheetWidth,
+            sheetLength: cartInput.sheetLength,
+            userId: cartInput.userId,
+          });
