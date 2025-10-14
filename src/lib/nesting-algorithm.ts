@@ -340,3 +340,29 @@ export function executeNesting(
   
   return result;
 }
+
+// Enhanced nesting with Bottom-Left-Fill algorithm
+import { BottomLeftFillPacker, BLFOptions } from './algorithms/bottom-left-fill';
+
+export function executeEnhancedNesting(
+  images: ManagedImage[],
+  sheetWidth: number,
+  algorithm: 'MaxRects' | 'BottomLeftFill' = 'BottomLeftFill',
+  options?: Partial<BLFOptions>
+): NestingResult {
+  
+  if (algorithm === 'BottomLeftFill') {
+    const packer = new BottomLeftFillPacker(sheetWidth);
+    const blfOptions: BLFOptions = {
+      allowRotation: true,
+      spacing: 0.125,
+      sortStrategy: 'AREA_DESC',
+      maxIterations: 1000,
+      ...options
+    };
+    return packer.pack(images, blfOptions);
+  }
+  
+  // Fallback to existing MaxRects implementation
+  return executeNesting(images, sheetWidth);
+}
