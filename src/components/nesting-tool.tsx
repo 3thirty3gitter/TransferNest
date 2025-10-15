@@ -83,10 +83,11 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
                 </div>
               )}
             </div>
-            
-            <SheetPreview
-              nestingResult={nestingResult}
+              <SheetPreview
               sheetWidth={sheetWidth}
+              sheetLength={nestingResult?.sheetLength || 0}
+              nestedLayout={nestingResult?.placedItems || null}
+              isLoading={isProcessing}
             />
           </div>
         </div>

@@ -5,29 +5,53 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, Loader2 } from 'lucide-react';
 import { useRef } from 'react';
-import type { ManagedImage } from './nesting-tool';
+import type { ManagedImage } from '@/lib/nesting-algorithm';
 import { ImageCard } from './image-card';
 
 type ImageManagerProps = {
   images: ManagedImage[];
-  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onRemoveImage: (id: string) => void;
-  onUpdateImage: (id: string, updates: Partial<Omit<ManagedImage, 'id' | 'url' | 'aspectRatio'>>) => void;
-  onDuplicateImage: (id: string) => void;
-  onTrimImage: (id: string) => void;
-  isUploading: boolean;
+  onImagesChange: (images: ManagedImage[]) => void;
 };
 
 export default function ImageManager({
   images,
-  onFileChange,
-  onRemoveImage,
-  onUpdateImage,
-  onDuplicateImage,
-  onTrimImage,
-  isUploading,
+  onImagesChange,
 }: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      // Simple file handling for now - in production this would process the images
+      console.log('Files selected:', files.length);
+    }
+  };
+
+  const handleRemoveImage = (id: string) => {
+    onImagesChange(images.filter(img => img.id !== id));
+  };
+
+  const handleUpdateImage = (id: string, updates: Partial<ManagedImage>) => {
+    onImagesChange(images.map(img => 
+      img.id === id ? { ...img, ...updates } : img
+    ));
+  };
+
+  const handleDuplicateImage = (id: string) => {
+    const imageToClone = images.find(img => img.id === id);
+    if (imageToClone) {
+      const newImage = { 
+        ...imageToClone, 
+        id: `${imageToClone.id}-copy-${Date.now()}` 
+      };
+      onImagesChange([...images, newImage]);
+    }
+  };
+
+  const handleTrimImage = (id: string) => {
+    // Placeholder for trim functionality
+    console.log('Trim image:', id);
+  };
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -40,32 +64,26 @@ export default function ImageManager({
         <input
             type="file"
             ref={fileInputRef}
-            onChange={onFileChange}
+            onChange={handleFileUpload}
             className="hidden"
             accept="image/png, image/jpeg, image/webp, image/svg+xml"
-            disabled={isUploading}
+            disabled={false}
             multiple
-        />
-        <Button onClick={handleUploadClick} size="sm" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }} disabled={isUploading}>
-          {isUploading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Upload className="mr-2 h-4 w-4" />
-          )}
+        />        <Button onClick={handleUploadClick} size="sm" disabled={false}>
+          <Upload className="mr-2 h-4 w-4" />
           Upload
         </Button>
       </CardHeader>
       <CardContent>
         {images.length > 0 ? (
           <div className="space-y-6">
-            {images.map((image) => (
-              <ImageCard
+            {images.map((image) => (              <ImageCard
                 key={image.id}
                 image={image}
-                onUpdate={onUpdateImage}
-                onRemove={onRemoveImage}
-                onDuplicate={onDuplicateImage}
-                onTrim={onTrimImage}
+                onUpdate={handleUpdateImage}
+                onRemove={handleRemoveImage}
+                onDuplicate={handleDuplicateImage}
+                onTrim={handleTrimImage}
               />
             ))}
           </div>

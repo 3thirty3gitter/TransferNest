@@ -5,13 +5,11 @@ export const runtime = 'edge'; // Use edge runtime for better performance
 
 export async function POST(request: NextRequest) {
   try {
-    const { images, sheetWidth, algorithm, options } = await request.json();
+    const { images, sheetWidth } = await request.json();
     
     const result = executeEnhancedNesting(
       images as ManagedImage[],
-      sheetWidth,
-      algorithm,
-      options
+      sheetWidth
     );
     
     return NextResponse.json(result);
