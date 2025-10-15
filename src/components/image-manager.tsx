@@ -1,12 +1,13 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Loader2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Upload, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { useRef } from 'react';
 import type { ManagedImage } from '@/lib/nesting-algorithm';
-import { ImageCard } from './image-card';
+import { useImageUpload } from '@/hooks/use-image-upload';
 
 type ImageManagerProps = {
   images: ManagedImage[];
@@ -18,43 +19,47 @@ export default function ImageManager({
   onImagesChange,
 }: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { uploadImages, isUploading, uploadProgress, error, clearProgress } = useImageUpload();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files) {
-      // Simple file handling for now - in production this would process the images
-      console.log('Files selected:', files.length);
-    }
+    if (!files || files.length === 0) return;
+
+    await uploadImages(files, (newImages) => {
+      onImagesChange([...images, ...newImages]);
+      // Clear the input so the same files can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    });
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleRemoveImage = (id: string) => {
     onImagesChange(images.filter(img => img.id !== id));
   };
 
-  const handleUpdateImage = (id: string, updates: Partial<ManagedImage>) => {
+  const handleUpdateCopies = (id: string, copies: number) => {
     onImagesChange(images.map(img => 
-      img.id === id ? { ...img, ...updates } : img
+      img.id === id ? { ...img, copies: Math.max(1, copies) } : img
     ));
   };
 
-  const handleDuplicateImage = (id: string) => {
-    const imageToClone = images.find(img => img.id === id);
-    if (imageToClone) {
-      const newImage = { 
-        ...imageToClone, 
-        id: `${imageToClone.id}-copy-${Date.now()}` 
-      };
-      onImagesChange([...images, newImage]);
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'complete':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'uploading':
+      case 'processing':
+        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+      default:
+        return null;
     }
-  };
-
-  const handleTrimImage = (id: string) => {
-    // Placeholder for trim functionality
-    console.log('Trim image:', id);
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
   };
   
   return (
@@ -62,35 +67,131 @@ export default function ImageManager({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="font-headline text-xl">Your Images</CardTitle>
         <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="image/png, image/jpeg, image/webp, image/svg+xml"
-            disabled={false}
-            multiple
-        />        <Button onClick={handleUploadClick} size="sm" disabled={false}>
-          <Upload className="mr-2 h-4 w-4" />
-          Upload
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          className="hidden"
+          accept="image/png, image/jpeg, image/webp, image/svg+xml"
+          disabled={isUploading}
+          multiple
+        />
+        <Button 
+          onClick={handleUploadClick} 
+          size="sm" 
+          disabled={isUploading}
+          className="relative"
+        >
+          {isUploading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="mr-2 h-4 w-4" />
+          )}
+          {isUploading ? 'Uploading...' : 'Upload Images'}
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Upload Progress */}
+        {uploadProgress.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium">Upload Progress</h4>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearProgress}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+            {uploadProgress.map((upload) => (
+              <div key={upload.id} className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-2">
+                    {getStatusIcon(upload.status)}
+                    <span className="truncate max-w-48">{upload.file.name}</span>
+                  </div>
+                  <span className="text-muted-foreground">
+                    {upload.status === 'complete' ? '100%' : `${upload.progress}%`}
+                  </span>
+                </div>
+                <Progress value={upload.progress} className="h-1" />
+                {upload.error && (
+                  <p className="text-xs text-red-500">{upload.error}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Images Grid */}
         {images.length > 0 ? (
-          <div className="space-y-6">
-            {images.map((image) => (              <ImageCard
-                key={image.id}
-                image={image}
-                onUpdate={handleUpdateImage}
-                onRemove={handleRemoveImage}
-                onDuplicate={handleDuplicateImage}
-                onTrim={handleTrimImage}
-              />
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium">
+              {images.length} image{images.length !== 1 ? 's' : ''} ready for nesting
+            </h4>
+            {images.map((image) => (
+              <div key={image.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <img 
+                    src={image.url} 
+                    alt={image.dataAiHint || 'Image'} 
+                    className="w-12 h-12 object-cover rounded border"
+                  />
+                  <div>
+                    <p className="font-medium text-sm truncate max-w-32">
+                      {image.dataAiHint || 'Untitled'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {image.width}" × {image.height}"
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-xs font-medium">Copies:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={image.copies}
+                      onChange={(e) => handleUpdateCopies(image.id, parseInt(e.target.value) || 1)}
+                      className="w-14 px-2 py-1 text-xs border rounded text-center"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveImage(image.id)}
+                    className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-             <p className="text-muted-foreground">No images uploaded yet.</p>
-            <p className="text-sm text-muted-foreground mt-1">Click "Upload" to get started!</p>
+          <div className="text-center py-8">
+            <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Upload className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">No images uploaded yet</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Upload PNG, JPG, WebP, or SVG files to get started
+            </p>
+            <Button onClick={handleUploadClick} variant="outline">
+              <Upload className="mr-2 h-4 w-4" />
+              Choose Files
+            </Button>
           </div>
         )}
       </CardContent>

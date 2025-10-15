@@ -30,6 +30,39 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
     }
   };
 
+  const addDemoImages = () => {
+    const demoImages: ManagedImage[] = [
+      {
+        id: 'demo-1',
+        url: 'https://picsum.photos/300/200?random=1',
+        width: 4,
+        height: 3,
+        aspectRatio: 4/3,
+        copies: 2,
+        dataAiHint: 'Demo Logo 1'
+      },
+      {
+        id: 'demo-2',
+        url: 'https://picsum.photos/200/200?random=2',
+        width: 3,
+        height: 3,
+        aspectRatio: 1,
+        copies: 1,
+        dataAiHint: 'Demo Square Design'
+      },
+      {
+        id: 'demo-3',
+        url: 'https://picsum.photos/400/150?random=3',
+        width: 5,
+        height: 2,
+        aspectRatio: 2.5,
+        copies: 3,
+        dataAiHint: 'Demo Banner'
+      }
+    ];
+    setImages([...images, ...demoImages]);
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex flex-col lg:flex-row gap-6">
@@ -53,6 +86,16 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
               </div>
             )}
 
+            {/* Demo Button */}
+            <Button 
+              onClick={addDemoImages}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              Add Demo Images
+            </Button>
+
             {/* Manual Re-nest Button */}
             <Button 
               onClick={performNesting}
@@ -60,6 +103,14 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
               className="w-full mt-4"
             >
               {isProcessing ? 'Processing...' : 'Nest Images'}
+            </Button>
+
+            {/* Add Demo Images Button */}
+            <Button 
+              onClick={addDemoImages}
+              className="w-full mt-2"
+            >
+              Add Demo Images
             </Button>
           </div>
 
