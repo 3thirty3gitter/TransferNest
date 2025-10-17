@@ -73,7 +73,9 @@ export default function CartPage() {
           <CardContent className="pt-6">
             <div className="flex justify-between items-center">
               <p className="text-xl font-bold">Total: ${totalPrice.toFixed(2)}</p>
-              <Button size="lg">Checkout</Button>
+              <Button size="lg" asChild>
+                <Link href="/checkout">Checkout</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
