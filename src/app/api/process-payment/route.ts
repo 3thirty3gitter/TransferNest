@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Environment } from 'squareup';
+import { SquareClient, SquareEnvironment } from 'square';
 import { randomUUID } from 'crypto';
 
-const client = new Client({
-  accessToken: process.env.SQUARE_ACCESS_TOKEN,
+const client = new SquareClient({
+  token: process.env.SQUARE_ACCESS_TOKEN,
   environment: process.env.NEXT_PUBLIC_SQUARE_ENVIRONMENT === 'production' 
-    ? Environment.Production 
-    : Environment.Sandbox,
+    ? SquareEnvironment.Production 
+    : SquareEnvironment.Sandbox,
 });
 
 export async function POST(request: NextRequest) {
@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the payment request
-    const paymentsApi = client.paymentsApi;
     const requestBody = {
       sourceId,
       amountMoney: {
@@ -36,9 +35,9 @@ export async function POST(request: NextRequest) {
     };
 
     // Process the payment
-    const { result, statusCode } = await paymentsApi.createPayment(requestBody);
+    const result = await client.payments.create(requestBody);
 
-    if (statusCode === 200 && result.payment) {
+    if (result.payment) {
       // Payment successful - now save the order
       const orderId = await saveOrder({
         paymentId: result.payment.id,
