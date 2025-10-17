@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
+import { useCart } from '@/contexts/cart-context';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, ShoppingCart } from 'lucide-react';
 
 export default function Header() {
   const { user } = useAuth();
+  const { totalItems } = useCart();
 
   const handleSignOut = async () => {
     try {
@@ -32,8 +35,16 @@ export default function Header() {
           <Link href="/nesting-tool-17" className="text-foreground hover:text-primary transition-colors">
             Build Your 17" Sheet
           </Link>
-          <Link href="/cart" className="text-foreground hover:text-primary transition-colors">
-            Cart
+          <Link href="/cart" className="relative text-foreground hover:text-primary transition-colors">
+            <div className="flex items-center space-x-1">
+              <ShoppingCart className="h-5 w-5" />
+              <span>Cart</span>
+              {totalItems > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
+                  {totalItems}
+                </Badge>
+              )}
+            </div>
           </Link>
         </nav>
 
