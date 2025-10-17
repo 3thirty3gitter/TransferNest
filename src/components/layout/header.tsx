@@ -1,6 +1,23 @@
+'use client';
+
 import Link from 'next/link';
+import { useAuth } from '@/contexts/auth-context';
+import { Button } from '@/components/ui/button';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { User, LogOut } from 'lucide-react';
 
 export default function Header() {
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
     <div className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -19,6 +36,30 @@ export default function Header() {
             Cart
           </Link>
         </nav>
+
+        <div className="flex items-center space-x-4">
+          {user ? (
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4" />
+                <span className="text-sm">{user.displayName || user.email}</span>
+              </div>
+              <Button 
+                onClick={handleSignOut}
+                variant="outline" 
+                size="sm"
+                className="flex items-center space-x-1"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sign Out</span>
+              </Button>
+            </div>
+          ) : (
+            <Button asChild variant="default" size="sm">
+              <Link href="/login">Sign In</Link>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

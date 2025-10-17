@@ -4,9 +4,12 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, Loader2 } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { ManagedImage } from '@/lib/nesting-algorithm';
 import { ImageCard } from './image-card';
+import { uploadImage } from '@/services/storage';
+import { useAuth } from '@/contexts/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 type ImageManagerProps = {
   images: ManagedImage[];
@@ -18,12 +21,101 @@ export default function ImageManager({
   onImagesChange,
 }: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const processImageFile = (file: File): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files) {
-      // Simple file handling for now - in production this would process the images
-      console.log('Files selected:', files.length);
+    if (!files || files.length === 0) return;
+
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to upload images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    
+    try {
+      const newImages: ManagedImage[] = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: "Invalid File",
+            description: `${file.name} is not a valid image file.`,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        try {
+          // Upload to Firebase Storage
+          const url = await uploadImage(file, user.uid);
+          
+          // Get image dimensions
+          const { width, height } = await processImageFile(file);
+          
+          // Create ManagedImage object
+          const managedImage: ManagedImage = {
+            id: `img-${Date.now()}-${i}`,
+            url,
+            width,
+            height,
+            aspectRatio: width / height,
+            copies: 1,
+          };
+          
+          newImages.push(managedImage);
+        } catch (error) {
+          console.error('Error processing file:', file.name, error);
+          toast({
+            title: "Upload Failed",
+            description: `Failed to upload ${file.name}. Please try again.`,
+            variant: "destructive",
+          });
+        }
+      }
+      
+      if (newImages.length > 0) {
+        onImagesChange([...images, ...newImages]);
+        toast({
+          title: "Upload Successful",
+          description: `Successfully uploaded ${newImages.length} image(s).`,
+        });
+      }
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Error",
+        description: "An unexpected error occurred during upload.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -67,11 +159,20 @@ export default function ImageManager({
             onChange={handleFileUpload}
             className="hidden"
             accept="image/png, image/jpeg, image/webp, image/svg+xml"
-            disabled={false}
+            disabled={isUploading}
             multiple
-        />        <Button onClick={handleUploadClick} size="sm" disabled={false}>
-          <Upload className="mr-2 h-4 w-4" />
-          Upload
+        />        <Button onClick={handleUploadClick} size="sm" disabled={isUploading}>
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload
+            </>
+          )}
         </Button>
       </CardHeader>
       <CardContent>
