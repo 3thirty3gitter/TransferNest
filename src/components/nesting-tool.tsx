@@ -4,7 +4,13 @@ import React, { useState } from 'react';
 import { executeNesting, ManagedImage, NestingResult } from '@/lib/nesting-algorithm';
 import SheetPreview from './sheet-preview';
 import ImageManager from './image-manager';
-import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useCart } from '@/contexts/cart-context';
+import { useAuth } from '@/contexts/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import { ShoppingCart, Download } from 'lucide-react';
 
 interface NestingToolProps {
   sheetWidth: number;
@@ -14,6 +20,9 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
   const [images, setImages] = useState<ManagedImage[]>([]);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { addItem } = useCart();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const performNesting = async () => {
     if (images.length === 0) return;
@@ -28,6 +37,70 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const calculatePricing = () => {
+    if (!nestingResult) return { basePrice: 0, setupFee: 0, total: 0 };
+    
+    const totalDesigns = nestingResult.placedItems.length;
+    const sheetSizeNum = sheetWidth === 17 ? 17 : 13;
+    
+    // Base pricing logic (adjust as needed)
+    const basePrice = nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59);
+    const setupFee = totalDesigns * 2.50; // $2.50 per unique design
+    const total = basePrice + setupFee;
+    
+    return { basePrice, setupFee, total };
+  };
+
+  const handleAddToCart = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to add items to cart.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!nestingResult || images.length === 0) {
+      toast({
+        title: "No Layout to Add",
+        description: "Please upload images and nest them first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const pricing = calculatePricing();
+    const sheetSizeStr = sheetWidth === 17 ? '17' : '13';
+    
+    const cartItem = {
+      name: `Custom DTF Sheet ${sheetSizeStr}"`,
+      sheetSize: sheetSizeStr as '13' | '17',
+      images,
+      layout: {
+        positions: nestingResult.placedItems.map((item: any) => ({
+          x: item.x,
+          y: item.y,
+          width: item.width,
+          height: item.height,
+          imageId: item.id || item.image?.id || 'unknown',
+          copyIndex: item.copyIndex || 0,
+        })),
+        utilization: nestingResult.areaUtilizationPct * 100,
+        totalCopies: nestingResult.placedItems.length,
+      },
+      pricing,
+      quantity: 1,
+    };
+
+    addItem(cartItem);
+    
+    toast({
+      title: "Added to Cart!",
+      description: `Your ${sheetSizeStr}" DTF sheet layout has been added to cart.`,
+    });
   };
 
   return (
@@ -49,6 +122,44 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
                   <div>Utilization: {(nestingResult.areaUtilizationPct * 100).toFixed(1)}%</div>
                   <div>Sheet Length: {nestingResult.sheetLength.toFixed(2)}"</div>
                   <div>Cost: ${(nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59)).toFixed(2)}</div>
+                  
+                  {/* Pricing Breakdown */}
+                  <div className="mt-4 p-3 bg-muted rounded-md">
+                    <div className="text-sm font-medium mb-2">Pricing Breakdown:</div>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Base Price:</span>
+                        <span>${calculatePricing().basePrice.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Setup Fee ({nestingResult.placedItems.length} designs):</span>
+                        <span>${calculatePricing().setupFee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium border-t pt-1">
+                        <span>Total:</span>
+                        <span>${calculatePricing().total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Add to Cart Button */}
+                  <div className="mt-4 space-y-2">
+                    <Button 
+                      onClick={handleAddToCart}
+                      disabled={!user}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Add to Cart
+                    </Button>
+                    
+                    {!user && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Please sign in to add items to cart
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
