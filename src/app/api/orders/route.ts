@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OrderManager } from '@/lib/order-manager';
+import { OrderManager, Order } from '@/lib/order-manager';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     const orderManager = new OrderManager();
-    let orders = [];
+    let orders: Order[] = [];
 
     if (userId) {
       // Get orders for a specific user
