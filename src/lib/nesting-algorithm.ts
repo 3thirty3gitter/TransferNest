@@ -36,7 +36,7 @@ export type PackingMethod = 'bottom-left-fill' | 'maxrects' | 'BottomLeft';
 
 export const VIRTUAL_SHEET_HEIGHT = 1000; // Virtual height for calculations
 
-// Simple MaxRects-based nesting algorithm
+// Enhanced MaxRects with rotation support
 export function executeNesting(
   images: ManagedImage[],
   sheetWidth: number
@@ -62,13 +62,28 @@ export function executeNesting(
   for (const image of allImages) {
     let bestRect = null;
     let bestY = Infinity;
+    let bestRotated = false;
+    let bestWidth = image.width;
+    let bestHeight = image.height;
 
-    // Find the best fitting rectangle (lowest Y position)
-    for (const rect of freeRectangles) {
-      if (rect.width >= image.width && rect.height >= image.height) {
-        if (rect.y < bestY) {
-          bestY = rect.y;
-          bestRect = rect;
+    // Try both orientations: normal and rotated
+    const orientations = [
+      { w: image.width, h: image.height, r: false },
+      { w: image.height, h: image.width, r: true }
+    ];
+
+    for (const orientation of orientations) {
+      // Find the best fitting rectangle for this orientation
+      for (const rect of freeRectangles) {
+        if (rect.width >= orientation.w && rect.height >= orientation.h) {
+          // Prefer lowest Y position, then leftmost X
+          if (rect.y < bestY || (rect.y === bestY && rect.x < (bestRect?.x ?? Infinity))) {
+            bestY = rect.y;
+            bestRect = rect;
+            bestRotated = orientation.r;
+            bestWidth = orientation.w;
+            bestHeight = orientation.h;
+          }
         }
       }
     }
@@ -80,36 +95,48 @@ export function executeNesting(
         url: image.url,
         x: bestRect.x,
         y: bestRect.y,
-        width: image.width,
-        height: image.height,
-        rotated: false
+        width: bestWidth,
+        height: bestHeight,
+        rotated: bestRotated
       };
-      
+
       placedItems.push(placedItem);
-      maxY = Math.max(maxY, bestRect.y + image.height);
+      maxY = Math.max(maxY, bestRect.y + bestHeight);
 
       // Remove the used rectangle
       const rectIndex = freeRectangles.indexOf(bestRect);
       freeRectangles.splice(rectIndex, 1);
 
-      // Split the rectangle if needed
-      if (bestRect.width > image.width) {
-        freeRectangles.push({
-          x: bestRect.x + image.width,
+      // Split the rectangle and generate new free rectangles
+      // This is a key optimization: create rectangles efficiently
+      const newRects: { x: number; y: number; width: number; height: number }[] = [];
+
+      // Right rectangle (waste to the right)
+      if (bestRect.width > bestWidth) {
+        newRects.push({
+          x: bestRect.x + bestWidth,
           y: bestRect.y,
-          width: bestRect.width - image.width,
-          height: image.height
+          width: bestRect.width - bestWidth,
+          height: bestHeight
         });
       }
 
-      if (bestRect.height > image.height) {
-        freeRectangles.push({
+      // Bottom rectangle (waste below)
+      if (bestRect.height > bestHeight) {
+        newRects.push({
           x: bestRect.x,
-          y: bestRect.y + image.height,
+          y: bestRect.y + bestHeight,
           width: bestRect.width,
-          height: bestRect.height - image.height
+          height: bestRect.height - bestHeight
         });
       }
+
+      // Add new rectangles and sort by Y position for better packing
+      freeRectangles.push(...newRects);
+      freeRectangles.sort((a, b) => a.y - b.y || a.x - b.x);
+
+      // Merge adjacent free rectangles to reduce fragmentation
+      mergeRectangles(freeRectangles);
     }
   }
 
@@ -128,7 +155,46 @@ export function executeNesting(
   };
 }
 
-// Re-export for compatibility
+// Merge adjacent/overlapping rectangles to reduce fragmentation
+function mergeRectangles(rects: { x: number; y: number; width: number; height: number }[]): void {
+  let merged = true;
+  while (merged) {
+    merged = false;
+    for (let i = 0; i < rects.length && !merged; i++) {
+      for (let j = i + 1; j < rects.length && !merged; j++) {
+        const a = rects[i];
+        const b = rects[j];
+
+        // Check if rectangles can be merged horizontally (same Y and height)
+        if (a.y === b.y && a.height === b.height) {
+          if (a.x + a.width === b.x) {
+            a.width += b.width;
+            rects.splice(j, 1);
+            merged = true;
+          } else if (b.x + b.width === a.x) {
+            b.width += a.width;
+            rects[i] = b;
+            rects.splice(j, 1);
+            merged = true;
+          }
+        }
+        // Check if rectangles can be merged vertically (same X and width)
+        else if (a.x === b.x && a.width === b.width) {
+          if (a.y + a.height === b.y) {
+            a.height += b.height;
+            rects.splice(j, 1);
+            merged = true;
+          } else if (b.y + b.height === a.y) {
+            b.height += a.height;
+            rects[i] = b;
+            rects.splice(j, 1);
+            merged = true;
+          }
+        }
+      }
+    }
+  }
+}// Re-export for compatibility
 export function executeEnhancedNesting(
   images: ManagedImage[],
   sheetWidth: number
