@@ -87,6 +87,7 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
           height: item.height,
           imageId: item.id || item.image?.id || 'unknown',
           copyIndex: item.copyIndex || 0,
+          rotated: item.rotated || false,
         })),
         utilization: nestingResult.areaUtilizationPct * 100,
         totalCopies: nestingResult.placedItems.length,

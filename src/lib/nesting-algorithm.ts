@@ -60,11 +60,16 @@ export function executeNesting(
   let maxY = 0;
 
   for (const image of allImages) {
-    let bestRect = null;
-    let bestY = Infinity;
-    let bestRotated = false;
-    let bestWidth = image.width;
-    let bestHeight = image.height;
+    // Find best placement considering both orientations
+    interface Placement {
+      rect: { x: number; y: number; width: number; height: number };
+      width: number;
+      height: number;
+      rotated: boolean;
+      score: number; // Lower score = better (prioritizes lowest Y, then leftmost X)
+    }
+
+    let bestPlacement: Placement | null = null;
 
     // Try both orientations: normal and rotated
     const orientations = [
@@ -73,61 +78,71 @@ export function executeNesting(
     ];
 
     for (const orientation of orientations) {
-      // Find the best fitting rectangle for this orientation
+      // Find the best fitting rectangle for THIS orientation
       for (const rect of freeRectangles) {
         if (rect.width >= orientation.w && rect.height >= orientation.h) {
-          // Prefer lowest Y position, then leftmost X
-          if (rect.y < bestY || (rect.y === bestY && rect.x < (bestRect?.x ?? Infinity))) {
-            bestY = rect.y;
-            bestRect = rect;
-            bestRotated = orientation.r;
-            bestWidth = orientation.w;
-            bestHeight = orientation.h;
+          // Calculate score: prioritize lowest Y, then leftmost X, then smallest waste
+          const waste = (rect.width - orientation.w) + (rect.height - orientation.h);
+          const score = rect.y * 10000 + rect.x * 100 + waste;
+
+          // Update best if this is better
+          if (!bestPlacement || score < bestPlacement.score) {
+            bestPlacement = {
+              rect,
+              width: orientation.w,
+              height: orientation.h,
+              rotated: orientation.r,
+              score
+            };
           }
         }
       }
     }
 
-    if (bestRect) {
+    if (bestPlacement) {
       // Place the image
       const placedItem: NestedImage = {
         id: `${image.id}-${image.copyIndex}`,
         url: image.url,
-        x: bestRect.x,
-        y: bestRect.y,
-        width: bestWidth,
-        height: bestHeight,
-        rotated: bestRotated
+        x: bestPlacement.rect.x,
+        y: bestPlacement.rect.y,
+        width: bestPlacement.width,
+        height: bestPlacement.height,
+        rotated: bestPlacement.rotated
       };
 
+      // Debug logging - remove in production
+      if (bestPlacement.rotated) {
+        console.log(`[ROTATED] ${image.id}: ${image.width}×${image.height} → ${bestPlacement.width}×${bestPlacement.height}`);
+      }
+
       placedItems.push(placedItem);
-      maxY = Math.max(maxY, bestRect.y + bestHeight);
+      maxY = Math.max(maxY, bestPlacement.rect.y + bestPlacement.height);
 
       // Remove the used rectangle
-      const rectIndex = freeRectangles.indexOf(bestRect);
+      const rectIndex = freeRectangles.indexOf(bestPlacement.rect);
       freeRectangles.splice(rectIndex, 1);
 
       // Split the rectangle and generate new free rectangles
-      // This is a key optimization: create rectangles efficiently
       const newRects: { x: number; y: number; width: number; height: number }[] = [];
 
       // Right rectangle (waste to the right)
-      if (bestRect.width > bestWidth) {
+      if (bestPlacement.rect.width > bestPlacement.width) {
         newRects.push({
-          x: bestRect.x + bestWidth,
-          y: bestRect.y,
-          width: bestRect.width - bestWidth,
-          height: bestHeight
+          x: bestPlacement.rect.x + bestPlacement.width,
+          y: bestPlacement.rect.y,
+          width: bestPlacement.rect.width - bestPlacement.width,
+          height: bestPlacement.height
         });
       }
 
       // Bottom rectangle (waste below)
-      if (bestRect.height > bestHeight) {
+      if (bestPlacement.rect.height > bestPlacement.height) {
         newRects.push({
-          x: bestRect.x,
-          y: bestRect.y + bestHeight,
-          width: bestRect.width,
-          height: bestRect.height - bestHeight
+          x: bestPlacement.rect.x,
+          y: bestPlacement.rect.y + bestPlacement.height,
+          width: bestPlacement.rect.width,
+          height: bestPlacement.rect.height - bestPlacement.height
         });
       }
 

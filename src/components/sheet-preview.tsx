@@ -121,6 +121,8 @@ export default function SheetPreview({
                   width: `${item.width * PIXELS_PER_INCH}px`,
                   height: `${item.height * PIXELS_PER_INCH}px`,
                   transitionDelay: `${index * 50}ms`,
+                  transform: item.rotated ? 'rotate(90deg)' : 'rotate(0deg)',
+                  transformOrigin: 'top left',
                 }}
               >
                 <Image
