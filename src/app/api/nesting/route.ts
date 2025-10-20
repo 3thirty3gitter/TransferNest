@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeEnhancedNesting, ManagedImage } from '@/lib/nesting-algorithm';
 
-export const runtime = 'edge'; // Use edge runtime for better performance
+export const runtime = 'nodejs'; // Use nodejs runtime for maxrects-packer compatibility
 
 export async function POST(request: NextRequest) {
   try {
