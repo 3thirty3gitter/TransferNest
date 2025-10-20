@@ -1,4 +1,4 @@
-import { storage } from '@/lib/firebase';
+﻿import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { PrintExportResult } from '@/lib/print-export';
 
@@ -10,42 +10,34 @@ export interface UploadResult {
 }
 
 export class PrintFileStorage {
-  /**
-   * Upload a print file to Firebase Storage
-   */
   async uploadPrintFile(
-    printResult: PrintExportResult,
+    buffer: Buffer,
+    filename: string,
     orderId: string,
     userId: string
   ): Promise<UploadResult> {
     try {
-      // Create a path structure: orders/{userId}/{orderId}/{filename}
-      const filePath = `orders/${userId}/${orderId}/${printResult.filename}`;
+      const filePath = `orders/${userId}/${orderId}/${filename}`;
       const storageRef = ref(storage, filePath);
 
-      // Upload the file
-      const uploadResult = await uploadBytes(storageRef, printResult.buffer, {
+      const uploadResult = await uploadBytes(storageRef, buffer, {
         contentType: 'image/png',
         customMetadata: {
           orderId,
           userId,
-          dpi: printResult.dimensions.dpi.toString(),
-          width: printResult.dimensions.width.toString(),
-          height: printResult.dimensions.height.toString(),
+          dpi: '300',
           generatedAt: new Date().toISOString()
         }
       });
 
-      // Get the download URL
       const downloadURL = await getDownloadURL(uploadResult.ref);
 
       return {
-        filename: printResult.filename,
+        filename,
         url: downloadURL,
         path: filePath,
-        size: printResult.buffer.length
+        size: buffer.length
       };
-
     } catch (error) {
       console.error('Error uploading print file:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -53,16 +45,26 @@ export class PrintFileStorage {
     }
   }
 
-  /**
-   * Upload multiple print files for an order
-   */
+  async uploadPrintResult(
+    printResult: PrintExportResult,
+    orderId: string,
+    userId: string
+  ): Promise<UploadResult> {
+    return this.uploadPrintFile(
+      printResult.buffer,
+      printResult.filename,
+      orderId,
+      userId
+    );
+  }
+
   async uploadOrderPrintFiles(
     printResults: PrintExportResult[],
     orderId: string,
     userId: string
   ): Promise<UploadResult[]> {
-    const uploadPromises = printResults.map(result => 
-      this.uploadPrintFile(result, orderId, userId)
+    const uploadPromises = printResults.map(result =>
+      this.uploadPrintResult(result, orderId, userId)
     );
 
     try {
@@ -75,17 +77,10 @@ export class PrintFileStorage {
     }
   }
 
-  /**
-   * Generate a secure download link for a print file
-   */
-  async getSecureDownloadLink(filePath: string, expirationMinutes: number = 60): Promise<string> {
+  async getSecureDownloadLink(filePath: string): Promise<string> {
     try {
       const storageRef = ref(storage, filePath);
-      
-      // For production, you might want to use signed URLs with expiration
-      // For now, return the public download URL
-      const downloadURL = await getDownloadURL(storageRef);
-      return downloadURL;
+      return await getDownloadURL(storageRef);
     } catch (error) {
       console.error('Error getting download link:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -93,13 +88,10 @@ export class PrintFileStorage {
     }
   }
 
-  /**
-   * Delete print files for an order (for cleanup or refunds)
-   */
   async deletePrintFiles(filePaths: string[]): Promise<void> {
     try {
       const { deleteObject } = await import('firebase/storage');
-      
+
       const deletePromises = filePaths.map(async (filePath) => {
         const storageRef = ref(storage, filePath);
         await deleteObject(storageRef);
