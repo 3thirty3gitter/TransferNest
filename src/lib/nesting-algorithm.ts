@@ -1,5 +1,6 @@
 // src/lib/nesting-algorithm.ts
-// Client-side nesting algorithm - no server dependencies
+// Optimized nesting using maxrects-packer library
+import { MaxRectsPacker, Rectangle } from 'maxrects-packer';
 
 export type ManagedImage = {
   id: string;
@@ -32,20 +33,15 @@ export type NestingResult = {
 };
 
 export type SortStrategy = 'largest-first' | 'smallest-first' | 'width-first' | 'height-first' | 'AREA_DESC' | 'HEIGHT_DESC' | 'WIDTH_DESC' | 'PERIMETER_DESC';
-export type PackingMethod = 'bottom-left-fill' | 'maxrects' | 'BottomLeft';
+export type PackingMethod = 'bottom-left-fill' | 'maxrects' | 'BottomLeft' | 'maxrects-packer';
 
-export const VIRTUAL_SHEET_HEIGHT = 1000; // Virtual height for calculations
+export const VIRTUAL_SHEET_HEIGHT = 10000; // Virtual height for calculations
 
-// Enhanced MaxRects with rotation support
+// Optimized MaxRects-Packer based nesting
 export function executeNesting(
   images: ManagedImage[],
   sheetWidth: number
 ): NestingResult {
-  const placedItems: NestedImage[] = [];
-  const freeRectangles: { x: number; y: number; width: number; height: number }[] = [
-    { x: 0, y: 0, width: sheetWidth, height: VIRTUAL_SHEET_HEIGHT }
-  ];
-
   // Flatten images with copies
   const allImages: (ManagedImage & { copyIndex: number })[] = [];
   images.forEach(img => {
@@ -54,106 +50,77 @@ export function executeNesting(
     }
   });
 
-  // Sort by area (largest first)
+  // Sort by area (largest first) for better packing
   allImages.sort((a, b) => (b.width * b.height) - (a.width * a.height));
 
-  let maxY = 0;
-
-  for (const image of allImages) {
-    // Find best placement considering both orientations
-    interface Placement {
-      rect: { x: number; y: number; width: number; height: number };
-      width: number;
-      height: number;
+  // Create custom rectangle objects for packing
+  interface PackingRect extends Rectangle {
+    imageData?: {
+      image: ManagedImage & { copyIndex: number };
       rotated: boolean;
-      score: number; // Lower score = better (prioritizes lowest Y, then leftmost X)
+    };
+  }
+
+  // Use the library's packing algorithm
+  const packer = new MaxRectsPacker(
+    sheetWidth,
+    VIRTUAL_SHEET_HEIGHT,
+    0, // No padding
+    {
+      smart: true,
+      pot: false,
+      square: false,
+      allowRotation: true, // KEY: Enable rotation!
+      tag: false,
+      border: 0
     }
+  );
 
-    let bestPlacement: Placement | null = null;
+  const placedItems: NestedImage[] = [];
+  let failedCount = 0;
 
-    // Try both orientations: normal and rotated
-    const orientations = [
-      { w: image.width, h: image.height, r: false },
-      { w: image.height, h: image.width, r: true }
-    ];
-
-    for (const orientation of orientations) {
-      // Find the best fitting rectangle for THIS orientation
-      for (const rect of freeRectangles) {
-        if (rect.width >= orientation.w && rect.height >= orientation.h) {
-          // Calculate score: prioritize lowest Y, then leftmost X, then smallest waste
-          const waste = (rect.width - orientation.w) + (rect.height - orientation.h);
-          const score = rect.y * 10000 + rect.x * 100 + waste;
-
-          // Update best if this is better
-          if (!bestPlacement || score < bestPlacement.score) {
-            bestPlacement = {
-              rect,
-              width: orientation.w,
-              height: orientation.h,
-              rotated: orientation.r,
-              score
-            };
-          }
-        }
+  // Pack each image with both orientations
+  for (const image of allImages) {
+    // Try to pack - the library will handle rotation internally
+    const rect = packer.add(
+      image.width,
+      image.height,
+      {
+        imageId: `${image.id}-${image.copyIndex}`,
+        originalWidth: image.width,
+        originalHeight: image.height
       }
-    }
+    );
 
-    if (bestPlacement) {
-      // Place the image
+    if (rect) {
+      // Check if rotation was applied
+      const rotated = (rect.width === image.height && rect.height === image.width);
+
       const placedItem: NestedImage = {
         id: `${image.id}-${image.copyIndex}`,
         url: image.url,
-        x: bestPlacement.rect.x,
-        y: bestPlacement.rect.y,
-        width: bestPlacement.width,
-        height: bestPlacement.height,
-        rotated: bestPlacement.rotated
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        rotated
       };
 
-      // Debug logging - remove in production
-      if (bestPlacement.rotated) {
-        console.log(`[ROTATED] ${image.id}: ${image.width}×${image.height} → ${bestPlacement.width}×${bestPlacement.height}`);
-      }
-
       placedItems.push(placedItem);
-      maxY = Math.max(maxY, bestPlacement.rect.y + bestPlacement.height);
 
-      // Remove the used rectangle
-      const rectIndex = freeRectangles.indexOf(bestPlacement.rect);
-      freeRectangles.splice(rectIndex, 1);
-
-      // Split the rectangle and generate new free rectangles
-      const newRects: { x: number; y: number; width: number; height: number }[] = [];
-
-      // Right rectangle (waste to the right)
-      if (bestPlacement.rect.width > bestPlacement.width) {
-        newRects.push({
-          x: bestPlacement.rect.x + bestPlacement.width,
-          y: bestPlacement.rect.y,
-          width: bestPlacement.rect.width - bestPlacement.width,
-          height: bestPlacement.height
-        });
+      // Debug logging
+      if (rotated) {
+        console.log(`[ROTATED] ${image.id}: ${image.width}×${image.height} → ${rect.width}×${rect.height} at (${rect.x}, ${rect.y})`);
       }
-
-      // Bottom rectangle (waste below)
-      if (bestPlacement.rect.height > bestPlacement.height) {
-        newRects.push({
-          x: bestPlacement.rect.x,
-          y: bestPlacement.rect.y + bestPlacement.height,
-          width: bestPlacement.rect.width,
-          height: bestPlacement.rect.height - bestPlacement.height
-        });
-      }
-
-      // Add new rectangles and sort by Y position for better packing
-      freeRectangles.push(...newRects);
-      freeRectangles.sort((a, b) => a.y - b.y || a.x - b.x);
-
-      // Merge adjacent free rectangles to reduce fragmentation
-      mergeRectangles(freeRectangles);
+    } else {
+      failedCount++;
     }
   }
+
+  // Calculate metrics
+  const maxY = placedItems.length > 0
+    ? Math.max(...placedItems.map(item => item.y + item.height))
+    : 0;
 
   const totalArea = sheetWidth * maxY;
   const usedArea = placedItems.reduce((sum, item) => sum + (item.width * item.height), 0);
@@ -164,52 +131,14 @@ export function executeNesting(
     sheetLength: maxY,
     areaUtilizationPct: utilization,
     totalCount: allImages.length,
-    failedCount: allImages.length - placedItems.length,
+    failedCount,
     sortStrategy: 'largest-first',
-    packingMethod: 'maxrects'
+    packingMethod: 'maxrects-packer'
   };
 }
 
-// Merge adjacent/overlapping rectangles to reduce fragmentation
-function mergeRectangles(rects: { x: number; y: number; width: number; height: number }[]): void {
-  let merged = true;
-  while (merged) {
-    merged = false;
-    for (let i = 0; i < rects.length && !merged; i++) {
-      for (let j = i + 1; j < rects.length && !merged; j++) {
-        const a = rects[i];
-        const b = rects[j];
 
-        // Check if rectangles can be merged horizontally (same Y and height)
-        if (a.y === b.y && a.height === b.height) {
-          if (a.x + a.width === b.x) {
-            a.width += b.width;
-            rects.splice(j, 1);
-            merged = true;
-          } else if (b.x + b.width === a.x) {
-            b.width += a.width;
-            rects[i] = b;
-            rects.splice(j, 1);
-            merged = true;
-          }
-        }
-        // Check if rectangles can be merged vertically (same X and width)
-        else if (a.x === b.x && a.width === b.width) {
-          if (a.y + a.height === b.y) {
-            a.height += b.height;
-            rects.splice(j, 1);
-            merged = true;
-          } else if (b.y + b.height === a.y) {
-            b.height += a.height;
-            rects[i] = b;
-            rects.splice(j, 1);
-            merged = true;
-          }
-        }
-      }
-    }
-  }
-}// Re-export for compatibility
+// Re-export for compatibility
 export function executeEnhancedNesting(
   images: ManagedImage[],
   sheetWidth: number
