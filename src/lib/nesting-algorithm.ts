@@ -97,24 +97,27 @@ export function executeNesting(
 
   // Use the library's packing algorithm
   const PADDING = 0.15; // 0.15 inches spacing between images
+  
+  let placedItems: NestedImage[] = [];
+  let failedCount = 0;
+  
+  // Initialize packer with strict width constraint
   const packer = new MaxRectsPacker(
     sheetWidth,
     VIRTUAL_SHEET_HEIGHT,
     PADDING,  // Add 0.15" spacing between all items
     {
-      smart: true,
-      pot: false,
-      square: false,
-      allowRotation: false,
-      tag: false,
-      border: 0
+      smart: true,      // Smart packing
+      pot: false,       // Not power-of-two
+      square: false,    // Not square required
+      allowRotation: false,  // No rotation
+      tag: false,       // No tagging
+      border: 0         // No border
     }
   );
 
   console.log(`[NESTING] Packer initialized: width=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", padding=${PADDING}"`);
-
-  const placedItems: NestedImage[] = [];
-  let failedCount = 0;
+  console.log(`[NESTING] Total images to pack: ${allImages.length}`);
 
   // Pack each image with both orientations
   for (const image of allImages) {
@@ -130,29 +133,33 @@ export function executeNesting(
     );
 
     if (rect) {
-      // Check if rotation was applied
-      const rotated = (rect.width === image.height && rect.height === image.width);
+      // CRITICAL: Check if item is within sheet bounds
+      const itemRight = rect.x + rect.width;
+      
+      if (itemRight > sheetWidth) {
+        console.error(`[ENFORCEMENT] Item ${image.id}-${image.copyIndex} extends beyond sheet: x=${rect.x}, width=${rect.width}, right=${itemRight}, max=${sheetWidth}`);
+        console.error(`[ENFORCEMENT] Rejecting this placement to maintain sheet integrity`);
+        failedCount++;
+      } else {
+        // Check if rotation was applied
+        const rotated = (rect.width === image.height && rect.height === image.width);
 
-      const placedItem: NestedImage = {
-        id: `${image.id}-${image.copyIndex}`,
-        url: image.url,
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
-        rotated
-      };
+        const placedItem: NestedImage = {
+          id: `${image.id}-${image.copyIndex}`,
+          url: image.url,
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+          rotated
+        };
 
-      placedItems.push(placedItem);
+        placedItems.push(placedItem);
 
-      // Debug logging for items outside bounds
-      if (rect.x + rect.width > sheetWidth) {
-        console.warn(`[WARNING] Item ${image.id}-${image.copyIndex} extends beyond sheet width: x=${rect.x}, width=${rect.width}, total=${rect.x + rect.width}, sheetWidth=${sheetWidth}`);
-      }
-
-      // Debug logging
-      if (rotated) {
-        console.log(`[ROTATED] ${image.id}: ${image.width}×${image.height} → ${rect.width}×${rect.height} at (${rect.x}, ${rect.y})`);
+        // Debug logging
+        if (rotated) {
+          console.log(`[ROTATED] ${image.id}: ${image.width}×${image.height} → ${rect.width}×${rect.height} at (${rect.x}, ${rect.y})`);
+        }
       }
     } else {
       failedCount++;
