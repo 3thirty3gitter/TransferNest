@@ -186,6 +186,12 @@ export function executeNesting(
       itemsOutOfBounds.map(i => `${i.id} at x=${i.x}, width=${i.width}, right=${i.x + i.width}`)
     );
   }
+  
+  // Log if significant failures occurred
+  if (failedCount > 0) {
+    const failureRate = ((failedCount / allImages.length) * 100).toFixed(1);
+    console.warn(`[WARNING] Failed to place ${failedCount}/${allImages.length} items (${failureRate}% failure rate)`);
+  }
 
   const totalArea = sheetWidth * maxY;
   const usedArea = placedItems.reduce((sum, item) => sum + (item.width * item.height), 0);
