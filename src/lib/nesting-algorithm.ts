@@ -81,8 +81,14 @@ export function executeNesting(
     }
   });
 
-  // Sort by area (largest first) for better packing
-  allImages.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+  // Sort by width descending, then height descending - better for MaxRects
+  // MaxRects works better when wider items are placed first (fills width efficiently)
+  allImages.sort((a, b) => {
+    // Primary: wider items first
+    if (b.width !== a.width) return b.width - a.width;
+    // Secondary: taller items first
+    return b.height - a.height;
+  });
 
   // Create custom rectangle objects for packing
   interface PackingRect {
