@@ -39,15 +39,19 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
     const value = dimension === 'width' ? localWidth : localHeight;
     const numericValue = parseFloat(value);
     if (!isNaN(numericValue) && numericValue > 0) {
+      // Round to 2 decimal places to avoid floating point issues
+      const rounded = Math.round(numericValue * 100) / 100;
       if (dimension === 'width') {
+        const newHeight = Math.round((rounded / image.aspectRatio) * 100) / 100;
         onUpdate(image.id, {
-          width: numericValue,
-          height: numericValue / image.aspectRatio,
+          width: rounded,
+          height: newHeight,
         });
       } else {
+        const newWidth = Math.round((rounded * image.aspectRatio) * 100) / 100;
         onUpdate(image.id, {
-          height: numericValue,
-          width: numericValue * image.aspectRatio,
+          height: rounded,
+          width: newWidth,
         });
       }
     } else {
@@ -59,7 +63,9 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
 
 
   const handleCopiesChange = (newCopies: number) => {
-    onUpdate(image.id, { copies: Math.max(1, newCopies) });
+    // Ensure copies is a positive integer
+    const validCopies = Math.max(1, Math.floor(Math.abs(newCopies)));
+    onUpdate(image.id, { copies: validCopies });
   };
   
   return (

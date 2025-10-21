@@ -42,10 +42,40 @@ export function executeNesting(
   images: ManagedImage[],
   sheetWidth: number
 ): NestingResult {
+  // Validate and normalize images
+  const validatedImages = images.filter(img => {
+    // Check dimensions are valid numbers
+    if (!Number.isFinite(img.width) || !Number.isFinite(img.height) || 
+        img.width <= 0 || img.height <= 0) {
+      console.warn(`Invalid image dimensions: ${img.id} (${img.width}x${img.height})`);
+      return false;
+    }
+    // Check copies is valid
+    if (!Number.isFinite(img.copies) || img.copies < 1) {
+      console.warn(`Invalid copies count: ${img.id} (${img.copies})`);
+      return false;
+    }
+    return true;
+  });
+
+  if (validatedImages.length === 0) {
+    console.warn('No valid images to nest');
+    return {
+      placedItems: [],
+      sheetLength: 0,
+      areaUtilizationPct: 0,
+      totalCount: 0,
+      failedCount: 0,
+      sortStrategy: 'largest-first',
+      packingMethod: 'maxrects-packer'
+    };
+  }
+
   // Flatten images with copies
   const allImages: (ManagedImage & { copyIndex: number })[] = [];
-  images.forEach(img => {
-    for (let i = 0; i < img.copies; i++) {
+  validatedImages.forEach(img => {
+    const numCopies = Math.max(1, Math.floor(img.copies)); // Ensure integer copies
+    for (let i = 0; i < numCopies; i++) {
       allImages.push({ ...img, copyIndex: i });
     }
   });

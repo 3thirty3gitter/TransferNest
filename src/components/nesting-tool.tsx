@@ -26,20 +26,40 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
 
   const performNesting = async () => {
     if (images.length === 0) return;
-    
+
     setIsProcessing(true);
-    
+
     try {
+      // Validate images before nesting
+      console.log('🔍 Nesting Input Validation:');
+      images.forEach((img, idx) => {
+        console.log(`  Image ${idx}: ${img.id}`, {
+          width: img.width,
+          height: img.height,
+          copies: img.copies,
+          aspectRatio: img.aspectRatio,
+          dimensions_valid: Number.isFinite(img.width) && Number.isFinite(img.height) && img.width > 0 && img.height > 0,
+          copies_valid: Number.isFinite(img.copies) && img.copies >= 1
+        });
+      });
+
       const result = executeNesting(images, sheetWidth);
+      
+      console.log('📊 Nesting Result:', {
+        total_items: result.totalCount,
+        placed_items: result.placedItems.length,
+        failed_items: result.failedCount,
+        utilization: (result.areaUtilizationPct * 100).toFixed(1) + '%',
+        sheet_length: result.sheetLength
+      });
+      
       setNestingResult(result);
     } catch (error) {
       console.error('Nesting failed:', error);
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const calculatePricing = () => {
+  };  const calculatePricing = () => {
     if (!nestingResult) return { basePrice: 0, setupFee: 0, total: 0 };
     
     const totalDesigns = nestingResult.placedItems.length;
