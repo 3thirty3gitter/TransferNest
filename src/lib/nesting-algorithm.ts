@@ -173,7 +173,7 @@ function packImages(
   }
 
   // Use the library's packing algorithm
-  const PADDING = padding ?? 0.08; // Default 0.08" if not specified, or use provided value
+  const PADDING = padding ?? 0.05; // Reduced from 0.08" to 0.05" for better utilization
   
   let placedItems: NestedImage[] = [];
   let failedCount = 0;
