@@ -96,7 +96,7 @@ export function executeNesting(
   }
 
   // Use the library's packing algorithm
-  const PADDING = 0.15; // 0.15 inches spacing between images
+  const PADDING = 0.08; // Reduced spacing - 0.08" (2mm) for light separation
   
   let placedItems: NestedImage[] = [];
   let failedCount = 0;
@@ -121,10 +121,10 @@ export function executeNesting(
 
   // Pack each image with both orientations
   for (const image of allImages) {
-    // Add spacing by increasing the packing dimensions
-    // This ensures items won't touch each other
-    const packedWidth = image.width + PADDING;
-    const packedHeight = image.height + PADDING;
+    // Add spacing only to right and bottom (0.15" right, 0.15" bottom margins)
+    // This is more efficient than adding to both sides
+    const packedWidth = image.width + PADDING;  // Space on right
+    const packedHeight = image.height + PADDING; // Space on bottom
     
     // Try to pack - the library will handle rotation internally
     const rect = packer.add(
