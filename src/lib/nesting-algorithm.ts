@@ -41,7 +41,8 @@ export const VIRTUAL_SHEET_HEIGHT = 10000; // Virtual height for calculations
 export function executeNesting(
   images: ManagedImage[],
   sheetWidth: number,
-  padding?: number  // Optional padding override for testing
+  padding?: number,  // Optional padding override for testing
+  targetUtilization: number = 0.90  // Target 90% utilization, retry if below
 ): NestingResult {
   // Validate and normalize images
   const validatedImages = images.filter(img => {
@@ -81,16 +82,85 @@ export function executeNesting(
     }
   });
 
-  // Sort by width descending, then height descending - better for MaxRects
-  // MaxRects works better when wider items are placed first (fills width efficiently)
-  allImages.sort((a, b) => {
-    // Primary: wider items first
-    if (b.width !== a.width) return b.width - a.width;
-    // Secondary: taller items first
-    return b.height - a.height;
-  });
+  // Define sorting strategies to try
+  type SortStrategy = (a: any, b: any) => number;
+  
+  const sortStrategies: { name: string; fn: SortStrategy }[] = [
+    {
+      name: 'AREA_DESC',
+      fn: (a, b) => (b.width * b.height) - (a.width * a.height),  // Largest area first
+    },
+    {
+      name: 'WIDTH_DESC',
+      fn: (a, b) => {
+        if (b.width !== a.width) return b.width - a.width;
+        return b.height - a.height;
+      },
+    },
+    {
+      name: 'HEIGHT_DESC',
+      fn: (a, b) => {
+        if (b.height !== a.height) return b.height - a.height;
+        return b.width - a.width;
+      },
+    },
+    {
+      name: 'PERIMETER_DESC',
+      fn: (a, b) => (2 * (b.width + b.height)) - (2 * (a.width + a.height)),
+    },
+  ];
 
-  // Create custom rectangle objects for packing
+  // Try packing with different strategies until we hit target utilization
+  let bestResult: NestingResult | null = null;
+  let attemptCount = 0;
+
+  for (const strategy of sortStrategies) {
+    // Make a copy to sort
+    const sortedImages = [...allImages];
+    sortedImages.sort(strategy.fn);
+
+    // Pack with this strategy
+    const result = packImages(sortedImages, sheetWidth, padding ?? 0.08);
+    attemptCount++;
+
+    console.log(`[RETRY-${attemptCount}] Strategy: ${strategy.name} → ${(result.areaUtilizationPct * 100).toFixed(1)}% util`);
+
+    // Check if this is the best so far
+    if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
+      bestResult = result;
+    }
+
+    // If we hit target, stop trying
+    if (result.areaUtilizationPct >= targetUtilization) {
+      console.log(`[RETRY-SUCCESS] Hit target ${(targetUtilization * 100).toFixed(0)}% utilization with ${strategy.name}`);
+      return result;
+    }
+  }
+
+  // Return best result even if it didn't hit target
+  if (bestResult) {
+    console.log(`[RETRY-BEST] Best result: ${(bestResult.areaUtilizationPct * 100).toFixed(1)}% (tried ${attemptCount} strategies)`);
+    return bestResult;
+  }
+
+  // Fallback - should never reach here
+  return {
+    placedItems: [],
+    sheetLength: 0,
+    areaUtilizationPct: 0,
+    totalCount: allImages.length,
+    failedCount: allImages.length,
+    sortStrategy: 'largest-first',
+    packingMethod: 'maxrects-packer'
+  };
+}
+
+// Helper function to perform the actual packing with a given sort order
+function packImages(
+  sortedImages: (ManagedImage & { copyIndex: number })[],
+  sheetWidth: number,
+  padding: number
+): NestingResult {
   interface PackingRect {
     x: number;
     y: number;
@@ -124,10 +194,10 @@ export function executeNesting(
   );
 
   console.log(`[NESTING] Packer initialized: width=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", spacing=${PADDING}"`);
-  console.log(`[NESTING] Total images to pack: ${allImages.length}`);
+  console.log(`[NESTING] Total images to pack: ${sortedImages.length}`);
 
   // Pack each image with both orientations
-  for (const image of allImages) {
+  for (const image of sortedImages) {
     // Add spacing only to right and bottom (0.15" right, 0.15" bottom margins)
     // This is more efficient than adding to both sides
     const packedWidth = image.width + PADDING;  // Space on right
@@ -195,21 +265,21 @@ export function executeNesting(
   
   // Log if significant failures occurred
   if (failedCount > 0) {
-    const failureRate = ((failedCount / allImages.length) * 100).toFixed(1);
-    console.warn(`[WARNING] Failed to place ${failedCount}/${allImages.length} items (${failureRate}% failure rate)`);
+    const failureRate = ((failedCount / sortedImages.length) * 100).toFixed(1);
+    console.warn(`[WARNING] Failed to place ${failedCount}/${sortedImages.length} items (${failureRate}% failure rate)`);
   }
 
   const totalArea = sheetWidth * maxY;
   const usedArea = placedItems.reduce((sum, item) => sum + (item.width * item.height), 0);
   const utilization = totalArea > 0 ? usedArea / totalArea : 0;
 
-  console.log(`[RESULT] Sheet: ${sheetWidth}" × ${maxY.toFixed(2)}", Items: ${placedItems.length}/${allImages.length}, Utilization: ${(utilization * 100).toFixed(1)}%`);
+  console.log(`[RESULT] Sheet: ${sheetWidth}" × ${maxY.toFixed(2)}", Items: ${placedItems.length}/${sortedImages.length}, Utilization: ${(utilization * 100).toFixed(1)}%`);
 
   return {
     placedItems,
     sheetLength: maxY,
     areaUtilizationPct: utilization,
-    totalCount: allImages.length,
+    totalCount: sortedImages.length,
     failedCount,
     sortStrategy: 'largest-first',
     packingMethod: 'maxrects-packer'
