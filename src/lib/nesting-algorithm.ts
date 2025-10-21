@@ -101,9 +101,13 @@ export function executeNesting(
   let placedItems: NestedImage[] = [];
   let failedCount = 0;
   
+  // Account for padding on both sides when calculating available width
+  // Reduce effective width to ensure items don't exceed sheet bounds with padding
+  const effectiveWidth = Math.max(1, sheetWidth - PADDING);
+  
   // Initialize packer with strict width constraint
   const packer = new MaxRectsPacker(
-    sheetWidth,
+    effectiveWidth,
     VIRTUAL_SHEET_HEIGHT,
     PADDING,  // Add 0.15" spacing between all items
     {
@@ -116,7 +120,7 @@ export function executeNesting(
     }
   );
 
-  console.log(`[NESTING] Packer initialized: width=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", padding=${PADDING}"`);
+  console.log(`[NESTING] Packer initialized: effectiveWidth=${effectiveWidth}", actualSheetWidth=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", padding=${PADDING}"`);
   console.log(`[NESTING] Total images to pack: ${allImages.length}`);
 
   // Pack each image with both orientations
@@ -135,10 +139,11 @@ export function executeNesting(
     if (rect) {
       // CRITICAL: Check if item is within sheet bounds
       const itemRight = rect.x + rect.width;
+      const itemLeft = rect.x;
       
-      if (itemRight > sheetWidth) {
-        console.error(`[ENFORCEMENT] Item ${image.id}-${image.copyIndex} extends beyond sheet: x=${rect.x}, width=${rect.width}, right=${itemRight}, max=${sheetWidth}`);
-        console.error(`[ENFORCEMENT] Rejecting this placement to maintain sheet integrity`);
+      // Reject if item goes outside bounds (left edge or right edge)
+      if (itemLeft < 0 || itemRight > sheetWidth) {
+        console.error(`[ENFORCEMENT] Item ${image.id}-${image.copyIndex} out of bounds: x=${rect.x}, width=${rect.width}, right=${itemRight}, bounds=[0, ${sheetWidth}]`);
         failedCount++;
       } else {
         // Check if rotation was applied
