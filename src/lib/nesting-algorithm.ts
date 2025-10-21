@@ -96,15 +96,16 @@ export function executeNesting(
   }
 
   // Use the library's packing algorithm
+  const PADDING = 0.15; // 0.15 inches spacing between images
   const packer = new MaxRectsPacker(
     sheetWidth,
     VIRTUAL_SHEET_HEIGHT,
-    0, // No padding
+    PADDING,  // Add 0.15" spacing between all items
     {
       smart: true,
       pot: false,
       square: false,
-      allowRotation: false,  // Try without rotation first
+      allowRotation: false,
       tag: false,
       border: 0
     }
