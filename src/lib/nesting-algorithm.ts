@@ -40,7 +40,8 @@ export const VIRTUAL_SHEET_HEIGHT = 10000; // Virtual height for calculations
 // Optimized MaxRects-Packer based nesting
 export function executeNesting(
   images: ManagedImage[],
-  sheetWidth: number
+  sheetWidth: number,
+  padding?: number  // Optional padding override for testing
 ): NestingResult {
   // Validate and normalize images
   const validatedImages = images.filter(img => {
@@ -96,7 +97,7 @@ export function executeNesting(
   }
 
   // Use the library's packing algorithm
-  const PADDING = 0.08; // Reduced spacing - 0.08" (2mm) for light separation
+  const PADDING = padding ?? 0.08; // Default 0.08" if not specified, or use provided value
   
   let placedItems: NestedImage[] = [];
   let failedCount = 0;
@@ -207,7 +208,8 @@ export function executeNesting(
 // Re-export for compatibility
 export function executeEnhancedNesting(
   images: ManagedImage[],
-  sheetWidth: number
+  sheetWidth: number,
+  padding?: number
 ) {
-  return executeNesting(images, sheetWidth);
+  return executeNesting(images, sheetWidth, padding);
 }
