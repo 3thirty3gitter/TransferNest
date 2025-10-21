@@ -101,15 +101,11 @@ export function executeNesting(
   let placedItems: NestedImage[] = [];
   let failedCount = 0;
   
-  // Account for padding on both sides when calculating available width
-  // Reduce effective width to ensure items don't exceed sheet bounds with padding
-  const effectiveWidth = Math.max(1, sheetWidth - PADDING);
-  
-  // Initialize packer with strict width constraint
+  // Initialize packer WITHOUT padding parameter - we'll handle spacing differently
   const packer = new MaxRectsPacker(
-    effectiveWidth,
+    sheetWidth,
     VIRTUAL_SHEET_HEIGHT,
-    PADDING,  // Add 0.15" spacing between all items
+    0,  // No padding - we'll add spacing by increasing item sizes
     {
       smart: true,      // Smart packing
       pot: false,       // Not power-of-two
@@ -120,15 +116,20 @@ export function executeNesting(
     }
   );
 
-  console.log(`[NESTING] Packer initialized: effectiveWidth=${effectiveWidth}", actualSheetWidth=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", padding=${PADDING}"`);
+  console.log(`[NESTING] Packer initialized: width=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", spacing=${PADDING}"`);
   console.log(`[NESTING] Total images to pack: ${allImages.length}`);
 
   // Pack each image with both orientations
   for (const image of allImages) {
+    // Add spacing by increasing the packing dimensions
+    // This ensures items won't touch each other
+    const packedWidth = image.width + PADDING;
+    const packedHeight = image.height + PADDING;
+    
     // Try to pack - the library will handle rotation internally
     const rect = packer.add(
-      image.width,
-      image.height,
+      packedWidth,
+      packedHeight,
       {
         imageId: `${image.id}-${image.copyIndex}`,
         originalWidth: image.width,
@@ -137,13 +138,13 @@ export function executeNesting(
     );
 
     if (rect) {
-      // CRITICAL: Check if item is within sheet bounds
-      const itemRight = rect.x + rect.width;
+      // CRITICAL: Check if item is within sheet bounds (using actual item width, not padded)
+      const itemRight = rect.x + image.width;
       const itemLeft = rect.x;
       
-      // Reject if item goes outside bounds (left edge or right edge)
+      // If item extends beyond bounds, don't add it to placed items
       if (itemLeft < 0 || itemRight > sheetWidth) {
-        console.error(`[ENFORCEMENT] Item ${image.id}-${image.copyIndex} out of bounds: x=${rect.x}, width=${rect.width}, right=${itemRight}, bounds=[0, ${sheetWidth}]`);
+        console.error(`[ENFORCEMENT] Rejecting ${image.id}-${image.copyIndex}: x=${rect.x}, width=${image.width}, right=${itemRight}, max=${sheetWidth}`);
         failedCount++;
       } else {
         // Check if rotation was applied
@@ -154,8 +155,8 @@ export function executeNesting(
           url: image.url,
           x: rect.x,
           y: rect.y,
-          width: rect.width,
-          height: rect.height,
+          width: image.width,
+          height: image.height,
           rotated
         };
 
