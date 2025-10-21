@@ -110,36 +110,47 @@ export function executeNesting(
     },
   ];
 
-  // Try packing with different strategies until we hit target utilization
+  // Try packing with different strategies AND padding values until we hit target utilization
   let bestResult: NestingResult | null = null;
   let attemptCount = 0;
+  
+  // Padding values to try (most promising first)
+  const paddingValues = [
+    padding ?? 0.05,  // User override or default 0.05
+    0.03,             // Aggressive - very tight
+    0.05,             // Standard
+    0.08,             // Conservative
+  ];
 
-  for (const strategy of sortStrategies) {
-    // Make a copy to sort
-    const sortedImages = [...allImages];
-    sortedImages.sort(strategy.fn);
+  for (const tryPadding of paddingValues) {
+    for (const strategy of sortStrategies) {
+      // Make a copy to sort
+      const sortedImages = [...allImages];
+      sortedImages.sort(strategy.fn);
 
-    // Pack with this strategy
-    const result = packImages(sortedImages, sheetWidth, padding ?? 0.08);
-    attemptCount++;
+      // Pack with this strategy and padding combo
+      const result = packImages(sortedImages, sheetWidth, tryPadding);
+      attemptCount++;
 
-    console.log(`[RETRY-${attemptCount}] Strategy: ${strategy.name} → ${(result.areaUtilizationPct * 100).toFixed(1)}% util`);
+      const util = (result.areaUtilizationPct * 100).toFixed(1);
+      console.log(`[RETRY-${attemptCount}] Pad: ${tryPadding.toFixed(2)}", Strategy: ${strategy.name} → ${util}% util`);
 
-    // Check if this is the best so far
-    if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
-      bestResult = result;
-    }
+      // Check if this is the best so far
+      if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
+        bestResult = result;
+      }
 
-    // If we hit target, stop trying
-    if (result.areaUtilizationPct >= targetUtilization) {
-      console.log(`[RETRY-SUCCESS] Hit target ${(targetUtilization * 100).toFixed(0)}% utilization with ${strategy.name}`);
-      return result;
+      // If we hit target, stop trying
+      if (result.areaUtilizationPct >= targetUtilization) {
+        console.log(`[RETRY-SUCCESS] Hit target ${(targetUtilization * 100).toFixed(0)}% with ${tryPadding.toFixed(2)}" padding and ${strategy.name}`);
+        return result;
+      }
     }
   }
 
   // Return best result even if it didn't hit target
   if (bestResult) {
-    console.log(`[RETRY-BEST] Best result: ${(bestResult.areaUtilizationPct * 100).toFixed(1)}% (tried ${attemptCount} strategies)`);
+    console.log(`[RETRY-BEST] Best result: ${(bestResult.areaUtilizationPct * 100).toFixed(1)}% (tried ${attemptCount} combinations)`);
     return bestResult;
   }
 
