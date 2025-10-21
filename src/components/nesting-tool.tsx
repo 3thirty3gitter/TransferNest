@@ -128,8 +128,8 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex flex-col lg:flex-row gap-6">
         
-        {/* Left Panel - Controls */}
-        <div className="lg:w-1/3 space-y-6">
+        {/* Left Panel - Controls (Sticky) */}
+        <div className="lg:w-1/3 space-y-6 lg:sticky lg:top-6 lg:h-fit">
           <div className="bg-card p-4 rounded-lg border">
             <h2 className="text-xl font-semibold mb-4">Nesting Configuration</h2>
             
