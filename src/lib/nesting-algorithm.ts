@@ -111,6 +111,8 @@ export function executeNesting(
     }
   );
 
+  console.log(`[NESTING] Packer initialized: width=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", padding=${PADDING}"`);
+
   const placedItems: NestedImage[] = [];
   let failedCount = 0;
 
@@ -143,12 +145,18 @@ export function executeNesting(
 
       placedItems.push(placedItem);
 
+      // Debug logging for items outside bounds
+      if (rect.x + rect.width > sheetWidth) {
+        console.warn(`[WARNING] Item ${image.id}-${image.copyIndex} extends beyond sheet width: x=${rect.x}, width=${rect.width}, total=${rect.x + rect.width}, sheetWidth=${sheetWidth}`);
+      }
+
       // Debug logging
       if (rotated) {
         console.log(`[ROTATED] ${image.id}: ${image.width}×${image.height} → ${rect.width}×${rect.height} at (${rect.x}, ${rect.y})`);
       }
     } else {
       failedCount++;
+      console.warn(`[FAILED] Could not pack ${image.id}-${image.copyIndex} (${image.width}×${image.height})`);
     }
   }
 
@@ -157,9 +165,19 @@ export function executeNesting(
     ? Math.max(...placedItems.map(item => item.y + item.height))
     : 0;
 
+  // Check for items outside sheet bounds (safety check)
+  const itemsOutOfBounds = placedItems.filter(item => item.x + item.width > sheetWidth);
+  if (itemsOutOfBounds.length > 0) {
+    console.warn(`[CRITICAL] ${itemsOutOfBounds.length} items placed outside sheet width (${sheetWidth}"):`, 
+      itemsOutOfBounds.map(i => `${i.id} at x=${i.x}, width=${i.width}, right=${i.x + i.width}`)
+    );
+  }
+
   const totalArea = sheetWidth * maxY;
   const usedArea = placedItems.reduce((sum, item) => sum + (item.width * item.height), 0);
   const utilization = totalArea > 0 ? usedArea / totalArea : 0;
+
+  console.log(`[RESULT] Sheet: ${sheetWidth}" × ${maxY.toFixed(2)}", Items: ${placedItems.length}/${allImages.length}, Utilization: ${(utilization * 100).toFixed(1)}%`);
 
   return {
     placedItems,
