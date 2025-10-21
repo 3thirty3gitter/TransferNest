@@ -193,11 +193,12 @@ function packImages(
   let placedItems: NestedImage[] = [];
   let failedCount = 0;
   
-  // Initialize packer WITHOUT padding parameter - we'll handle spacing differently
+  // CRITICAL FIX: Let MaxRects handle spacing internally via padding parameter
+  // DO NOT add padding to item dimensions - that causes double-spacing waste
   const packer = new MaxRectsPacker(
     sheetWidth,
     VIRTUAL_SHEET_HEIGHT,
-    0,  // No padding - we'll add spacing by increasing item sizes
+    PADDING,  // Packer will maintain this spacing between ALL items automatically
     {
       smart: true,      // Smart packing
       pot: false,       // Not power-of-two
@@ -208,15 +209,14 @@ function packImages(
     }
   );
 
-  console.log(`[NESTING] Packer initialized: width=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", spacing=${PADDING}"`);
+  console.log(`[NESTING] Packer initialized: width=${sheetWidth}", height=${VIRTUAL_SHEET_HEIGHT}", spacing=${PADDING}" [ROT: ${allowRotation}]`);
   console.log(`[NESTING] Total images to pack: ${sortedImages.length}`);
 
-  // Pack each image with both orientations
+  // Pack items at their ACTUAL dimensions - packer handles spacing internally
   for (const image of sortedImages) {
-    // Add spacing only to right and bottom (0.15" right, 0.15" bottom margins)
-    // This is more efficient than adding to both sides
-    const packedWidth = image.width + PADDING;  // Space on right
-    const packedHeight = image.height + PADDING; // Space on bottom
+    // CORRECT: Pack at real dimensions, let MaxRects maintain spacing
+    const packedWidth = image.width;    // Actual width (no artificial inflation)
+    const packedHeight = image.height;  // Actual height (no artificial inflation)
     
     // Try to pack - the library will handle rotation internally
     const rect = packer.add(
