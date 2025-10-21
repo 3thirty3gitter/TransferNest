@@ -114,12 +114,13 @@ export function executeNesting(
   let bestResult: NestingResult | null = null;
   let attemptCount = 0;
   
-  // Padding values to try (most promising first)
+  // Expanded padding values to try - MORE aggressive to reduce space waste
   const paddingValues = [
+    0.02,             // Ultra-aggressive (most tight)
+    0.01,             // Minimal spacing
     padding ?? 0.05,  // User override or default 0.05
-    0.03,             // Aggressive - very tight
-    0.05,             // Standard
-    0.08,             // Conservative
+    0.03,             // Aggressive
+    0.0,              // No padding - theoretical max
   ];
 
   for (const tryPadding of paddingValues) {
@@ -128,12 +129,14 @@ export function executeNesting(
       const sortedImages = [...allImages];
       sortedImages.sort(strategy.fn);
 
-      // Pack with this strategy and padding combo
-      const result = packImages(sortedImages, sheetWidth, tryPadding);
+      // Pack with this strategy and padding combo (enableRotation for aggressive attempts)
+      const enableRotation = tryPadding <= 0.02;  // Enable rotation for tighter packing
+      const result = packImages(sortedImages, sheetWidth, tryPadding, enableRotation);
       attemptCount++;
 
       const util = (result.areaUtilizationPct * 100).toFixed(1);
-      console.log(`[RETRY-${attemptCount}] Pad: ${tryPadding.toFixed(2)}", Strategy: ${strategy.name} → ${util}% util`);
+      const rotStr = enableRotation ? " [ROT]" : "";
+      console.log(`[RETRY-${attemptCount}] Pad: ${tryPadding.toFixed(2)}", Strategy: ${strategy.name}${rotStr} → ${util}% util`);
 
       // Check if this is the best so far
       if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
@@ -142,7 +145,7 @@ export function executeNesting(
 
       // If we hit target, stop trying
       if (result.areaUtilizationPct >= targetUtilization) {
-        console.log(`[RETRY-SUCCESS] Hit target ${(targetUtilization * 100).toFixed(0)}% with ${tryPadding.toFixed(2)}" padding and ${strategy.name}`);
+        console.log(`[RETRY-SUCCESS] Hit target ${(targetUtilization * 100).toFixed(0)}% with ${tryPadding.toFixed(2)}" padding, ${strategy.name}${rotStr}`);
         return result;
       }
     }
@@ -170,7 +173,8 @@ export function executeNesting(
 function packImages(
   sortedImages: (ManagedImage & { copyIndex: number })[],
   sheetWidth: number,
-  padding: number
+  padding: number,
+  allowRotation: boolean = false
 ): NestingResult {
   interface PackingRect {
     x: number;
@@ -198,7 +202,7 @@ function packImages(
       smart: true,      // Smart packing
       pot: false,       // Not power-of-two
       square: false,    // Not square required
-      allowRotation: false,  // No rotation
+      allowRotation: allowRotation,  // Enable/disable rotation based on strategy
       tag: false,       // No tagging
       border: 0         // No border
     }
