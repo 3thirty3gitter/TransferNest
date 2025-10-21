@@ -104,7 +104,7 @@ export function executeNesting(
       smart: true,
       pot: false,
       square: false,
-      allowRotation: true, // KEY: Enable rotation!
+      allowRotation: false,  // Try without rotation first
       tag: false,
       border: 0
     }
