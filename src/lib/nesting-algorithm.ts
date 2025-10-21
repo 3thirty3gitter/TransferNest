@@ -1,6 +1,6 @@
 // src/lib/nesting-algorithm.ts
 // Optimized nesting using maxrects-packer library
-import { MaxRectsPacker, Rectangle } from 'maxrects-packer';
+import { MaxRectsPacker } from 'maxrects-packer';
 
 export type ManagedImage = {
   id: string;
@@ -54,7 +54,11 @@ export function executeNesting(
   allImages.sort((a, b) => (b.width * b.height) - (a.width * a.height));
 
   // Create custom rectangle objects for packing
-  interface PackingRect extends Rectangle {
+  interface PackingRect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
     imageData?: {
       image: ManagedImage & { copyIndex: number };
       rotated: boolean;
