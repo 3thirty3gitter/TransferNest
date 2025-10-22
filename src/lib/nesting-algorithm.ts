@@ -130,7 +130,7 @@ export function executeNesting(
       sortedImages.sort(strategy.fn);
 
       // Pack with this strategy and padding combo (enableRotation for aggressive attempts)
-      const enableRotation = tryPadding <= 0.02;  // Enable rotation for tighter packing
+      const enableRotation = true;  // Always enable rotation for maximum utilization
       const result = packImages(sortedImages, sheetWidth, tryPadding, enableRotation);
       attemptCount++;
 
@@ -321,3 +321,4 @@ export function executeEnhancedNesting(
 ) {
   return executeNesting(images, sheetWidth, padding);
 }
+
