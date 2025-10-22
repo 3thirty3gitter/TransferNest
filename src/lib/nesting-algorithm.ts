@@ -113,38 +113,56 @@ function shelfPack(
   let x = 0, y = 0, shelfHeight = 0;
   const placedItems: NestedImage[] = [];
   let usedArea = 0;
-  let totalArea = images.reduce((sum, i) => sum + i.width * i.height, 0);
 
   for (const img of images) {
-    let w = img.width, h = img.height, rotated = false;
-    // Apply selective per-item rotation
-    if (canRotate(img) && w > h) { // Text usually horizontal, rotate if helps
-      [w, h] = [h, w];
-      rotated = true;
+    // Try both orientations if allowed, else only original
+    let tried = [
+      { w: img.width, h: img.height, rotated: false }
+    ];
+    if (canRotate(img) && img.width !== img.height) {
+      tried.push({ w: img.height, h: img.width, rotated: true });
     }
-    // If does not fit in current shelf, move to next shelf
-    if (x + w > sheetWidth) {
+    
+    // Find orientation that fits this shelf, preferring least shelf height increase
+    let fit = null;
+    for (const t of tried) {
+      if (t.w > sheetWidth) continue; // Can't fit at all
+      if (x + t.w <= sheetWidth) {
+        // Fits in current shelf
+        fit = t;
+        break;
+      }
+    }
+    
+    // If none fits in current shelf, move to new shelf and retry
+    if (!fit) {
       y += shelfHeight + padding;
       x = 0;
       shelfHeight = 0;
+      for (const t of tried) {
+        if (t.w <= sheetWidth) {
+          fit = t;
+          break;
+        }
+      }
+      if (!fit) continue; // Still doesn't fit
     }
-    // If still doesn't fit, skip to next shelf
-    if (w > sheetWidth) {
-      continue; // Item too wide, cannot be placed
-    }
+    
     placedItems.push({
       id: img.id,
       url: img.url,
       x,
       y,
-      width: img.width,
-      height: img.height,
-      rotated
+      width: img.width,    // Report original, per interface
+      height: img.height,  // Report original, per interface
+      rotated: fit.rotated
     });
-    usedArea += w * h;
-    x += w + padding;
-    if (h > shelfHeight) shelfHeight = h;
+    
+    usedArea += img.width * img.height; // Use original dimensions for area calculation
+    x += fit.w + padding;
+    if (fit.h > shelfHeight) shelfHeight = fit.h;
   }
+  
   const sheetLength = y + shelfHeight;
   const sheetArea = sheetWidth * sheetLength;
   const areaUtilizationPct = sheetArea === 0 ? 0 : usedArea / sheetArea;
