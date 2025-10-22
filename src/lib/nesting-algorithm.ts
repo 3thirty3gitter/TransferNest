@@ -55,11 +55,22 @@ export function executeNesting(
 
   // Utility function: selective rotation (car images upright, text flexible)
   function canRotate(img: ManagedImage): boolean {
-    if (!img.dataAiHint) return false;
-    const hint = img.dataAiHint.toLowerCase();
-    if (hint.includes('car')) return false;
-    if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall')) return true;
-    return false;
+    // If dataAiHint is provided, use it for rotation decisions
+    if (img.dataAiHint) {
+      const hint = img.dataAiHint.toLowerCase();
+      if (hint.includes('car') || hint.includes('vehicle')) return false;
+      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall')) return true;
+    }
+    
+    // If no hint provided, use aspect ratio to determine rotation eligibility
+    // Allow rotation for tall/narrow items (aspect ratio < 0.8 or > 1.25)
+    // This helps pack vertical items horizontally and vice versa
+    const aspectRatio = img.width / img.height;
+    if (aspectRatio < 0.8 || aspectRatio > 1.25) {
+      return true; // Tall or wide items can rotate
+    }
+    
+    return false; // Square-ish items stay as-is
   }
 
   // Packing strategies
