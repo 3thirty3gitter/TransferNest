@@ -219,36 +219,47 @@ function packImages(
     const packedHeight = image.height;  // Actual height (no artificial inflation)
     
     // Try to pack - the library will handle rotation internally
-    const rect = packer.add(
+    packer.add(
       packedWidth,
       packedHeight,
       {
         imageId: `${image.id}-${image.copyIndex}`,
         originalWidth: image.width,
-        originalHeight: image.height
+        originalHeight: image.height,
+        url: image.url
       }
     );
+  }
 
-    if (rect) {
-      // CRITICAL: Check if item is within sheet bounds (using actual item width, not padded)
-      const itemRight = rect.x + image.width;
+  // MaxRects creates multiple bins - we need to process ALL of them
+  console.log(`[PACKING] Created ${packer.bins.length} bin(s)`);
+
+  // Extract placed items from ALL bins
+  for (let binIndex = 0; binIndex < packer.bins.length; binIndex++) {
+    const bin = packer.bins[binIndex];
+    
+    for (const rect of bin.rects) {
+      const imageData = rect.data as any;
+      
+      // CRITICAL: Check if item is within sheet bounds
+      const itemRight = rect.x + imageData.originalWidth;
       const itemLeft = rect.x;
       
       // If item extends beyond bounds, don't add it to placed items
       if (itemLeft < 0 || itemRight > sheetWidth) {
-        console.error(`[ENFORCEMENT] Rejecting ${image.id}-${image.copyIndex}: x=${rect.x}, width=${image.width}, right=${itemRight}, max=${sheetWidth}`);
+        console.error(`[ENFORCEMENT] Rejecting ${imageData.imageId}: x=${rect.x}, width=${imageData.originalWidth}, right=${itemRight}, max=${sheetWidth}`);
         failedCount++;
       } else {
         // Check if rotation was applied
-        const rotated = (rect.width === image.height && rect.height === image.width);
+        const rotated = (rect.width === imageData.originalHeight && rect.height === imageData.originalWidth);
 
         const placedItem: NestedImage = {
-          id: `${image.id}-${image.copyIndex}`,
-          url: image.url,
+          id: imageData.imageId,
+          url: imageData.url,
           x: rect.x,
           y: rect.y,
-          width: image.width,
-          height: image.height,
+          width: imageData.originalWidth,
+          height: imageData.originalHeight,
           rotated
         };
 
@@ -256,14 +267,14 @@ function packImages(
 
         // Debug logging
         if (rotated) {
-          console.log(`[ROTATED] ${image.id}: ${image.width}×${image.height} → ${rect.width}×${rect.height} at (${rect.x}, ${rect.y})`);
+          console.log(`[ROTATED] ${imageData.imageId}: ${imageData.originalWidth}×${imageData.originalHeight} → ${rect.width}×${rect.height} at (${rect.x}, ${rect.y})`);
         }
       }
-    } else {
-      failedCount++;
-      console.warn(`[FAILED] Could not pack ${image.id}-${image.copyIndex} (${image.width}×${image.height})`);
     }
   }
+
+  // Check if any items failed to pack (should be 0 now)
+  failedCount = sortedImages.length - placedItems.length;
 
   // Calculate metrics
   const maxY = placedItems.length > 0
