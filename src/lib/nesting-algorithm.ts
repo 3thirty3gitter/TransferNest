@@ -133,47 +133,43 @@ function shelfPack(
       tried.push({ w: img.height, h: img.width, rotated: true });
     }
 
-    // Find best fit that stays inside shelf width and increases shelf height least
+    // Find best fit that stays inside shelf width
     let fit = null;
-    let bestOverflow = Infinity;
     for (const t of tried) {
-      // Check: left padding + item width + right padding fits within sheet
-      if (t.w + padding * 2 <= sheetWidth && x + t.w + padding <= sheetWidth) {
-        const overflow = shelfHeight === 0 ? t.h : Math.abs(t.h - shelfHeight);
-        if (overflow < bestOverflow) {
-          fit = t;
-          bestOverflow = overflow;
-        }
+      // Image must fit with full padding to the left, right, and between items
+      // Next position: x + item width + padding (for right side spacing), must be ≤ sheetWidth
+      if (x + t.w + padding <= sheetWidth) {
+        fit = t;
+        break;
       }
     }
 
-    // If can't fit in current shelf, move to new shelf and retry
+    // If can't fit in current shelf, move to next shelf and retry
     if (!fit) {
-      y += shelfHeight + padding; // Add full shelf height plus top padding
-      x = padding;
+      y += shelfHeight + padding; // Add shelf height and padding below last shelf
+      x = padding;                // Start next shelf with left padding
       shelfHeight = 0;
       for (const t of tried) {
-        // Check again for new shelf
-        if (t.w + padding * 2 <= sheetWidth) {
+        if (x + t.w + padding <= sheetWidth) {
           fit = t;
           break;
         }
       }
-      if (!fit) continue; // Still can't fit
+      if (!fit) continue; // Can't fit this image
     }
 
     placedItems.push({
       id: img.id,
       url: img.url,
-      x,  // Already offset by padding
-      y,  // Already offset by padding
+      x,  // Offset by left padding
+      y,  // Offset by top padding
       width: img.width,
       height: img.height,
       rotated: fit.rotated
     });
 
     usedArea += fit.w * fit.h;
-    x += fit.w + padding; // Place item, then move forward by item width and next padding
+    x += fit.w + padding; // Advance by item width plus right-side padding
     if (fit.h > shelfHeight) shelfHeight = fit.h;
   }
 
