@@ -119,7 +119,8 @@ export function executeNesting(
   return bestResult!;
 }
 
-// Shelf Packing Algorithm (with selective per-item rotation)
+// Shelf Packing Algorithm with Multi-Level Shelf Support
+// Each shelf can have multiple "levels" to fill vertical space efficiently
 function shelfPack(
   images: ManagedImage[],
   sheetWidth: number,
@@ -131,10 +132,23 @@ function shelfPack(
   sheetLength: number;
   areaUtilizationPct: number;
 } {
-  let x = padding, y = padding, shelfHeight = 0;
   const placedItems: NestedImage[] = [];
   let usedArea = 0;
-
+  
+  // Track shelves with their positions and remaining space
+  type Shelf = {
+    y: number;           // Y position of shelf top
+    maxHeight: number;   // Tallest item in this shelf
+    segments: Array<{    // Horizontal segments in this shelf
+      x: number;         // X start position
+      width: number;     // Available width
+      usedHeight: number; // Height used so far in this segment
+    }>;
+  };
+  
+  const shelves: Shelf[] = [];
+  let currentY = padding;
+  
   for (const img of images) {
     // Try all orientations
     const tried = [
@@ -144,47 +158,102 @@ function shelfPack(
       tried.push({ w: img.height, h: img.width, rotated: true });
     }
 
-    // Find best fit that stays inside shelf width
-    let fit = null;
-    for (const t of tried) {
-      // Image must fit with full padding to the left, right, and between items
-      // Next position: x + item width + padding (for right side spacing), must be ≤ sheetWidth
-      if (x + t.w + padding <= sheetWidth) {
-        fit = t;
-        break;
+    let placed = false;
+    
+    // Try to fit in existing shelves first (fill vertically)
+    for (const shelf of shelves) {
+      for (const segment of shelf.segments) {
+        for (const t of tried) {
+          const availableHeight = shelf.maxHeight - segment.usedHeight;
+          const fitsWidth = segment.x + t.w + padding <= segment.x + segment.width;
+          const fitsHeight = t.h <= availableHeight;
+          
+          if (fitsWidth && fitsHeight) {
+            // Place item in this segment
+            placedItems.push({
+              id: img.id,
+              url: img.url,
+              x: segment.x,
+              y: shelf.y + segment.usedHeight,
+              width: img.width,
+              height: img.height,
+              rotated: t.rotated
+            });
+            
+            usedArea += t.w * t.h;
+            
+            // Split segment into used and remaining horizontal space
+            const remainingWidth = segment.width - t.w - padding;
+            segment.usedHeight += t.h + padding;
+            
+            if (remainingWidth > 0) {
+              shelf.segments.push({
+                x: segment.x + t.w + padding,
+                width: remainingWidth,
+                usedHeight: segment.usedHeight - t.h - padding // Start at same height as item just placed
+              });
+            }
+            
+            placed = true;
+            break;
+          }
+        }
+        if (placed) break;
       }
+      if (placed) break;
     }
-
-    // If can't fit in current shelf, move to next shelf and retry
-    if (!fit) {
-      y += shelfHeight + padding; // Add shelf height and padding below last shelf
-      x = padding;                // Start next shelf with left padding
-      shelfHeight = 0;
+    
+    // If not placed in existing shelves, create new shelf
+    if (!placed) {
       for (const t of tried) {
-        if (x + t.w + padding <= sheetWidth) {
-          fit = t;
+        if (padding + t.w + padding <= sheetWidth) {
+          const newShelf: Shelf = {
+            y: currentY,
+            maxHeight: t.h + padding,
+            segments: [{
+              x: padding,
+              width: sheetWidth - 2 * padding,
+              usedHeight: t.h + padding
+            }]
+          };
+          
+          placedItems.push({
+            id: img.id,
+            url: img.url,
+            x: padding,
+            y: currentY,
+            width: img.width,
+            height: img.height,
+            rotated: t.rotated
+          });
+          
+          usedArea += t.w * t.h;
+          
+          // Split remaining horizontal space in new shelf
+          const remainingWidth = sheetWidth - padding - t.w - padding;
+          if (remainingWidth > 0) {
+            newShelf.segments.push({
+              x: padding + t.w + padding,
+              width: remainingWidth,
+              usedHeight: 0 // Available from top of shelf
+            });
+          }
+          
+          shelves.push(newShelf);
+          currentY += newShelf.maxHeight;
+          placed = true;
           break;
         }
       }
-      if (!fit) continue; // Can't fit this image
     }
-
-    placedItems.push({
-      id: img.id,
-      url: img.url,
-      x,  // Offset by left padding
-      y,  // Offset by top padding
-      width: img.width,
-      height: img.height,
-      rotated: fit.rotated
-    });
-
-    usedArea += fit.w * fit.h;
-    x += fit.w + padding; // Advance by item width plus right-side padding
-    if (fit.h > shelfHeight) shelfHeight = fit.h;
+    
+    // If still can't place, skip this item (shouldn't happen with proper sizing)
+    if (!placed) {
+      console.warn(`Failed to place item ${img.id}`);
+    }
   }
 
-  const sheetLength = y + shelfHeight + padding; // Add bottom padding to total length
+  const sheetLength = currentY + padding; // Add bottom padding
   const sheetArea = sheetWidth * sheetLength;
   const areaUtilizationPct = sheetArea === 0 ? 0 : usedArea / sheetArea;
   return { placedItems, sheetLength, areaUtilizationPct };
