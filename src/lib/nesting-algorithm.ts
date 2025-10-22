@@ -120,7 +120,7 @@ function shelfPack(
   sheetLength: number;
   areaUtilizationPct: number;
 } {
-  let x = 0, y = 0, shelfHeight = 0;
+  let x = padding, y = padding, shelfHeight = 0;
   const placedItems: NestedImage[] = [];
   let usedArea = 0;
 
@@ -132,12 +132,13 @@ function shelfPack(
     if (canRotate(img) && img.width !== img.height) {
       tried.push({ w: img.height, h: img.width, rotated: true });
     }
-    
+
     // Find best fit that stays inside shelf width and increases shelf height least
     let fit = null;
     let bestOverflow = Infinity;
     for (const t of tried) {
-      if (t.w <= sheetWidth && x + t.w <= sheetWidth) {
+      // Check: left padding + item width + right padding fits within sheet
+      if (t.w + padding * 2 <= sheetWidth && x + t.w + padding <= sheetWidth) {
         const overflow = shelfHeight === 0 ? t.h : Math.abs(t.h - shelfHeight);
         if (overflow < bestOverflow) {
           fit = t;
@@ -145,38 +146,38 @@ function shelfPack(
         }
       }
     }
-    
+
     // If can't fit in current shelf, move to new shelf and retry
     if (!fit) {
-      y += shelfHeight + padding;
-      x = 0;
+      y += shelfHeight + padding; // Add full shelf height plus top padding
+      x = padding;
       shelfHeight = 0;
       for (const t of tried) {
-        if (t.w <= sheetWidth) {
+        // Check again for new shelf
+        if (t.w + padding * 2 <= sheetWidth) {
           fit = t;
           break;
         }
       }
-      if (!fit) continue; // Still doesn't fit; fail to place
+      if (!fit) continue; // Still can't fit
     }
 
     placedItems.push({
       id: img.id,
       url: img.url,
-      x,
-      y,
+      x,  // Already offset by padding
+      y,  // Already offset by padding
       width: img.width,
       height: img.height,
       rotated: fit.rotated
     });
-    
-    // CRITICAL FIX: Use actual placed dimensions (fit.w * fit.h), not original
+
     usedArea += fit.w * fit.h;
-    x += fit.w + padding;
+    x += fit.w + padding; // Place item, then move forward by item width and next padding
     if (fit.h > shelfHeight) shelfHeight = fit.h;
   }
-  
-  const sheetLength = y + shelfHeight;
+
+  const sheetLength = y + shelfHeight + padding; // Add bottom padding to total length
   const sheetArea = sheetWidth * sheetLength;
   const areaUtilizationPct = sheetArea === 0 ? 0 : usedArea / sheetArea;
   return { placedItems, sheetLength, areaUtilizationPct };
