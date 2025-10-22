@@ -130,7 +130,7 @@ export function executeNesting(
       sortedImages.sort(strategy.fn);
 
       // Pack with this strategy and padding combo (enableRotation for aggressive attempts)
-      const enableRotation = false;  // Disable rotation to prevent sideways cars
+      const enableRotation = (tryPadding <= 0.01);  // Enable rotation ONLY for ultra-tight packing
       const result = packImages(sortedImages, sheetWidth, tryPadding, enableRotation);
       attemptCount++;
 
