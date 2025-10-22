@@ -45,14 +45,14 @@ export default function AdminPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        router.push('/login?redirect=/admin');
+        router.push('/admin/login');
         return;
       }
       
       const hasAccess = await checkAdminAccess();
       if (!hasAccess) {
         alert('Access denied. Admin privileges required.');
-        router.push('/');
+        router.push('/admin/login');
         return;
       }
       
