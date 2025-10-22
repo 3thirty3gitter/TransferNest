@@ -72,12 +72,15 @@ export function executeNesting(
   const paddings = [padding, 0.03, 0.02, 0.01, 0];
 
   let bestResult: NestingResult | null = null;
+  let attemptCount = 0;
 
   for (const pad of paddings) {
     for (const sorter of sorters) {
+      attemptCount++;
       const sorted = expanded.slice().sort(sorter.fn);
       const { placedItems, sheetLength, areaUtilizationPct } = shelfPack(sorted, sheetWidth, pad, canRotate, sorter.name);
       const failedCount = totalCount - placedItems.length;
+      
       const result: NestingResult = {
         placedItems,
         sheetLength,
@@ -87,14 +90,21 @@ export function executeNesting(
         sortStrategy: sorter.name,
         packingMethod: 'ShelfPack'
       };
+      
+      const util = (areaUtilizationPct * 100).toFixed(1);
+      console.log(`[ATTEMPT-${attemptCount}] Pad: ${pad.toFixed(3)}", Strategy: ${sorter.name} → ${util}% (${placedItems.length}/${totalCount} placed)`);
+      
       if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
         bestResult = result;
       }
       if (result.areaUtilizationPct >= targetUtilization && failedCount === 0) {
+        console.log(`[SUCCESS] ✓ Hit ${(targetUtilization * 100).toFixed(0)}% target with ${sorter.name} and ${pad.toFixed(3)}" padding`);
         return result;
       }
     }
   }
+  
+  console.log(`[BEST] Best result: ${(bestResult!.areaUtilizationPct * 100).toFixed(1)}% (${bestResult!.placedItems.length}/${totalCount} placed, tried ${attemptCount} combinations)`);
   return bestResult!;
 }
 
