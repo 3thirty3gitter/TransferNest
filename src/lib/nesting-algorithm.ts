@@ -115,26 +115,28 @@ function shelfPack(
   let usedArea = 0;
 
   for (const img of images) {
-    // Try both orientations if allowed, else only original
-    let tried = [
+    // Try all orientations
+    const tried = [
       { w: img.width, h: img.height, rotated: false }
     ];
     if (canRotate(img) && img.width !== img.height) {
       tried.push({ w: img.height, h: img.width, rotated: true });
     }
     
-    // Find orientation that fits this shelf, preferring least shelf height increase
+    // Find best fit that stays inside shelf width and increases shelf height least
     let fit = null;
+    let bestOverflow = Infinity;
     for (const t of tried) {
-      if (t.w > sheetWidth) continue; // Can't fit at all
-      if (x + t.w <= sheetWidth) {
-        // Fits in current shelf
-        fit = t;
-        break;
+      if (t.w <= sheetWidth && x + t.w <= sheetWidth) {
+        const overflow = shelfHeight === 0 ? t.h : Math.abs(t.h - shelfHeight);
+        if (overflow < bestOverflow) {
+          fit = t;
+          bestOverflow = overflow;
+        }
       }
     }
     
-    // If none fits in current shelf, move to new shelf and retry
+    // If can't fit in current shelf, move to new shelf and retry
     if (!fit) {
       y += shelfHeight + padding;
       x = 0;
@@ -145,20 +147,21 @@ function shelfPack(
           break;
         }
       }
-      if (!fit) continue; // Still doesn't fit
+      if (!fit) continue; // Still doesn't fit; fail to place
     }
-    
+
     placedItems.push({
       id: img.id,
       url: img.url,
       x,
       y,
-      width: img.width,    // Report original, per interface
-      height: img.height,  // Report original, per interface
+      width: img.width,
+      height: img.height,
       rotated: fit.rotated
     });
     
-    usedArea += img.width * img.height; // Use original dimensions for area calculation
+    // CRITICAL FIX: Use actual placed dimensions (fit.w * fit.h), not original
+    usedArea += fit.w * fit.h;
     x += fit.w + padding;
     if (fit.h > shelfHeight) shelfHeight = fit.h;
   }
