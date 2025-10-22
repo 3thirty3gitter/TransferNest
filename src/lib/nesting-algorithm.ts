@@ -130,7 +130,7 @@ export function executeNesting(
       sortedImages.sort(strategy.fn);
 
       // Pack with this strategy and padding combo (enableRotation for aggressive attempts)
-      const enableRotation = true;  // Always enable rotation for maximum utilization
+      const enableRotation = false;  // Disable rotation to prevent sideways cars
       const result = packImages(sortedImages, sheetWidth, tryPadding, enableRotation);
       attemptCount++;
 
@@ -321,4 +321,5 @@ export function executeEnhancedNesting(
 ) {
   return executeNesting(images, sheetWidth, padding);
 }
+
 
