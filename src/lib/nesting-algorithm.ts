@@ -44,6 +44,20 @@ export function executeNesting(
   padding: number = 0.05,
   targetUtilization: number = 0.9
 ): NestingResult {
+  // Route to size-specific algorithm
+  if (sheetWidth === 13) {
+    return executeNesting13(images, sheetWidth, padding, targetUtilization);
+  }
+  return executeNesting17(images, sheetWidth, padding, targetUtilization);
+}
+
+// Optimized algorithm for 17" sheets (KEEP AS-IS - WORKING WELL)
+function executeNesting17(
+  images: ManagedImage[],
+  sheetWidth: number,
+  padding: number = 0.05,
+  targetUtilization: number = 0.9
+): NestingResult {
   // Expand copies
   const expanded: ManagedImage[] = [];
   images.forEach(img => {
@@ -119,7 +133,265 @@ export function executeNesting(
   return bestResult!;
 }
 
-// Improved Shelf Packing with Best-Fit Gap Selection
+// Optimized algorithm for 13" sheets (NARROWER - MORE AGGRESSIVE ROTATION)
+function executeNesting13(
+  images: ManagedImage[],
+  sheetWidth: number,
+  padding: number = 0.05,
+  targetUtilization: number = 0.9
+): NestingResult {
+  // Expand copies
+  const expanded: ManagedImage[] = [];
+  images.forEach(img => {
+    for (let i = 0; i < Math.max(1, img.copies); i++) {
+      expanded.push({ ...img, copies: 1 });
+    }
+  });
+  const totalCount = expanded.length;
+
+  // More aggressive rotation for narrow sheets
+  function canRotate(img: ManagedImage): boolean {
+    if (img.dataAiHint) {
+      const hint = img.dataAiHint.toLowerCase();
+      if (hint.includes('car') || hint.includes('vehicle')) return false;
+      // For narrow sheets, be more liberal with text rotation
+      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall')) return true;
+    }
+
+    // More aggressive rotation threshold for narrow sheets
+    const aspectRatio = img.width / img.height;
+    // Allow rotation for most items except perfect squares
+    if (aspectRatio < 0.9 || aspectRatio > 1.1) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // Different sort strategies optimized for narrow width
+  const sorters = [
+    // Prioritize width-first for narrow sheets
+    { name: 'WIDTH_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.width - a.width },
+    { name: 'AREA_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width * b.height) - (a.width * a.height) },
+    { name: 'HEIGHT_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.height - a.height },
+    { name: 'PERIMETER_DESC', fn: (a: ManagedImage, b: ManagedImage) => ((b.width + b.height) - (a.width + a.height)) }
+  ];
+  
+  // Tighter padding options for narrow sheets
+  const paddings = [padding, 0.02, 0.01, 0.005, 0];
+
+  let bestResult: NestingResult | null = null;
+  let attemptCount = 0;
+
+  for (const pad of paddings) {
+    for (const sorter of sorters) {
+      attemptCount++;
+      const sorted = expanded.slice().sort(sorter.fn);
+      const { placedItems, sheetLength, areaUtilizationPct } = shelfPackBestFit13(sorted, sheetWidth, pad, canRotate, sorter.name);
+      const failedCount = totalCount - placedItems.length;
+
+      const result: NestingResult = {
+        placedItems,
+        sheetLength,
+        areaUtilizationPct,
+        totalCount,
+        failedCount,
+        sortStrategy: sorter.name,
+        packingMethod: 'ShelfPackBestFit13'
+      };
+
+      const util = (areaUtilizationPct * 100).toFixed(1);
+      console.log(`[13" ATTEMPT-${attemptCount}] Pad: ${pad.toFixed(3)}", Strategy: ${sorter.name}  ${util}% (${placedItems.length}/${totalCount} placed)`);
+
+      if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
+        bestResult = result;
+      }
+      if (result.areaUtilizationPct >= targetUtilization && failedCount === 0) {
+        console.log(`[13" SUCCESS]  Hit ${(targetUtilization * 100).toFixed(0)}% target with ${sorter.name} and ${pad.toFixed(3)}" padding`);
+        return result;
+      }
+    }
+  }
+
+  console.log(`[13" BEST] Best result: ${(bestResult!.areaUtilizationPct * 100).toFixed(1)}% (${bestResult!.placedItems.length}/${totalCount} placed, tried ${attemptCount} combinations)`);
+  return bestResult!;
+}
+
+// Shelf packing optimized for 13" sheets (narrower width, more aggressive fitting)
+function shelfPackBestFit13(
+  images: ManagedImage[],
+  sheetWidth: number,
+  padding: number,
+  canRotate: (img: ManagedImage) => boolean,
+  sortStrategy: string
+): {
+  placedItems: NestedImage[];
+  sheetLength: number;
+  areaUtilizationPct: number;
+} {
+  const placedItems: NestedImage[] = [];
+  let usedArea = 0;
+
+  type Segment = {
+    x: number;
+    width: number;
+    usedHeight: number;
+  };
+
+  type Shelf = {
+    y: number;
+    maxHeight: number;
+    segments: Segment[];
+  };
+
+  const shelves: Shelf[] = [];
+  let currentY = padding;
+
+  for (const img of images) {
+    // For narrow sheets, try rotated orientation first if it fits better
+    const orientations = [
+      { w: img.width, h: img.height, rotated: false }
+    ];
+    if (canRotate(img) && img.width !== img.height) {
+      orientations.push({ w: img.height, h: img.width, rotated: true });
+    }
+
+    // Sort orientations to prefer ones that fit width better for narrow sheets
+    orientations.sort((a, b) => {
+      const aFitsWidth = a.w <= sheetWidth - 2 * padding;
+      const bFitsWidth = b.w <= sheetWidth - 2 * padding;
+      if (aFitsWidth && !bFitsWidth) return -1;
+      if (!aFitsWidth && bFitsWidth) return 1;
+      // If both fit or both don't fit, prefer narrower
+      return a.w - b.w;
+    });
+
+    let bestPlacement: {
+      shelf: Shelf;
+      segmentIndex: number;
+      orientation: typeof orientations[0];
+      wastedSpace: number;
+    } | null = null;
+
+    // Find best-fit position with emphasis on width efficiency
+    for (const shelf of shelves) {
+      for (let segIdx = 0; segIdx < shelf.segments.length; segIdx++) {
+        const segment = shelf.segments[segIdx];
+        for (const t of orientations) {
+          const availableHeight = shelf.maxHeight - segment.usedHeight;
+          const fitsWidth = segment.x + t.w + padding <= segment.x + segment.width;
+          const fitsHeight = t.h <= availableHeight;
+
+          if (fitsWidth && fitsHeight) {
+            // For narrow sheets, heavily penalize wasted width
+            const wastedWidth = segment.width - t.w - padding;
+            const wastedHeight = availableHeight - t.h;
+            // Increase width penalty by 2x for narrow sheets
+            const wastedSpace = (wastedWidth * shelf.maxHeight * 2) + (t.w * wastedHeight);
+
+            if (!bestPlacement || wastedSpace < bestPlacement.wastedSpace) {
+              bestPlacement = {
+                shelf,
+                segmentIndex: segIdx,
+                orientation: t,
+                wastedSpace
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // Place in existing shelf if found
+    if (bestPlacement) {
+      const { shelf, segmentIndex, orientation } = bestPlacement;
+      const segment = shelf.segments[segmentIndex];
+
+      placedItems.push({
+        id: img.id,
+        url: img.url,
+        x: segment.x,
+        y: shelf.y + segment.usedHeight,
+        width: img.width,
+        height: img.height,
+        rotated: orientation.rotated
+      });
+
+      usedArea += orientation.w * orientation.h;
+
+      shelf.segments.splice(segmentIndex, 1);
+
+      const remainingWidth = segment.width - orientation.w - padding;
+      if (remainingWidth > 0) {
+        shelf.segments.push({
+          x: segment.x + orientation.w + padding,
+          width: remainingWidth,
+          usedHeight: segment.usedHeight
+        });
+      }
+
+      const remainingHeight = shelf.maxHeight - segment.usedHeight - orientation.h - padding;
+      if (remainingHeight > 0) {
+        shelf.segments.push({
+          x: segment.x,
+          width: orientation.w,
+          usedHeight: segment.usedHeight + orientation.h + padding
+        });
+      }
+
+      continue;
+    }
+
+    // Create new shelf with preferred orientation
+    let placed = false;
+    for (const t of orientations) {
+      if (padding + t.w + padding <= sheetWidth) {
+        const newShelf: Shelf = {
+          y: currentY,
+          maxHeight: t.h + padding,
+          segments: []
+        };
+
+        placedItems.push({
+          id: img.id,
+          url: img.url,
+          x: padding,
+          y: currentY,
+          width: img.width,
+          height: img.height,
+          rotated: t.rotated
+        });
+
+        usedArea += t.w * t.h;
+
+        const remainingWidth = sheetWidth - padding - t.w - padding;
+        if (remainingWidth > 0) {
+          newShelf.segments.push({
+            x: padding + t.w + padding,
+            width: remainingWidth,
+            usedHeight: 0
+          });
+        }
+
+        shelves.push(newShelf);
+        currentY += newShelf.maxHeight;
+        placed = true;
+        break;
+      }
+    }
+
+    if (!placed) {
+      console.warn(`Failed to place item ${img.id} on 13" sheet`);
+    }
+  }
+
+  const sheetLength = currentY + padding;
+  const sheetArea = sheetWidth * sheetLength;
+  const areaUtilizationPct = sheetArea === 0 ? 0 : usedArea / sheetArea;
+  return { placedItems, sheetLength, areaUtilizationPct };
+}
+
+// Improved Shelf Packing with Best-Fit Gap Selection (17" OPTIMIZED)
 // Finds the tightest fit for each item to minimize wasted space
 function shelfPackBestFit(
   images: ManagedImage[],
