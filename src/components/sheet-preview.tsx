@@ -106,34 +106,53 @@ export default function SheetPreview({
             )}
             {memoizedLayout
               .filter(item => item && item.url)
-              .map((item, index) => (
-              <div
-                key={item.id ? `${item.id}-${index}` : `${item.url}-${index}`}
-                className={cn(
-                  'absolute transition-all duration-500',
-                  'data-[state=loading]:opacity-0',
-                  'data-[state=loaded]:opacity-100 data-[state=loaded]:animate-in data-[state=loaded]:fade-in data-[state=loaded]:zoom-in-95'
-                )}
-                data-state={isLoading ? 'loading' : 'loaded'}
-                style={{
-                  left: `${item.x * PIXELS_PER_INCH}px`,
-                  top: `${item.y * PIXELS_PER_INCH}px`,
-                  width: `${item.width * PIXELS_PER_INCH}px`,
-                  height: `${item.height * PIXELS_PER_INCH}px`,
-                  transitionDelay: `${index * 50}ms`,
-                  transform: item.rotated ? 'rotate(90deg)' : 'rotate(0deg)',
-                  transformOrigin: 'top left',
-                }}
-              >
-                <Image
-                  src={item.url}
-                  alt={`Nested image`}
-                  width={item.width * PIXELS_PER_INCH}
-                  height={item.height * PIXELS_PER_INCH}
-                  className="object-contain"
-                />
-              </div>
-            ))}
+              .map((item, index) => {
+                // The algorithm outputs original width/height with a rotated flag
+                // When rotated, we need to display the image rotated within the frame
+                const displayWidth = item.width * PIXELS_PER_INCH;
+                const displayHeight = item.height * PIXELS_PER_INCH;
+                
+                // When rotated, the frame on the sheet is actually height×width
+                // So we need to adjust the container size to match the rotated dimensions
+                const containerWidth = item.rotated ? displayHeight : displayWidth;
+                const containerHeight = item.rotated ? displayWidth : displayHeight;
+                
+                return (
+                  <div
+                    key={item.id ? `${item.id}-${index}` : `${item.url}-${index}`}
+                    className={cn(
+                      'absolute transition-all duration-500 overflow-hidden',
+                      'data-[state=loading]:opacity-0',
+                      'data-[state=loaded]:opacity-100 data-[state=loaded]:animate-in data-[state=loaded]:fade-in data-[state=loaded]:zoom-in-95'
+                    )}
+                    data-state={isLoading ? 'loading' : 'loaded'}
+                    style={{
+                      left: `${item.x * PIXELS_PER_INCH}px`,
+                      top: `${item.y * PIXELS_PER_INCH}px`,
+                      width: `${containerWidth}px`,
+                      height: `${containerHeight}px`,
+                      transitionDelay: `${index * 50}ms`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${displayWidth}px`,
+                        height: `${displayHeight}px`,
+                        transform: item.rotated ? 'rotate(90deg) translateY(-100%)' : 'none',
+                        transformOrigin: 'top left',
+                      }}
+                    >
+                      <Image
+                        src={item.url}
+                        alt={`Nested image`}
+                        width={displayWidth}
+                        height={displayHeight}
+                        className="object-contain w-full h-full"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       </CardContent>
