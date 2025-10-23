@@ -13,13 +13,14 @@ import { useToast } from '@/hooks/use-toast';
 import { ShoppingCart, Download } from 'lucide-react';
 
 interface NestingToolProps {
-  sheetWidth: number;
+  sheetWidth?: number; // Optional now, defaults to 13
 }
 
-export default function NestingTool({ sheetWidth }: NestingToolProps) {
+export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingToolProps) {
   const [images, setImages] = useState<ManagedImage[]>([]);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [sheetWidth, setSheetWidth] = useState<13 | 17>(initialWidth as 13 | 17);
   const { addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -132,7 +133,30 @@ export default function NestingTool({ sheetWidth }: NestingToolProps) {
         <div className="lg:w-1/3 space-y-6 lg:sticky lg:top-6 lg:h-fit">
           <div className="bg-card p-4 rounded-lg border">
             <h2 className="text-xl font-semibold mb-4">Nesting Configuration</h2>
-            
+
+            {/* Sheet Width Selector */}
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-2 block">Sheet Width</label>
+              <div className="flex gap-2">
+                <Button
+                  variant={sheetWidth === 13 ? 'default' : 'outline'}
+                  onClick={() => setSheetWidth(13)}
+                  className="flex-1"
+                  size="sm"
+                >
+                  13"
+                </Button>
+                <Button
+                  variant={sheetWidth === 17 ? 'default' : 'outline'}
+                  onClick={() => setSheetWidth(17)}
+                  className="flex-1"
+                  size="sm"
+                >
+                  17"
+                </Button>
+              </div>
+            </div>
+
             {/* Results Display */}
             {nestingResult && (
               <div className="mt-4 p-3 bg-muted rounded">
