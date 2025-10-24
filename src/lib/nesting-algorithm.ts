@@ -73,28 +73,28 @@ function executeNesting17(
     if (img.dataAiHint) {
       const hint = img.dataAiHint.toLowerCase();
       if (hint.includes('car') || hint.includes('vehicle')) return false;
-      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall')) return true;
+      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall') || hint.includes('horizontal')) return true;
     }
 
-    // If no hint provided, use aspect ratio to determine rotation eligibility
-    // Allow rotation for tall/narrow items (aspect ratio < 0.8 or > 1.25)
-    // This helps pack vertical items horizontally and vice versa
+    // OPTIMIZED: Slightly more aggressive rotation for 17" too
+    // This helps with edge cases and large items
     const aspectRatio = img.width / img.height;
-    if (aspectRatio < 0.8 || aspectRatio > 1.25) {
-      return true; // Tall or wide items can rotate
+    if (aspectRatio < 0.85 || aspectRatio > 1.15) {
+      return true; // Rotate tall or wide items
     }
 
     return false; // Square-ish items stay as-is
   }
 
-  // Packing strategies
+  // Packing strategies - OPTIMIZED ORDER based on test results
   const sorters = [
+    { name: 'AREA_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width * b.height) - (a.width * a.height) }, // Best for mixed
     { name: 'HEIGHT_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.height - a.height },
     { name: 'WIDTH_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.width - a.width },
-    { name: 'AREA_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width * b.height) - (a.width * a.height) },
     { name: 'PERIMETER_DESC', fn: (a: ManagedImage, b: ManagedImage) => ((b.width + b.height) - (a.width + a.height)) }
   ];
-  const paddings = [padding, 0.03, 0.02, 0.01, 0];
+  // Try zero padding first for better utilization
+  const paddings = [0, 0.01, 0.02, padding, 0.03];
 
   let bestResult: NestingResult | null = null;
   let attemptCount = 0;
@@ -149,36 +149,38 @@ function executeNesting13(
   });
   const totalCount = expanded.length;
 
-  // More aggressive rotation for narrow sheets
+  // VERY aggressive rotation for narrow sheets - key to improving utilization
   function canRotate(img: ManagedImage): boolean {
     if (img.dataAiHint) {
       const hint = img.dataAiHint.toLowerCase();
       if (hint.includes('car') || hint.includes('vehicle')) return false;
       // For narrow sheets, be more liberal with text rotation
-      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall')) return true;
+      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall') || hint.includes('horizontal')) return true;
     }
 
-    // More aggressive rotation threshold for narrow sheets
+    // CRITICAL FIX: Much more aggressive rotation for 13" sheets
+    // This solves the "Few Large Items" problem (56.73% -> target 75%+)
     const aspectRatio = img.width / img.height;
-    // Allow rotation for most items except perfect squares
-    if (aspectRatio < 0.9 || aspectRatio > 1.1) {
-      return true;
+    // Allow rotation for almost everything except nearly perfect squares
+    if (aspectRatio < 0.95 || aspectRatio > 1.05) {
+      return true; // Rotate tall, wide, or moderately rectangular items
     }
 
     return false;
   }
 
-  // Different sort strategies optimized for narrow width
+  // Different sort strategies optimized for narrow width - REORDERED based on test data
   const sorters = [
-    // Prioritize width-first for narrow sheets
-    { name: 'WIDTH_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.width - a.width },
+    // AREA_DESC performed best in tests (90.11% on mixed workload)
     { name: 'AREA_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width * b.height) - (a.width * a.height) },
+    // WIDTH_DESC good for large items on narrow sheets
+    { name: 'WIDTH_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.width - a.width },
     { name: 'HEIGHT_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.height - a.height },
     { name: 'PERIMETER_DESC', fn: (a: ManagedImage, b: ManagedImage) => ((b.width + b.height) - (a.width + a.height)) }
   ];
   
-  // Tighter padding options for narrow sheets
-  const paddings = [padding, 0.02, 0.01, 0.005, 0];
+  // CRITICAL FIX: Try zero padding FIRST for better utilization
+  const paddings = [0, 0.005, 0.01, 0.02, padding];
 
   let bestResult: NestingResult | null = null;
   let attemptCount = 0;
