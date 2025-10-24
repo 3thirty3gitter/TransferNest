@@ -8,6 +8,13 @@
 3. **Automated Testing** - 5 test scenarios: Mixed, Small Items, Large Items, Vertical, Horizontal
 4. **Visual Comparison** - Side-by-side sheet previews with utilization metrics
 5. **Performance Tracking** - Enhanced telemetry and logging capabilities
+6. **🆕 ALGORITHM REPORTER** - Comprehensive diagnostic and reporting tool (`/algorithm-report`)
+   - 7 advanced test scenarios including edge cases
+   - Detailed performance metrics (rotation rates, wasted area, item sizes)
+   - 4-tab interface: Summary, Detailed Metrics, Comparisons, Issues & Fixes
+   - Automated issue detection with fix recommendations
+   - Markdown report export for documentation
+   - Console logging for deep algorithm debugging
 
 ### 🧪 Testing Features
 - **Run All Tests:** Execute all 5 scenarios for both sheet sizes
@@ -144,6 +151,8 @@ TransferNest/
 │   │   │       └── page.tsx          # Admin login (COMPLETE ✅)
 │   │   ├── algorithm-test/           # 🆕 Algorithm testing suite
 │   │   │   └── page.tsx              # Test page for comparing algorithms
+│   │   ├── algorithm-report/         # 🆕 Comprehensive diagnostic tool
+│   │   │   └── page.tsx              # Advanced reporting with fix recommendations
 │   │   ├── nesting-tool/             # Main nesting page
 │   │   ├── nesting-tool-13/          # 13" specific page (can deprecate)
 │   │   ├── nesting-tool-17/          # 17" specific page (can deprecate)
@@ -156,6 +165,7 @@ TransferNest/
 │   ├── components/
 │   │   ├── nesting-tool.tsx          # Main nesting component
 │   │   ├── algorithm-tester.tsx      # 🆕 Testing & comparison UI
+│   │   ├── algorithm-reporter.tsx    # 🆕 Advanced diagnostics & reporting
 │   │   ├── sheet-preview.tsx         # Visual preview (rotation fixed)
 │   │   └── image-manager.tsx         # Image upload/management
 │   ├── lib/
@@ -276,6 +286,110 @@ placedItems.push({
 });
 ```
 **Never use `orientation.w` or `orientation.h` in output!**
+
+---
+
+---
+
+## 🔬 Algorithm Reporter - Complete Diagnostic Tool
+
+### What It Does
+The Algorithm Reporter (`/algorithm-report`) is a **comprehensive diagnostic and optimization tool** that provides everything needed to identify and fix algorithm performance issues.
+
+### Key Features
+
+#### 1. **Advanced Test Scenarios (7 scenarios)**
+- Realistic Mixed Workload
+- Many Small Items (25)
+- Few Large Items (6)
+- Vertical-Heavy (12 tall items)
+- Horizontal-Heavy (12 wide items)
+- Edge Case: Very Wide Items
+- Edge Case: Very Tall Items
+
+#### 2. **Performance Metrics**
+For each test, tracks:
+- **Utilization %** - How efficiently space is used
+- **Sheet Length** - Total length needed
+- **Rotation Rate** - Percentage of items rotated
+- **Wasted Area** - Unused space in square inches
+- **Item Statistics** - Average, largest, smallest item sizes
+- **Sort Strategy** - Which strategy was selected
+
+#### 3. **4-Tab Interface**
+
+**Summary Tab:**
+- Overall performance averages (13" vs 17")
+- Quick comparison table
+- Winner indicators for each scenario
+
+**Detailed Metrics Tab:**
+- Full breakdown of all metrics
+- Rotation percentages
+- Wasted area calculations
+- Strategy used for each test
+
+**Comparison Tab:**
+- Side-by-side 13" vs 17" comparisons
+- Utilization differences
+- Length differences
+- Clear recommendations
+
+**Issues & Fixes Tab:**
+- 🚨 **Automated Issue Detection:**
+  - Failed placements (items that didn't fit)
+  - Low utilization warnings (<75%)
+  - Success highlights (≥90%)
+- 💡 **Fix Recommendations:**
+  - Specific suggestions for each issue type
+  - Algorithm optimization tips
+  - Configuration adjustments
+
+#### 4. **Markdown Report Export**
+- Click "Export Report" to download complete analysis
+- Includes all metrics, comparisons, and recommendations
+- Ready for documentation or sharing with team
+
+#### 5. **Console Logging**
+- Detailed console output for each test
+- Shows all algorithm attempts
+- Tracks best results
+- Perfect for debugging
+
+### How to Use
+
+1. Navigate to http://localhost:5009/algorithm-report
+2. Click "Run Full Test Suite"
+3. Wait for all 7 scenarios to complete (watch console)
+4. Review the 4 tabs:
+   - **Summary** - Quick overview
+   - **Detailed** - Deep dive into metrics
+   - **Comparison** - 13" vs 17" analysis
+   - **Issues** - Problems and fixes
+5. Export the report for documentation
+
+### What the Report Tells You
+
+✅ **If utilization is 90%+:** Algorithm is working great for that scenario  
+⚠️ **If utilization is 75-89%:** Room for improvement, check recommendations  
+🚨 **If utilization is <75%:** Significant issues, needs algorithm adjustment  
+❌ **If items fail to place:** Items too large or rotation issues
+
+### Example Insights
+
+The reporter will tell you things like:
+- "13" performs 5.2% better on vertical-heavy scenarios"
+- "17" algorithm has 15% rotation rate on mixed workloads"
+- "Horizontal items waste 45.3 sq in on 13" sheets - try WIDTH_DESC strategy"
+- "Edge case: Very tall items - 3 items failed on 13" (items wider than sheet)"
+
+### Why This Tool is Essential
+
+1. **Identifies specific problems** - Not just "low utilization" but WHY
+2. **Compares algorithms** - Shows which size works better for each scenario
+3. **Provides actionable fixes** - Tells you exactly what to adjust
+4. **Tracks metrics** - Rotation rates, wasted area, strategy selection
+5. **Exports documentation** - Share results with team or keep records
 
 ---
 
@@ -423,6 +537,7 @@ git push             # Push to GitHub
 - Main app: http://localhost:5009
 - Nesting tool: http://localhost:5009/nesting-tool
 - Algorithm tests: http://localhost:5009/algorithm-test
+- **🔥 Algorithm reporter:** http://localhost:5009/algorithm-report (START HERE!)
 - Admin: http://localhost:5009/admin
 - Cart: http://localhost:5009/cart
 - Checkout: http://localhost:5009/checkout

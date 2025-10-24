@@ -32,28 +32,33 @@ export default function AlgorithmTester() {
   // Generate test scenarios
   const generateTestScenario = (scenario: 'mixed' | 'small' | 'large' | 'vertical' | 'horizontal'): ManagedImage[] => {
     const images: ManagedImage[] = [];
+    // Use placeholder image service for test data
+    const placeholderUrl = (w: number, h: number, id: string) => 
+      `https://placehold.co/${Math.round(w * 50)}x${Math.round(h * 50)}/png?text=${id}`;
     
     switch (scenario) {
       case 'mixed':
         // Mix of sizes and aspect ratios
         images.push(
-          { id: 'm1', url: '/test1.jpg', width: 8, height: 6, aspectRatio: 8/6, copies: 2, dataAiHint: 'text' },
-          { id: 'm2', url: '/test2.jpg', width: 4, height: 3, aspectRatio: 4/3, copies: 3, dataAiHint: 'logo' },
-          { id: 'm3', url: '/test3.jpg', width: 6, height: 2, aspectRatio: 6/2, copies: 2, dataAiHint: 'banner' },
-          { id: 'm4', url: '/test4.jpg', width: 3, height: 5, aspectRatio: 3/5, copies: 2, dataAiHint: 'vertical text' },
-          { id: 'm5', url: '/test5.jpg', width: 10, height: 4, aspectRatio: 10/4, copies: 1, dataAiHint: 'wide banner' }
+          { id: 'm1', url: placeholderUrl(8, 6, 'm1'), width: 8, height: 6, aspectRatio: 8/6, copies: 2, dataAiHint: 'text' },
+          { id: 'm2', url: placeholderUrl(4, 3, 'm2'), width: 4, height: 3, aspectRatio: 4/3, copies: 3, dataAiHint: 'logo' },
+          { id: 'm3', url: placeholderUrl(6, 2, 'm3'), width: 6, height: 2, aspectRatio: 6/2, copies: 2, dataAiHint: 'banner' },
+          { id: 'm4', url: placeholderUrl(3, 5, 'm4'), width: 3, height: 5, aspectRatio: 3/5, copies: 2, dataAiHint: 'vertical text' },
+          { id: 'm5', url: placeholderUrl(10, 4, 'm5'), width: 10, height: 4, aspectRatio: 10/4, copies: 1, dataAiHint: 'wide banner' }
         );
         break;
       
       case 'small':
         // Many small items
         for (let i = 0; i < 20; i++) {
+          const w = 2 + Math.random() * 2;
+          const h = 2 + Math.random() * 2;
           images.push({
             id: `s${i}`,
-            url: `/small${i}.jpg`,
-            width: 2 + Math.random() * 2,
-            height: 2 + Math.random() * 2,
-            aspectRatio: 1,
+            url: placeholderUrl(w, h, `s${i}`),
+            width: w,
+            height: h,
+            aspectRatio: w / h,
             copies: 1,
             dataAiHint: 'small item'
           });
@@ -63,12 +68,14 @@ export default function AlgorithmTester() {
       case 'large':
         // Fewer large items
         for (let i = 0; i < 5; i++) {
+          const w = 8 + Math.random() * 4;
+          const h = 6 + Math.random() * 4;
           images.push({
             id: `l${i}`,
-            url: `/large${i}.jpg`,
-            width: 8 + Math.random() * 4,
-            height: 6 + Math.random() * 4,
-            aspectRatio: 1.2,
+            url: placeholderUrl(w, h, `l${i}`),
+            width: w,
+            height: h,
+            aspectRatio: w / h,
             copies: 1,
             dataAiHint: 'large image'
           });
@@ -78,12 +85,14 @@ export default function AlgorithmTester() {
       case 'vertical':
         // Tall/vertical items
         for (let i = 0; i < 10; i++) {
+          const w = 3 + Math.random();
+          const h = 6 + Math.random() * 3;
           images.push({
             id: `v${i}`,
-            url: `/vert${i}.jpg`,
-            width: 3 + Math.random(),
-            height: 6 + Math.random() * 3,
-            aspectRatio: 0.5,
+            url: placeholderUrl(w, h, `v${i}`),
+            width: w,
+            height: h,
+            aspectRatio: w / h,
             copies: 1,
             dataAiHint: 'vertical text'
           });
@@ -93,12 +102,14 @@ export default function AlgorithmTester() {
       case 'horizontal':
         // Wide/horizontal items
         for (let i = 0; i < 10; i++) {
+          const w = 8 + Math.random() * 3;
+          const h = 3 + Math.random();
           images.push({
             id: `h${i}`,
-            url: `/horiz${i}.jpg`,
-            width: 8 + Math.random() * 3,
-            height: 3 + Math.random(),
-            aspectRatio: 3,
+            url: placeholderUrl(w, h, `h${i}`),
+            width: w,
+            height: h,
+            aspectRatio: w / h,
             copies: 1,
             dataAiHint: 'banner'
           });
