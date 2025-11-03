@@ -6,9 +6,7 @@
   },
   "build": {
     "env": {
-      "NPM_CONFIG_OPTIONAL": "false",
-      "CANVAS_SKIP_INSTALL": "true"
+      "NPM_CONFIG_OPTIONAL": "true"
     }
-  },
-  "installCommand": "npm install --no-optional"
+  }
 }
