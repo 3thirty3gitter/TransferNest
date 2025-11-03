@@ -1,4 +1,5 @@
 ﻿import { NestedImage } from '@/lib/nesting-algorithm';
+import sharp from 'sharp';
 
 export interface PrintExportOptions {
   dpi: number;
@@ -53,14 +54,70 @@ export class PrintExportGenerator {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `dtf-print-${sheetSize}x-${opts.dpi}dpi-${timestamp}.png`;
 
-    console.log(`Print file queued: ${filename}`, {
+    console.log(`Generating print file: ${filename}`, {
       imageCount: images.length,
       dimensions: `${pixelWidth}x${pixelHeight}px`,
       utilization: `${utilization}%`
     });
 
+    // Create a blank white canvas
+    const canvas = sharp({
+      create: {
+        width: pixelWidth,
+        height: pixelHeight,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      }
+    });
+
+    // Composite all images onto the sheet
+    const compositeOps = await Promise.all(
+      images.map(async (img) => {
+        try {
+          // Convert inches to pixels
+          const left = Math.round(img.x * opts.dpi);
+          const top = Math.round(img.y * opts.dpi);
+          const width = Math.round(img.width * opts.dpi);
+          const height = Math.round(img.height * opts.dpi);
+
+          // Load and resize the image
+          // Note: In production, you'd fetch from img.url
+          // For now, create a placeholder rectangle
+          const placeholder = await sharp({
+            create: {
+              width,
+              height,
+              channels: 4,
+              background: { r: 200, g: 200, b: 200, alpha: 0.5 }
+            }
+          })
+            .png()
+            .toBuffer();
+
+          return {
+            input: placeholder,
+            left,
+            top
+          };
+        } catch (error) {
+          console.error(`Failed to process image ${img.id}:`, error);
+          return null;
+        }
+      })
+    );
+
+    // Filter out failed composites
+    const validComposites = compositeOps.filter((op): op is NonNullable<typeof op> => op !== null);
+
+    // Generate the final image
+    const buffer = validComposites.length > 0
+      ? await canvas.composite(validComposites).png({ quality: opts.quality }).toBuffer()
+      : await canvas.png({ quality: opts.quality }).toBuffer();
+
+    console.log(`✅ Generated print file: ${filename} (${(buffer.length / 1024).toFixed(2)} KB)`);
+
     return {
-      buffer: Buffer.alloc(0),
+      buffer,
       filename,
       dimensions: {
         width: pixelWidth,

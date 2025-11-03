@@ -41,7 +41,7 @@ export const VIRTUAL_SHEET_HEIGHT = 10000; // Virtual height for calculations
 export function executeNesting(
   images: ManagedImage[],
   sheetWidth: number,
-  padding: number = 0.05,
+  padding: number = 0.05,  // Maintain safe cutting margin
   targetUtilization: number = 0.9
 ): NestingResult {
   // Route to size-specific algorithm
@@ -62,7 +62,7 @@ function executeNesting17(
   const expanded: ManagedImage[] = [];
   images.forEach(img => {
     for (let i = 0; i < Math.max(1, img.copies); i++) {
-      expanded.push({ ...img, copies: 1 });
+      expanded.push({ ...img, id: `${img.id}-${i}`, copies: 1 });
     }
   });
   const totalCount = expanded.length;
@@ -76,25 +76,28 @@ function executeNesting17(
       if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall') || hint.includes('horizontal')) return true;
     }
 
-    // OPTIMIZED: Slightly more aggressive rotation for 17" too
-    // This helps with edge cases and large items
+    // CRITICAL: Very aggressive rotation to achieve 90%+ utilization
+    // Allow rotation for ANY non-square item
     const aspectRatio = img.width / img.height;
-    if (aspectRatio < 0.85 || aspectRatio > 1.15) {
-      return true; // Rotate tall or wide items
+    if (aspectRatio < 0.98 || aspectRatio > 1.02) {
+      return true; // Rotate almost everything except perfect squares
     }
 
-    return false; // Square-ish items stay as-is
+    return false;
   }
 
-  // Packing strategies - PROVEN ORDER (achieved 90.5% in testing)
+  // Packing strategies - trying more combinations for 90%+ utilization
   const sorters = [
+    { name: 'AREA_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width * b.height) - (a.width * a.height) },
     { name: 'HEIGHT_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.height - a.height },
     { name: 'WIDTH_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.width - a.width },
-    { name: 'AREA_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width * b.height) - (a.width * a.height) },
-    { name: 'PERIMETER_DESC', fn: (a: ManagedImage, b: ManagedImage) => ((b.width + b.height) - (a.width + a.height)) }
+    { name: 'PERIMETER_DESC', fn: (a: ManagedImage, b: ManagedImage) => ((b.width + b.height) - (a.width + a.height)) },
+    // Additional strategies for better optimization
+    { name: 'ASPECT_RATIO_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width/b.height) - (a.width/a.height) },
+    { name: 'DIAGONAL_DESC', fn: (a: ManagedImage, b: ManagedImage) => Math.sqrt(b.width**2 + b.height**2) - Math.sqrt(a.width**2 + a.height**2) }
   ];
-  // PROVEN padding sequence (achieved 90.5% utilization) - DO NOT CHANGE
-  const paddings = [padding, 0.03, 0.02, 0.01, 0];
+  // Try with the specified padding (safe for cutting) - optimize order not padding
+  const paddings = [padding, 0.045, 0.04, 0.035, 0.03];
 
   let bestResult: NestingResult | null = null;
   let attemptCount = 0;
@@ -144,7 +147,7 @@ function executeNesting13(
   const expanded: ManagedImage[] = [];
   images.forEach(img => {
     for (let i = 0; i < Math.max(1, img.copies); i++) {
-      expanded.push({ ...img, copies: 1 });
+      expanded.push({ ...img, id: `${img.id}-${i}`, copies: 1 });
     }
   });
   const totalCount = expanded.length;
@@ -169,21 +172,33 @@ function executeNesting13(
     return false;
   }
 
-  // Different sort strategies optimized for narrow width - REORDERED based on actual test results
+  // Enhanced sort strategies optimized for narrow width and 90%+ utilization
   const sorters = [
-    // AREA_DESC: Best for mixed (90.11%), good for large (66.18% improved from 56.73%)
+    // Primary strategies - proven effective
     { name: 'AREA_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width * b.height) - (a.width * a.height) },
-    // HEIGHT_DESC: Winner on small items (77.65%) and vertical (72.69%)
     { name: 'HEIGHT_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.height - a.height },
-    // WIDTH_DESC: Winner on horizontal (76.99%)
     { name: 'WIDTH_DESC', fn: (a: ManagedImage, b: ManagedImage) => b.width - a.width },
-    // PERIMETER_DESC: Fallback option
-    { name: 'PERIMETER_DESC', fn: (a: ManagedImage, b: ManagedImage) => ((b.width + b.height) - (a.width + a.height)) }
+    { name: 'PERIMETER_DESC', fn: (a: ManagedImage, b: ManagedImage) => ((b.width + b.height) - (a.width + a.height)) },
+    // Additional strategies for edge cases
+    { name: 'ASPECT_RATIO_DESC', fn: (a: ManagedImage, b: ManagedImage) => (b.width/b.height) - (a.width/a.height) },
+    { name: 'DIAGONAL_DESC', fn: (a: ManagedImage, b: ManagedImage) => Math.sqrt(b.width**2 + b.height**2) - Math.sqrt(a.width**2 + a.height**2) },
+    // Specialized: Sort by how well items fit the sheet width
+    { name: 'WIDTH_FIT', fn: (a: ManagedImage, b: ManagedImage) => {
+      const aFit = sheetWidth % a.width;
+      const bFit = sheetWidth % b.width;
+      return aFit - bFit; // Prefer items that divide evenly into sheet width
+    }},
+    // Specialized: Interleave large and small for better gap filling
+    { name: 'AREA_VARIANCE', fn: (a: ManagedImage, b: ManagedImage) => {
+      const avgArea = (a.width * a.height + b.width * b.height) / 2;
+      const aVar = Math.abs(a.width * a.height - avgArea);
+      const bVar = Math.abs(b.width * b.height - avgArea);
+      return bVar - aVar;
+    }}
   ];
   
-  // OPTIMIZED: Balanced padding sequence
-  // Start with minimal padding for best utilization, but don't be too aggressive
-  const paddings = [0, 0.005, 0.01, 0.02, padding];
+  // Try variations near the safe cutting margin, plus extremes
+  const paddings = [padding, 0.045, 0.04, 0.035, 0.03];
 
   let bestResult: NestingResult | null = null;
   let attemptCount = 0;

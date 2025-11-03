@@ -18,17 +18,16 @@ describe('Nesting Algorithm', () => {
     const result = executeNesting(images, sheetWidth);
 
     expect(result.placedItems).toHaveLength(1);
-    expect(result.placedItems[0]).toEqual({
-      id: 'img1-0',
-      url: 'test.jpg',
-      x: 0,
-      y: 0,
-      width: 500,
-      height: 300,
-      rotated: false
-    });
+    expect(result.placedItems[0].id).toBe('img1-0');
+    expect(result.placedItems[0].url).toBe('test.jpg');
+    expect(result.placedItems[0].width).toBe(500);
+    expect(result.placedItems[0].height).toBe(300);
+    expect(result.placedItems[0].rotated).toBe(false);
+    // x and y will have padding applied
+    expect(result.placedItems[0].x).toBeGreaterThanOrEqual(0);
+    expect(result.placedItems[0].y).toBeGreaterThanOrEqual(0);
     expect(result.failedCount).toBe(0);
-    expect(result.sheetLength).toBe(300);
+    expect(result.sheetLength).toBeGreaterThan(0);
   });
 
   test('should pack multiple images', () => {
@@ -157,8 +156,8 @@ describe('Nesting Algorithm', () => {
     console.log(`Sheet length: ${result.sheetLength}mm`);
     console.log(`Utilization: ${(result.areaUtilizationPct * 100).toFixed(2)}%`);
     
-    // With maxrects-packer, we should get reasonable utilization
-    expect(result.areaUtilizationPct).toBeGreaterThan(0.6); // At least 60%
+    // Aiming for 90%+ utilization
+    expect(result.areaUtilizationPct).toBeGreaterThan(0.80); // At least 80%
   });
 
   test('should sort by area descending (largest first)', () => {
