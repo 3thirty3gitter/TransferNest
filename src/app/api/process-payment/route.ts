@@ -16,6 +16,23 @@ export async function POST(request: NextRequest) {
   try {
     const { sourceId, amount, currency, customerInfo, cartItems, userId } = await request.json();
 
+    // Validate Square configuration
+    if (!process.env.SQUARE_ACCESS_TOKEN) {
+      console.error('[PAYMENT] Missing SQUARE_ACCESS_TOKEN environment variable');
+      return NextResponse.json(
+        { success: false, error: 'Payment system not configured' },
+        { status: 500 }
+      );
+    }
+
+    if (!process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID) {
+      console.error('[PAYMENT] Missing NEXT_PUBLIC_SQUARE_LOCATION_ID environment variable');
+      return NextResponse.json(
+        { success: false, error: 'Payment system not configured' },
+        { status: 500 }
+      );
+    }
+
     // Validate required fields
     if (!sourceId || !amount || !userId) {
       return NextResponse.json(

@@ -3,6 +3,13 @@
 import { nfpNesting } from './nfp-nesting';
 import { geneticAlgorithmNesting } from './ga-nesting';
 
+// Development-only logging
+const debugLog = (...args: any[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(...args);
+  }
+};
+
 // Input Types
 export type ManagedImage = {
   id: string;

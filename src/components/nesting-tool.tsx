@@ -13,6 +13,13 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { ShoppingCart, Download } from 'lucide-react';
 
+// Development-only logging
+const debugLog = (...args: any[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(...args);
+  }
+};
+
 interface NestingToolProps {
   sheetWidth?: number; // Optional now, defaults to 13
 }
@@ -48,9 +55,9 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
 
     try {
       // Validate images before nesting
-      console.log('🔍 Nesting Input Validation:');
+      debugLog('🔍 Nesting Input Validation:');
       images.forEach((img, idx) => {
-        console.log(`  Image ${idx}: ${img.id}`, {
+        debugLog(`  Image ${idx}: ${img.id}`, {
           width: img.width,
           height: img.height,
           copies: img.copies,
@@ -89,7 +96,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
       
       await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause
       
-      console.log('📊 Nesting Result:', {
+      debugLog('📊 Nesting Result:', {
         total_items: result.totalCount,
         placed_items: result.placedItems.length,
         failed_items: result.failedCount,

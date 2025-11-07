@@ -5,6 +5,13 @@
 
 import type { ManagedImage, NestedImage, NestingResult } from './nesting-algorithm';
 
+// Development-only logging
+const debugLog = (...args: any[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(...args);
+  }
+};
+
 interface Chromosome {
   sequence: ManagedImage[];
   rotations: number[];
@@ -85,8 +92,8 @@ function getAdaptiveParameters(analysis: BatchAnalysis, totalItems: number): {
   // More elites for larger populations
   const eliteCount = Math.max(2, Math.round(populationSize * 0.05));
   
-  console.log(`[GA ADAPTIVE] Complexity: ${analysis.complexityScore.toFixed(2)}, Pop: ${populationSize}, Gen: ${generations}, Mutation: ${(mutationRate * 100).toFixed(0)}%`);
-  console.log(`[GA BATCH] ${analysis.uniqueSizes} unique sizes, ${totalItems} total items, aspect range: ${analysis.aspectRatioRange.toFixed(2)}`);
+  debugLog(`[GA ADAPTIVE] Complexity: ${analysis.complexityScore.toFixed(2)}, Pop: ${populationSize}, Gen: ${generations}, Mutation: ${(mutationRate * 100).toFixed(0)}%`);
+  debugLog(`[GA BATCH] ${analysis.uniqueSizes} unique sizes, ${totalItems} total items, aspect range: ${analysis.aspectRatioRange.toFixed(2)}`);
   
   return { populationSize, generations, mutationRate, eliteCount };
 }
@@ -216,7 +223,7 @@ export function geneticAlgorithmNesting(
     // Sort by fitness (best first)
     population.sort((a, b) => b.fitness - a.fitness);
 
-    console.log(`[GA GEN ${gen + 1}/${generations}] Best: ${(population[0].fitness * 100).toFixed(1)}%, Diversity: ${analysis.uniqueSizes} sizes`);
+    debugLog(`[GA GEN ${gen + 1}/${generations}] Best: ${(population[0].fitness * 100).toFixed(1)}%, Diversity: ${analysis.uniqueSizes} sizes`);
 
     if (gen === generations - 1) break;
 
