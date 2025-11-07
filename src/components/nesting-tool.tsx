@@ -122,8 +122,8 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
     
     // Base pricing logic (adjust as needed)
     const basePrice = nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59);
-    const setupFee = totalDesigns * 2.50; // $2.50 per unique design
-    const total = basePrice + setupFee;
+    const setupFee = totalDesigns * 2.50; // $2.50 per unique design (hidden for now)
+    const total = basePrice; // Setup fee excluded from total
     
     return { basePrice, setupFee, total };
   };
@@ -238,10 +238,13 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
                         <span>Base Price:</span>
                         <span>${calculatePricing().basePrice.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Setup Fee ({nestingResult.placedItems.length} designs):</span>
-                        <span>${calculatePricing().setupFee.toFixed(2)}</span>
-                      </div>
+                      {/* Setup Fee - Hidden for now, can be re-enabled later */}
+                      {false && (
+                        <div className="flex justify-between">
+                          <span>Setup Fee ({nestingResult.placedItems.length} designs):</span>
+                          <span>${calculatePricing().setupFee.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between font-medium border-t pt-1">
                         <span>Total:</span>
                         <span>${calculatePricing().total.toFixed(2)}</span>
