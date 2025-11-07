@@ -76,23 +76,23 @@ function executeNesting13Advanced(
   }
 
   // Try multiple strategies and pick the best (genetic algorithm concept from Deepnest)
-  // Test GA with multiple padding levels
+  // INCREASED PARAMETERS to push for 90%+ utilization
   const strategies = [
     { 
       name: 'GA_TIGHT_PADDING', 
       fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.03, canRotate, {
-        populationSize: 50,
-        generations: 25,
-        mutationRate: 0.2,
+        populationSize: 80,
+        generations: 40,
+        mutationRate: 0.25,
         rotationSteps: 4
       }) 
     },
     { 
       name: 'GA_NORMAL_PADDING', 
       fn: () => geneticAlgorithmNesting(images, sheetWidth, padding, canRotate, {
-        populationSize: 50,
-        generations: 25,
-        mutationRate: 0.2,
+        populationSize: 80,
+        generations: 40,
+        mutationRate: 0.25,
         rotationSteps: 4
       }) 
     }
