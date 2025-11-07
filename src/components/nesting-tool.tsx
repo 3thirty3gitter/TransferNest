@@ -238,13 +238,12 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
                         <span>Base Price:</span>
                         <span>${calculatePricing().basePrice.toFixed(2)}</span>
                       </div>
-                      {/* Setup Fee - Hidden for now, can be re-enabled later */}
-                      {false && nestingResult && (
-                        <div className="flex justify-between">
-                          <span>Setup Fee ({nestingResult.placedItems.length} designs):</span>
-                          <span>${calculatePricing().setupFee.toFixed(2)}</span>
-                        </div>
-                      )}
+                      {/* Setup Fee - Commented out for now, can be re-enabled later
+                      <div className="flex justify-between">
+                        <span>Setup Fee ({nestingResult.placedItems.length} designs):</span>
+                        <span>${calculatePricing().setupFee.toFixed(2)}</span>
+                      </div>
+                      */}
                       <div className="flex justify-between font-medium border-t pt-1">
                         <span>Total:</span>
                         <span>${calculatePricing().total.toFixed(2)}</span>
