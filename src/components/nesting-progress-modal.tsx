@@ -36,20 +36,20 @@ export default function NestingProgressModal({
       case 'genetic-algorithm':
         return {
           icon: <Layers className="h-8 w-8 text-purple-500 animate-spin" />,
-          title: 'Running Genetic Algorithm',
-          description: `Generation ${currentGeneration} of ${totalGenerations}`
+          title: 'Arranging Designs',
+          description: 'Optimizing your layout...'
         };
       case 'optimizing':
         return {
           icon: <Zap className="h-8 w-8 text-yellow-500 animate-bounce" />,
-          title: 'Optimizing Layout',
-          description: 'Finding best placement strategy...'
+          title: 'Finalizing Layout',
+          description: 'Almost done...'
         };
       case 'complete':
         return {
           icon: <CheckCircle2 className="h-8 w-8 text-green-500" />,
-          title: 'Nesting Complete!',
-          description: `Achieved ${bestUtilization.toFixed(1)}% utilization`
+          title: 'Layout Complete!',
+          description: 'Your gang sheet is ready'
         };
     }
   };
@@ -80,23 +80,11 @@ export default function NestingProgressModal({
             </p>
           </div>
 
-          {/* Genetic Algorithm Details */}
+          {/* Progress Details */}
           {stage === 'genetic-algorithm' && (
             <div className="bg-secondary/50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Current Best:</span>
-                <span className="font-semibold text-primary">
-                  {bestUtilization.toFixed(1)}%
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Generation:</span>
-                <span className="font-semibold">
-                  {currentGeneration} / {totalGenerations}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Items:</span>
+                <span className="text-muted-foreground">Designs:</span>
                 <span className="font-semibold">{itemCount}</span>
               </div>
             </div>
@@ -106,10 +94,7 @@ export default function NestingProgressModal({
           {stage === 'complete' && (
             <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
               <p className="text-sm text-green-700 dark:text-green-300 font-medium">
-                Successfully nested {itemCount} design{itemCount !== 1 ? 's' : ''}
-              </p>
-              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                Material utilization optimized with genetic algorithm
+                Successfully arranged {itemCount} design{itemCount !== 1 ? 's' : ''}
               </p>
             </div>
           )}
@@ -117,7 +102,7 @@ export default function NestingProgressModal({
           {/* Processing Info */}
           {stage !== 'complete' && (
             <p className="text-xs text-center text-muted-foreground">
-              Using state-of-the-art genetic algorithm for optimal placement...
+              Creating your optimized gang sheet...
             </p>
           )}
         </div>
