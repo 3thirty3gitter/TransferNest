@@ -48,12 +48,12 @@ export function executeNesting(
   targetUtilization: number = 0.9
 ): NestingResult {
   // Route to size-specific algorithm
-  // For 13" sheets, use the advanced NFP approach for better utilization
+  // Both 13" and 17" sheets now use adaptive genetic algorithm for consistency
   if (sheetWidth === 13) {
     return executeNesting13Advanced(images, sheetWidth, padding, targetUtilization);
   }
-  // For 17" sheets, current shelf-packing is already achieving 87%+
-  return executeNesting17(images, sheetWidth, padding, targetUtilization);
+  // Use adaptive GA for 17" sheets too (instead of shelf-packing)
+  return executeNesting17Advanced(images, sheetWidth, padding, targetUtilization);
 }
 
 // ADVANCED algorithm for 13" sheets using NFP approach (Deepnest-inspired)
@@ -118,8 +118,58 @@ function executeNesting13Advanced(
   return bestResult!;
 }
 
-// Optimized algorithm for 17" sheets (KEEP AS-IS - WORKING WELL)
-function executeNesting17(
+// ADVANCED algorithm for 17" sheets using adaptive genetic algorithm
+// Replaces shelf-packing to achieve consistent 85-90%+ utilization
+function executeNesting17Advanced(
+  images: ManagedImage[],
+  sheetWidth: number,
+  padding: number = 0.05,
+  targetUtilization: number = 0.9
+): NestingResult {
+  // Rotation function for 17" sheets
+  function canRotate(img: ManagedImage): boolean {
+    if (img.dataAiHint) {
+      const hint = img.dataAiHint.toLowerCase();
+      if (hint.includes('car') || hint.includes('vehicle')) return false;
+      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall') || hint.includes('horizontal')) return true;
+    }
+    const aspectRatio = img.width / img.height;
+    return aspectRatio < 0.95 || aspectRatio > 1.05;
+  }
+
+  // Try multiple padding strategies with adaptive GA
+  const strategies = [
+    { 
+      name: 'GA_TIGHT_PADDING', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.03, canRotate, { 
+        adaptive: true  // Enable adaptive parameters
+      })
+    },
+    { 
+      name: 'GA_NORMAL_PADDING', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.05, canRotate, { 
+        adaptive: true
+      })
+    }
+  ];
+
+  let bestResult: NestingResult | null = null;
+
+  for (const strategy of strategies) {
+    console.log(`[17" TRYING] ${strategy.name}...`);
+    const result = strategy.fn();
+    
+    if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
+      bestResult = result;
+    }
+  }
+
+  console.log(`[17" BEST] Best: ${(bestResult!.areaUtilizationPct * 100).toFixed(1)}% using ${bestResult!.sortStrategy}`);
+  return bestResult!;
+}
+
+// Legacy shelf-packing algorithm for 17" sheets (kept for reference)
+function executeNesting17Legacy(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.05,
