@@ -15,7 +15,8 @@ import { ShoppingCart, Download } from 'lucide-react';
 
 // Development-only logging
 const debugLog = (...args: any[]) => {
-  if (process.env.NODE_ENV === 'development') {
+  // Only log in development or when explicitly enabled
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     console.log(...args);
   }
 };
