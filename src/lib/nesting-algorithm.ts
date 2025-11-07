@@ -76,11 +76,11 @@ function executeNesting13Advanced(
   }
 
   // Try multiple strategies and pick the best (genetic algorithm concept from Deepnest)
-  // INCREASED PARAMETERS to push for 90%+ utilization
+  // INCREASED SPACING for easier cutting (0.25" between images)
   const strategies = [
     { 
-      name: 'GA_TIGHT_PADDING', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.03, canRotate, {
+      name: 'GA_SAFE_SPACING', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.25, canRotate, {
         populationSize: 80,
         generations: 40,
         mutationRate: 0.25,
@@ -89,7 +89,7 @@ function executeNesting13Advanced(
     },
     { 
       name: 'GA_NORMAL_PADDING', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, padding, canRotate, {
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, Math.max(padding, 0.25), canRotate, {
         populationSize: 80,
         generations: 40,
         mutationRate: 0.25,
@@ -138,16 +138,17 @@ function executeNesting17Advanced(
   }
 
   // Try multiple padding strategies with adaptive GA
+  // INCREASED SPACING for easier cutting (0.25" between images)
   const strategies = [
     { 
-      name: 'GA_TIGHT_PADDING', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.03, canRotate, { 
+      name: 'GA_SAFE_SPACING', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.25, canRotate, { 
         adaptive: true  // Enable adaptive parameters
       })
     },
     { 
       name: 'GA_NORMAL_PADDING', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.05, canRotate, { 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, Math.max(padding, 0.25), canRotate, { 
         adaptive: true
       })
     }

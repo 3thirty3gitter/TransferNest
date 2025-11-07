@@ -99,7 +99,7 @@ function getAdaptiveParameters(analysis: BatchAnalysis, totalItems: number): {
 export function geneticAlgorithmNesting(
   images: ManagedImage[],
   sheetWidth: number,
-  padding: number = 0.05,
+  padding: number = 0.25,
   canRotate: (img: ManagedImage) => boolean,
   options: {
     populationSize?: number;
