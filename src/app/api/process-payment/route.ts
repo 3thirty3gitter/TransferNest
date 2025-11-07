@@ -184,16 +184,29 @@ async function generatePrintFiles(cartItems: any[], userId: string) {
     const printResults = [];
 
     for (const item of cartItems) {
-      const { images, sheetSize } = item;
+      const { layout, sheetSize } = item;
       
-      if (!images || !Array.isArray(images) || images.length === 0) {
-        console.warn(`No images found for cart item`);
+      if (!layout || !layout.positions || !Array.isArray(layout.positions) || layout.positions.length === 0) {
+        console.warn(`[PRINT] No layout positions found for cart item:`, item);
         continue;
       }
 
+      console.log(`[PRINT] Generating print file for ${layout.positions.length} images on ${sheetSize}" sheet`);
+
+      // Convert layout positions to NestedImage format
+      const nestedImages = layout.positions.map((pos: any) => ({
+        id: pos.imageId || 'unknown',
+        url: '', // Placeholder - would fetch from storage in production
+        x: pos.x,
+        y: pos.y,
+        width: pos.width,
+        height: pos.height,
+        rotated: false
+      }));
+
       // Generate high-quality print file
       const printResult = await printGenerator.generatePrintFile(
-        images,
+        nestedImages,
         sheetSize,
         {
           dpi: 300,

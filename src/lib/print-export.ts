@@ -74,11 +74,27 @@ export class PrintExportGenerator {
     const compositeOps = await Promise.all(
       images.map(async (img) => {
         try {
+          // Validate image coordinates
+          if (typeof img.x !== 'number' || typeof img.y !== 'number' || 
+              typeof img.width !== 'number' || typeof img.height !== 'number' ||
+              isNaN(img.x) || isNaN(img.y) || isNaN(img.width) || isNaN(img.height)) {
+            console.error('[PRINT] Invalid image coordinates:', img);
+            return null;
+          }
+
           // Convert inches to pixels
           const left = Math.round(img.x * opts.dpi);
           const top = Math.round(img.y * opts.dpi);
           const width = Math.round(img.width * opts.dpi);
           const height = Math.round(img.height * opts.dpi);
+
+          // Validate pixel values
+          if (isNaN(left) || isNaN(top) || isNaN(width) || isNaN(height)) {
+            console.error('[PRINT] Invalid pixel calculations:', { left, top, width, height, img });
+            return null;
+          }
+
+          console.log(`[PRINT] Image ${img.id}: ${left},${top} ${width}x${height}px`);
 
           // Load and resize the image
           // Note: In production, you'd fetch from img.url
