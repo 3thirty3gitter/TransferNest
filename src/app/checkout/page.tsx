@@ -132,6 +132,15 @@ export default function CheckoutPage() {
       const result = await cardPayment.tokenize();
       
       if (result.status === 'OK') {
+        const paymentAmount = Math.round(totalPrice * 100);
+        
+        console.log('[CHECKOUT] Preparing payment:', {
+          amount: paymentAmount,
+          totalPrice,
+          currency: 'CAD',
+          itemCount: items.length
+        });
+
         // Send payment to your backend
         const response = await fetch('/api/process-payment', {
           method: 'POST',
@@ -140,7 +149,7 @@ export default function CheckoutPage() {
           },
           body: JSON.stringify({
             sourceId: result.token,
-            amount: Math.round(totalPrice * 100), // Convert to cents
+            amount: paymentAmount,
             currency: 'CAD',
             customerInfo,
             cartItems: items,

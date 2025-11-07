@@ -41,11 +41,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate amount is a valid number
+    const amountNum = Number(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      console.error('[PAYMENT] Invalid amount:', amount, 'Type:', typeof amount);
+      return NextResponse.json(
+        { success: false, error: 'Invalid payment amount' },
+        { status: 400 }
+      );
+    }
+
+    console.log('[PAYMENT] Processing payment:', {
+      amount: amountNum,
+      currency: currency || 'CAD',
+      locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+      itemCount: cartItems.length
+    });
+
     // Create the payment request
     const requestBody = {
       sourceId,
       amountMoney: {
-        amount: BigInt(amount),
+        amount: BigInt(Math.round(amountNum)),
         currency: currency || 'CAD',
       },
       locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
