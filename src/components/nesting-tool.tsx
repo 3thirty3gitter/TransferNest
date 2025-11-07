@@ -36,11 +36,15 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
   const performNesting = async () => {
     if (images.length === 0) return;
 
+    // Set modal state FIRST - this makes it appear instantly
     setIsProcessing(true);
     setModalStage('preparing');
     setModalProgress(10);
     setBestUtilization(0);
     setCurrentGeneration(0);
+
+    // Give UI time to render the modal before starting heavy computation
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
       // Validate images before nesting
@@ -56,9 +60,12 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         });
       });
 
-      // Simulate progress stages for UX
+      // Update to genetic algorithm stage
       setModalStage('genetic-algorithm');
       setModalProgress(20);
+      
+      // Brief pause to show stage transition
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Simulate generation progress (in real implementation, this would come from GA callbacks)
       const progressInterval = setInterval(() => {
