@@ -225,11 +225,8 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
             {/* Results Display */}
             {nestingResult && (
               <div className="mt-4 p-3 bg-muted rounded">
-                <h3 className="font-medium mb-2">Results</h3>
+                <h3 className="font-medium mb-2">Your Gang Sheet</h3>
                 <div className="text-sm space-y-1">
-                  <div>Placed: {nestingResult.placedItems.length}/{nestingResult.totalCount}</div>
-                  <div>Failed: {nestingResult.failedCount}</div>
-                  <div>Utilization: {(nestingResult.areaUtilizationPct * 100).toFixed(1)}%</div>
                   <div>Sheet Length: {nestingResult.sheetLength.toFixed(2)}"</div>
                   <div>Cost: ${(nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59)).toFixed(2)}</div>
                   
@@ -298,11 +295,6 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
               <h2 className="text-xl font-semibold">
                 {sheetWidth}" Gang Sheet Preview
               </h2>
-              {nestingResult && (
-                <div className="text-sm text-muted-foreground">
-                  MaxRects Algorithm • {(nestingResult.areaUtilizationPct * 100).toFixed(1)}% Utilization
-                </div>
-              )}
             </div>
               <SheetPreview
               sheetWidth={sheetWidth}
