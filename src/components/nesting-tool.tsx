@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { executeNesting, ManagedImage, NestingResult } from '@/lib/nesting-algorithm';
 import SheetPreview from './sheet-preview';
 import ImageManager from './image-manager';
+import NestingProgressModal from './nesting-progress-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,13 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sheetWidth, setSheetWidth] = useState<13 | 17>(initialWidth as 13 | 17);
+  
+  // Progress modal state
+  const [modalStage, setModalStage] = useState<'preparing' | 'genetic-algorithm' | 'optimizing' | 'complete'>('preparing');
+  const [modalProgress, setModalProgress] = useState(0);
+  const [currentGeneration, setCurrentGeneration] = useState(0);
+  const [bestUtilization, setBestUtilization] = useState(0);
+  
   const { addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -29,6 +37,10 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
     if (images.length === 0) return;
 
     setIsProcessing(true);
+    setModalStage('preparing');
+    setModalProgress(10);
+    setBestUtilization(0);
+    setCurrentGeneration(0);
 
     try {
       // Validate images before nesting
@@ -44,7 +56,31 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         });
       });
 
+      // Simulate progress stages for UX
+      setModalStage('genetic-algorithm');
+      setModalProgress(20);
+      
+      // Simulate generation progress (in real implementation, this would come from GA callbacks)
+      const progressInterval = setInterval(() => {
+        setCurrentGeneration(prev => {
+          const next = prev + 1;
+          if (next <= 40) {
+            setModalProgress(20 + (next / 40) * 70); // 20% to 90%
+            setBestUtilization(prev => Math.min(prev + Math.random() * 2, 87));
+            return next;
+          }
+          return prev;
+        });
+      }, 100); // Update every 100ms for smooth progress
+
       const result = executeNesting(images, sheetWidth);
+      
+      clearInterval(progressInterval);
+      
+      setModalStage('optimizing');
+      setModalProgress(95);
+      
+      await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause
       
       console.log('📊 Nesting Result:', {
         total_items: result.totalCount,
@@ -54,9 +90,20 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         sheet_length: result.sheetLength
       });
       
+      setModalProgress(100);
+      setModalStage('complete');
+      setBestUtilization(result.areaUtilizationPct * 100);
+      
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Show completion
+      
       setNestingResult(result);
     } catch (error) {
       console.error('Nesting failed:', error);
+      toast({
+        title: "Nesting Failed",
+        description: "An error occurred while processing your layout.",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -127,6 +174,17 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Progress Modal */}
+      <NestingProgressModal
+        isOpen={isProcessing}
+        stage={modalStage}
+        progress={modalProgress}
+        currentGeneration={currentGeneration}
+        totalGenerations={40}
+        bestUtilization={bestUtilization}
+        itemCount={images.reduce((sum, img) => sum + img.copies, 0)}
+      />
+      
       <div className="flex flex-col lg:flex-row gap-6">
         
         {/* Left Panel - Controls (Sticky) */}
