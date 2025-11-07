@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       sourceId,
       amountMoney: {
         amount: BigInt(amount),
-        currency: currency || 'USD',
+        currency: currency || 'CAD',
       },
       locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
       idempotencyKey: randomUUID(),
@@ -144,7 +144,7 @@ async function saveOrder(orderData: any) {
       tax,
       shipping,
       total,
-      currency: orderData.currency || 'USD',
+      currency: orderData.currency || 'CAD',
       printFiles: []
     };
 

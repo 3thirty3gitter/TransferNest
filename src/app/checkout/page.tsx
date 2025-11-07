@@ -141,7 +141,7 @@ export default function CheckoutPage() {
           body: JSON.stringify({
             sourceId: result.token,
             amount: Math.round(totalPrice * 100), // Convert to cents
-            currency: 'USD',
+            currency: 'CAD',
             customerInfo,
             cartItems: items,
             userId: user.uid,
@@ -276,21 +276,19 @@ export default function CheckoutPage() {
                     onChange={(e) => handleInputChange('state', e.target.value)}
                     required
                   />
-                </div>
               </div>
-              <div>
-                <Label htmlFor="zipCode">ZIP Code *</Label>
-                <Input
-                  id="zipCode"
-                  value={customerInfo.zipCode}
-                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                  required
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
+            </div>
+            <div>
+              <Label htmlFor="zipCode">Postal Code *</Label>
+              <Input
+                id="zipCode"
+                value={customerInfo.zipCode}
+                onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                required
+              />
+            </div>
+          </CardContent>
+        </Card>          <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <CreditCard className="mr-2 h-5 w-5" />

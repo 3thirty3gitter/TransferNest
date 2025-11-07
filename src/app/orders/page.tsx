@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Package, Truck, CheckCircle, Clock } from 'lucide-react';
 
 // Simple utility to format currency
-const formatCurrency = (amount: number, currency: string = 'USD') => {
+const formatCurrency = (amount: number, currency: string = 'CAD') => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency
