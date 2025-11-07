@@ -29,9 +29,9 @@ export default function CartPage() {
       <div className="container mx-auto px-4 py-8 text-center">
         <ShoppingCart className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Your cart is empty</h1>
-        <p className="text-muted-foreground mb-4">Start building your DTF sheets.</p>
-        <Button asChild>
-          <Link href="/nesting-tool-13">Build 13" Sheet</Link>
+        <p className="text-muted-foreground mb-4">Start creating your custom DTF gang sheets.</p>
+        <Button asChild size="lg">
+          <Link href="/">Continue Shopping</Link>
         </Button>
       </div>
     );
