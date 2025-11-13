@@ -88,7 +88,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         });
       }, 100); // Update every 100ms for smooth progress
 
-      const result = executeNesting(images, sheetWidth);
+      const result = await executeNesting(images, sheetWidth);
       
       clearInterval(progressInterval);
       

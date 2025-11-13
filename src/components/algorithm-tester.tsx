@@ -129,11 +129,11 @@ export default function AlgorithmTester() {
     
     // Test 13" algorithm
     console.log('\n--- Testing 13" Sheet ---');
-    const result13 = executeNesting(images, 13);
+    const result13 = await executeNesting(images, 13);
     
     // Test 17" algorithm
     console.log('\n--- Testing 17" Sheet ---');
-    const result17 = executeNesting(images, 17);
+    const result17 = await executeNesting(images, 17);
     
     // Store results
     const newResults: TestResult[] = [
