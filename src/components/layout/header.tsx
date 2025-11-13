@@ -34,17 +34,22 @@ export default function Header() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-white">
-            <Link href="/nesting-tool" className="hover:opacity-80 transition-opacity">
-              Create Gang Sheet
+            <Link href="/nesting-tool" className="group relative px-4 py-2 rounded-lg hover:bg-white/10 transition-all">
+              <span className="flex items-center gap-2">
+                Create Gang Sheet
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
+                  New
+                </span>
+              </span>
             </Link>
-            <Link href="/#features" className="hover:opacity-80 transition-opacity">
+            <Link href="/#features" className="px-4 py-2 rounded-lg hover:bg-white/10 transition-all">
               Features
             </Link>
-            <Link href="/cart" className="relative hover:opacity-80 transition-opacity flex items-center gap-2">
+            <Link href="/cart" className="relative px-4 py-2 rounded-lg hover:bg-white/10 transition-all flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
               <span>Cart</span>
               {totalItems > 0 && (
-                <Badge className="bg-gradient-to-r from-pink-500 to-red-500 text-white border-0 px-2 py-0.5 text-xs">
+                <Badge className="bg-gradient-to-r from-pink-500 to-red-500 text-white border-0 px-2 py-0.5 text-xs shadow-lg animate-pulse">
                   {totalItems}
                 </Badge>
               )}
@@ -93,7 +98,12 @@ export default function Header() {
               className="block text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Create Gang Sheet
+              <span className="flex items-center justify-between">
+                <span>Create Gang Sheet</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
+                  New
+                </span>
+              </span>
             </Link>
             <Link 
               href="/#features" 
@@ -112,7 +122,7 @@ export default function Header() {
                 Cart
               </span>
               {totalItems > 0 && (
-                <Badge className="bg-gradient-to-r from-pink-500 to-red-500 text-white border-0">
+                <Badge className="bg-gradient-to-r from-pink-500 to-red-500 text-white border-0 shadow-lg animate-pulse">
                   {totalItems}
                 </Badge>
               )}
