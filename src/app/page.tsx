@@ -77,100 +77,15 @@ export default function Home() {
 
           {/* Scroll Indicator */}
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-            <div className="w-6 h-10 border-2 border-white/30 rounded-full flex items-start justify-center p-2">
-              <div className="w-1 h-3 bg-white/50 rounded-full"></div>
+            <div className="flex flex-col items-center gap-2 text-white/60">
+              <span className="text-sm font-medium">Scroll to explore</span>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
             </div>
           </div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-24 md:py-32 relative">
-          <div className="container relative z-10">
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-4">
-                <Zap className="h-4 w-4 text-yellow-400" />
-                <span className="text-sm font-medium">Powered by AI</span>
-              </div>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  Why We're Different
-                </span>
-              </h2>
-              <p className="max-w-3xl mx-auto text-slate-300 text-lg">
-                Industry-leading technology meets unbeatable quality. Experience the future of DTF transfers.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Feature Card 1 */}
-              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Wand2 className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">AI-Powered Nesting</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Our intelligent algorithm achieves 90%+ sheet utilization, maximizing your ROI and minimizing waste on every order.
-                </p>
-              </div>
-
-              {/* Feature Card 2 */}
-              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Star className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">Premium Quality</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Vibrant colors, incredible detail, and a soft hand feel. Our transfers are engineered for excellence.
-                </p>
-              </div>
-
-              {/* Feature Card 3 */}
-              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <CheckCircle className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">Wash Tested</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Exceptional washability and stretch resistance. Your designs stay vibrant wash after wash.
-                </p>
-              </div>
-
-              {/* Feature Card 4 */}
-              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <TrendingUp className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">Wholesale Pricing</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Pay by the inch and save big. Just $0.45/inch for 13" sheets and $0.59/inch for 17" sheets.
-                </p>
-              </div>
-
-              {/* Feature Card 5 */}
-              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Zap className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">Lightning Fast</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Upload, nest, and order in minutes. Get your transfers delivered in 24-48 hours across Canada.
-                </p>
-              </div>
-
-              {/* Feature Card 6 */}
-              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <UploadCloud className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">Simple Workflow</h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Upload your designs, let AI optimize placement, review, and checkout. It's that easy.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-        
         {/* Products Section */}
         <section className="py-24 md:py-32 relative overflow-hidden">
           {/* Background Gradient */}
@@ -282,6 +197,94 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Features Section */}
+        <section id="features" className="py-24 md:py-32 relative">
+          <div className="container relative z-10">
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-4">
+                <Zap className="h-4 w-4 text-yellow-400" />
+                <span className="text-sm font-medium">Powered by AI</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  Why We're Different
+                </span>
+              </h2>
+              <p className="max-w-3xl mx-auto text-slate-300 text-lg">
+                Industry-leading technology meets unbeatable quality. Experience the future of DTF transfers.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Feature Card 1 */}
+              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Wand2 className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3">AI-Powered Nesting</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Our intelligent algorithm achieves 90%+ sheet utilization, maximizing your ROI and minimizing waste on every order.
+                </p>
+              </div>
+
+              {/* Feature Card 2 */}
+              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Star className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3">Premium Quality</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Vibrant colors, incredible detail, and a soft hand feel. Our transfers are engineered for excellence.
+                </p>
+              </div>
+
+              {/* Feature Card 3 */}
+              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <CheckCircle className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3">Wash Tested</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Exceptional washability and stretch resistance. Your designs stay vibrant wash after wash.
+                </p>
+              </div>
+
+              {/* Feature Card 4 */}
+              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <TrendingUp className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3">Wholesale Pricing</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Pay by the inch and save big. Just $0.45/inch for 13" sheets and $0.59/inch for 17" sheets.
+                </p>
+              </div>
+
+              {/* Feature Card 5 */}
+              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Zap className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3">Lightning Fast</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Upload, nest, and order in minutes. Get your transfers delivered in 24-48 hours across Canada.
+                </p>
+              </div>
+
+              {/* Feature Card 6 */}
+              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group hover:glow">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <UploadCloud className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3">Simple Workflow</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Upload your designs, let AI optimize placement, review, and checkout. It's that easy.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+        
         {/* Showcase Section */}
         <section className="py-24 md:py-32 relative">
           <div className="container">
