@@ -194,7 +194,7 @@ export default function AlgorithmReporter() {
     
     for (const size of sizes) {
       console.log(`\n--- Testing ${size}" Sheet ---`);
-      const result = executeNesting(images, size);
+      const result = await executeNesting(images, size);
       const metrics = calculateMetrics(images, result);
       
       newResults.push({
