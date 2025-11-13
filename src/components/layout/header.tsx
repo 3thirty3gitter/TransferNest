@@ -34,13 +34,8 @@ export default function Header() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-white">
-            <Link href="/nesting-tool" className="group relative px-4 py-2 rounded-lg hover:bg-white/10 transition-all">
-              <span className="flex items-center gap-2">
-                Create Gang Sheet
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
-                  New
-                </span>
-              </span>
+            <Link href="/nesting-tool" className="px-4 py-2 rounded-lg hover:bg-white/10 transition-all">
+              Create Gang Sheet
             </Link>
             <Link href="/#features" className="px-4 py-2 rounded-lg hover:bg-white/10 transition-all">
               Features
@@ -98,12 +93,7 @@ export default function Header() {
               className="block text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
-              <span className="flex items-center justify-between">
-                <span>Create Gang Sheet</span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
-                  New
-                </span>
-              </span>
+              Create Gang Sheet
             </Link>
             <Link 
               href="/#features" 
