@@ -107,71 +107,89 @@ export default function AdminNestingTool() {
   const handleDownload = async () => {
     if (!nestingResult) return;
 
-    // Create a canvas to render the gang sheet
-    const canvas = document.createElement('canvas');
-    const dpi = 300; // High resolution for printing
-    const pixelsPerInch = dpi;
-    
-    canvas.width = sheetWidth * pixelsPerInch;
-    canvas.height = nestingResult.sheetLength * pixelsPerInch;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    try {
+      // Create a canvas to render the gang sheet
+      const canvas = document.createElement('canvas');
+      const dpi = 300; // High resolution for printing
+      const pixelsPerInch = dpi;
+      
+      canvas.width = sheetWidth * pixelsPerInch;
+      canvas.height = nestingResult.sheetLength * pixelsPerInch;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    // White background
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // White background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Load and draw all images
-    const imagePromises = nestingResult.placedItems.map(item => {
-      return new Promise<void>((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          const displayWidth = item.width * pixelsPerInch;
-          const displayHeight = item.height * pixelsPerInch;
+      // Load and draw all images with proper CORS handling
+      const imagePromises = nestingResult.placedItems.map(item => {
+        return new Promise<void>((resolve, reject) => {
+          const img = new Image();
           
-          ctx.save();
+          // Try to load with CORS first
+          img.crossOrigin = 'anonymous';
           
-          if (item.rotated) {
-            const x = item.x * pixelsPerInch;
-            const y = item.y * pixelsPerInch;
-            ctx.translate(x, y + displayWidth);
-            ctx.rotate(-Math.PI / 2);
-            ctx.drawImage(img, 0, 0, displayHeight, displayWidth);
-          } else {
-            ctx.drawImage(
-              img,
-              item.x * pixelsPerInch,
-              item.y * pixelsPerInch,
-              displayWidth,
-              displayHeight
-            );
-          }
+          img.onload = () => {
+            try {
+              const displayWidth = item.width * pixelsPerInch;
+              const displayHeight = item.height * pixelsPerInch;
+              
+              ctx.save();
+              
+              if (item.rotated) {
+                const x = item.x * pixelsPerInch;
+                const y = item.y * pixelsPerInch;
+                ctx.translate(x, y + displayWidth);
+                ctx.rotate(-Math.PI / 2);
+                ctx.drawImage(img, 0, 0, displayHeight, displayWidth);
+              } else {
+                ctx.drawImage(
+                  img,
+                  item.x * pixelsPerInch,
+                  item.y * pixelsPerInch,
+                  displayWidth,
+                  displayHeight
+                );
+              }
+              
+              ctx.restore();
+              resolve();
+            } catch (error) {
+              console.error('Error drawing image:', error);
+              resolve(); // Continue even if one image fails
+            }
+          };
           
-          ctx.restore();
-          resolve();
-        };
-        img.onerror = () => resolve();
-        img.src = item.url;
+          img.onerror = (error) => {
+            console.error('Error loading image:', item.url, error);
+            resolve(); // Continue even if one image fails to load
+          };
+          
+          img.src = item.url;
+        });
       });
-    });
 
-    await Promise.all(imagePromises);
+      await Promise.all(imagePromises);
 
-    // Download
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `gangsheet-${sheetWidth}inch-${Date.now()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    }, 'image/png');
+      // Download
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `gangsheet-${sheetWidth}inch-${Date.now()}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }, 'image/png');
+    } catch (error) {
+      console.error('Error generating download:', error);
+      alert('Failed to generate download. Please check console for details.');
+    }
   };
 
   if (loading) {
