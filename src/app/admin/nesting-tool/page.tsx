@@ -30,7 +30,7 @@ export default function AdminNestingTool() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const hasAccess = await checkAdminAccess(user.uid);
+        const hasAccess = await checkAdminAccess();
         setIsAdmin(hasAccess);
         if (!hasAccess) {
           router.push('/admin/login');
