@@ -133,18 +133,27 @@ export default function AdminNestingTool() {
           
           img.onload = () => {
             try {
-              const displayWidth = item.width * pixelsPerInch;
-              const displayHeight = item.height * pixelsPerInch;
-              
               ctx.save();
               
               if (item.rotated) {
+                // For rotated images, item.width and item.height are already swapped
+                // So item.width = original height, item.height = original width
+                // We need to unswap them for drawing
                 const x = item.x * pixelsPerInch;
                 const y = item.y * pixelsPerInch;
-                ctx.translate(x, y + displayWidth);
-                ctx.rotate(-Math.PI / 2);
-                ctx.drawImage(img, 0, 0, displayHeight, displayWidth);
+                const drawWidth = item.height * pixelsPerInch;  // Use height as width (unswap)
+                const drawHeight = item.width * pixelsPerInch;  // Use width as height (unswap)
+                
+                // Position for rotation: rotate around top-left of rotated space
+                ctx.translate(x + drawHeight, y);
+                ctx.rotate(Math.PI / 2);
+                
+                // Draw the image in its original orientation
+                ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
               } else {
+                // Non-rotated images draw normally
+                const displayWidth = item.width * pixelsPerInch;
+                const displayHeight = item.height * pixelsPerInch;
                 ctx.drawImage(
                   img,
                   item.x * pixelsPerInch,
