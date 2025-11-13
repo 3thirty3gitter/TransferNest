@@ -68,17 +68,17 @@ export default function SheetPreview({
   };
 
   return (
-    <Card className="lg:sticky lg:top-24">
-      <CardHeader>
-        <CardTitle className="font-headline text-xl">Live Preview</CardTitle>
-        <CardDescription>
+    <div className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-md rounded-2xl p-6 border border-white/10 shadow-xl">
+      <div className="mb-6">
+        <h3 className="text-xl font-bold text-white mb-2">Live Preview</h3>
+        <p className="text-sm text-slate-300">
           Your {sheetWidth}" wide sheet layout.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </p>
+      </div>
+      <div>
         <div 
           ref={containerRef}
-          className="relative w-full bg-muted/50 rounded-lg border flex items-center justify-center"
+          className="relative w-full bg-slate-950/50 rounded-xl border border-white/10 flex items-center justify-center"
           style={{ height: `${containerHeight}px`, transition: 'height 0.5s ease-in-out' }}
         >
           <div
@@ -92,16 +92,16 @@ export default function SheetPreview({
             }}
           >
             {isLoading && (
-              <div className="absolute inset-0 z-10 bg-white/70 flex flex-col items-center justify-center backdrop-blur-sm">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 font-semibold">Nesting images...</p>
+              <div className="absolute inset-0 z-10 bg-slate-950/70 flex flex-col items-center justify-center backdrop-blur-sm">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-400" />
+                <p className="mt-4 font-semibold text-white">Nesting images...</p>
               </div>
             )}
             {!isLoading && memoizedLayout.length === 0 && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-4">
-                <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                <p className="mt-4 font-semibold text-muted-foreground">Your sheet is empty</p>
-                <p className="text-sm text-muted-foreground">Upload and arrange images to see a preview.</p>
+                <ImageIcon className="h-12 w-12 text-slate-400" />
+                <p className="mt-4 font-semibold text-slate-300">Your sheet is empty</p>
+                <p className="text-sm text-slate-400">Upload and arrange images to see a preview.</p>
               </div>
             )}
             {memoizedLayout
@@ -155,7 +155,7 @@ export default function SheetPreview({
               })}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

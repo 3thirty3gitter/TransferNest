@@ -75,9 +75,8 @@ export async function POST(request: NextRequest) {
     const result = await client.payments.create(requestBody);
 
     if (result.payment) {
-      // Payment successful - now save the order and generate print files
-      const printFiles = await generatePrintFiles(cartItems, userId);
-      
+      // Payment successful - TWO-PHASE ORDER CREATION
+      // Phase 1: Create order without print files
       const orderId = await saveOrder({
         paymentId: result.payment.id,
         amount: amount / 100, // Convert back to dollars
@@ -86,18 +85,45 @@ export async function POST(request: NextRequest) {
         cartItems,
         userId,
         status: 'paid',
-        printFiles,
+        printFiles: [], // Empty initially
       });
 
-      return NextResponse.json({
-        success: true,
-        paymentId: result.payment.id,
-        orderId,
-        message: 'Payment processed successfully',
-        printFiles: printFiles.map(pf => ({
-          filename: pf.filename,
-          dimensions: pf.dimensions
-        }))
+      console.log(`[ORDER] Order created: ${orderId}`);
+
+      // Phase 2: Generate and upload print files
+      try {
+        const printFileData = await generateAndUploadPrintFiles(cartItems, orderId, userId);
+        console.log(`[ORDER] ${printFileData.length} print files uploaded`);
+
+        // Phase 3: Update order with print file URLs
+        const orderManager = new OrderManager();
+        await orderManager.addPrintFiles(orderId, printFileData);
+        console.log(`[ORDER] Order updated with print file URLs`);
+
+        return NextResponse.json({
+          success: true,
+          paymentId: result.payment.id,
+          orderId,
+          message: 'Payment processed successfully',
+          printFiles: printFileData.map(pf => ({
+            filename: pf.filename,
+            url: pf.url,
+            dimensions: pf.dimensions
+          }))
+        });
+
+      } catch (printError) {
+        // Order created but print files failed - log error but don't fail payment
+        console.error('[ORDER] Print file generation failed:', printError);
+        return NextResponse.json({
+          success: true,
+          paymentId: result.payment.id,
+          orderId,
+          message: 'Payment processed successfully',
+          warning: 'Print files will be generated shortly',
+          printFiles: []
+        });
+      }
       });
     } else {
       // Payment failed
@@ -176,12 +202,13 @@ async function saveOrder(orderData: any) {
   }
 }
 
-// Helper function to generate print-ready files
-async function generatePrintFiles(cartItems: any[], userId: string) {
+// Helper function to generate and upload print-ready files
+async function generateAndUploadPrintFiles(cartItems: any[], orderId: string, userId: string) {
   try {
     const printGenerator = new PrintExportGenerator();
     const printStorage = new PrintFileStorage();
     const printResults = [];
+    const uploadedFiles: any[] = [];
 
     for (const item of cartItems) {
       const { layout, sheetSize } = item;
@@ -218,11 +245,32 @@ async function generatePrintFiles(cartItems: any[], userId: string) {
       printResults.push(printResult);
     }
 
-    console.log(`Generated ${printResults.length} print files`);
-    return printResults;
+    console.log(`[PRINT] Generated ${printResults.length} print files`);
+
+    // Upload all print files to Firebase Storage
+    for (const printResult of printResults) {
+      const uploadResult = await printStorage.uploadPrintResult(
+        printResult,
+        orderId,
+        userId
+      );
+
+      uploadedFiles.push({
+        filename: uploadResult.filename,
+        url: uploadResult.url,
+        path: uploadResult.path,
+        size: uploadResult.size,
+        dimensions: printResult.dimensions
+      });
+
+      console.log(`[PRINT] Uploaded: ${uploadResult.filename} (${(uploadResult.size / 1024).toFixed(2)} KB)`);
+    }
+
+    console.log(`[PRINT] All ${uploadedFiles.length} files uploaded to Firebase Storage`);
+    return uploadedFiles;
 
   } catch (error) {
-    console.error('Error generating print files:', error);
+    console.error('Error generating and uploading print files:', error);
     throw error;
   }
 }

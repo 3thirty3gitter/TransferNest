@@ -1,0 +1,77 @@
+╔═══════════════════════════════════════════════════════════════════╗
+║          QUICK BOUNDARY VIOLATION CHECK                           ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+TEST 1: 45 Car Images on 17" Sheet (User Scenario)
+
+Placed: 45/45
+Sheet Length: 47.13"
+Utilization: 75.83%
+
+Checking boundary violations...
+
+✅ PASS: No boundary violations detected!
+
+
+══════════════════════════════════════════════════════════════════════
+
+TEST 2: Mixed Batch (Cars + Logos + Text) on 17" Sheet
+
+Placed: 55/55
+Sheet Length: 49.25"
+Utilization: 84.65%
+
+Checking boundary violations...
+
+✅ PASS: No boundary violations detected!
+
+
+══════════════════════════════════════════════════════════════════════
+
+TEST 3: Large Images Near 17" Boundary
+
+Placed: 13/13
+Sheet Length: 36.88"
+Utilization: 89.81%
+
+Checking boundary violations...
+
+✅ PASS: No boundary violations detected!
+
+
+══════════════════════════════════════════════════════════════════════
+
+TEST 4: 30 Car Images on 13" Sheet
+
+Placed: 30/30
+Sheet Length: 47.13"
+Utilization: 66.11%
+
+Checking boundary violations...
+
+✅ PASS: No boundary violations detected!
+
+
+╔═══════════════════════════════════════════════════════════════════╗
+║                        SUMMARY REPORT                             ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+Tests Passed: 4/4
+Total Violations: 0
+
+Test Results:
+  Test 1 (17" - 45 Cars):        ✅ PASS
+  Test 2 (17" - Mixed 55 items): ✅ PASS
+  Test 3 (17" - Large Images):   ✅ PASS
+  Test 4 (13" - 30 Cars):        ✅ PASS
+
+🎉 SUCCESS: All tests passed! No boundary violations detected.
+
+CONCLUSION: The algorithm correctly respects sheet width boundaries.
+The "overflow" you observed in the UI is likely a display/rendering issue,
+not an algorithm bug. Check the sheet-preview.tsx component.
+
+╔═══════════════════════════════════════════════════════════════════╗
+║                      TEST COMPLETE                                ║
+╚═══════════════════════════════════════════════════════════════════╝
+

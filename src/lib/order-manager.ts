@@ -279,4 +279,33 @@ export class OrderManager {
       throw new Error('Failed to get order by payment ID');
     }
   }
+
+  /**
+   * Get all orders (Admin only)
+   */
+  async getAllOrders(limitCount?: number): Promise<Order[]> {
+    try {
+      let q = query(
+        this.ordersCollection,
+        orderBy('createdAt', 'desc')
+      );
+
+      if (limitCount) {
+        q = query(q, limit(limitCount));
+      }
+
+      const querySnapshot = await getDocs(q);
+      const orders: Order[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        orders.push({ id: doc.id, ...doc.data() } as Order);
+      });
+
+      console.log(`Retrieved ${orders.length} orders`);
+      return orders;
+    } catch (error) {
+      console.error('Error getting all orders:', error);
+      throw new Error('Failed to get all orders');
+    }
+  }
 }

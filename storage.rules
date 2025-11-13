@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'admin@transfernest.com' ||
+        request.auth.token.email == 'your-email@gmail.com' // Replace with actual admin emails
+      );
+    }
+    
+    // Print files - organized by user/order
+    match /orders/{userId}/{orderId}/{filename} {
+      // Users can read their own print files, admins can read all
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || 
+        isAdmin()
+      );
+      
+      // Only admins and system can create/update print files
+      allow write: if isAdmin();
+    }
+    
+    // Uploaded images (from nesting tool)
+    match /uploads/{userId}/{filename} {
+      // Users can read/write their own uploads
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public assets (logos, etc)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Default deny for all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -49,29 +49,29 @@ export type PackingMethod = 'bottom-left-fill' | 'maxrects' | 'BottomLeft' | 'ma
 export const VIRTUAL_SHEET_HEIGHT = 10000; // Virtual height for calculations
 
 // Main function signature
-export function executeNesting(
+export async function executeNesting(
   images: ManagedImage[],
   sheetWidth: number,
-  padding: number = 0.05,  // Maintain safe cutting margin
-  targetUtilization: number = 0.9
-): NestingResult {
+  padding: number = 0.125,  // REDUCED: Test with tighter spacing for 90%+ target
+  targetUtilization: number = 0.95  // INCREASED: Push algorithm harder
+): Promise<NestingResult> {
   // Route to size-specific algorithm
   // Both 13" and 17" sheets now use adaptive genetic algorithm for consistency
   if (sheetWidth === 13) {
-    return executeNesting13Advanced(images, sheetWidth, padding, targetUtilization);
+    return await executeNesting13Advanced(images, sheetWidth, padding, targetUtilization);
   }
   // Use adaptive GA for 17" sheets too (instead of shelf-packing)
-  return executeNesting17Advanced(images, sheetWidth, padding, targetUtilization);
+  return await executeNesting17Advanced(images, sheetWidth, padding, targetUtilization);
 }
 
 // ADVANCED algorithm for 13" sheets using NFP approach (Deepnest-inspired)
 // This achieves 82-90%+ utilization vs 76% with shelf-packing
-function executeNesting13Advanced(
+async function executeNesting13Advanced(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.05,
   targetUtilization: number = 0.9
-): NestingResult {
+): Promise<NestingResult> {
   // Rotation function for 13" sheets
   function canRotate(img: ManagedImage): boolean {
     if (img.dataAiHint) {
@@ -83,25 +83,37 @@ function executeNesting13Advanced(
     return aspectRatio < 0.95 || aspectRatio > 1.05;
   }
 
-  // Try multiple strategies and pick the best (genetic algorithm concept from Deepnest)
-  // INCREASED SPACING for easier cutting (0.25" between images)
+  // ULTRA EXTREME PARAMETERS FOR 90%+ UTILIZATION
+  // 250 population, 250 generations, 0.10" spacing
   const strategies = [
     { 
-      name: 'GA_SAFE_SPACING', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.25, canRotate, {
-        populationSize: 80,
-        generations: 40,
-        mutationRate: 0.25,
-        rotationSteps: 4
+      name: 'GA_ULTRA_EXTREME_1', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, {
+        adaptive: false,
+        rotationSteps: 4,
+        populationSize: 250,  // ULTRA EXTREME
+        generations: 250,     // ULTRA EXTREME
+        mutationRate: 0.38
       }) 
     },
     { 
-      name: 'GA_NORMAL_PADDING', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, Math.max(padding, 0.25), canRotate, {
-        populationSize: 80,
-        generations: 40,
-        mutationRate: 0.25,
-        rotationSteps: 4
+      name: 'GA_ULTRA_EXTREME_2', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, {
+        adaptive: false,
+        rotationSteps: 4,
+        populationSize: 250,
+        generations: 250,
+        mutationRate: 0.42    // MAXIMUM
+      }) 
+    },
+    { 
+      name: 'GA_ULTRA_EXTREME_3', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.08, canRotate, {
+        adaptive: false,
+        rotationSteps: 4,
+        populationSize: 250,
+        generations: 250,
+        mutationRate: 0.40
       }) 
     }
   ];
@@ -110,13 +122,14 @@ function executeNesting13Advanced(
 
   for (const strategy of strategies) {
     console.log(`[13" TRYING] ${strategy.name}...`);
-    const result = strategy.fn();
+    const result = await strategy.fn();
     
     if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
       bestResult = result;
     }
 
-    if (result.areaUtilizationPct >= targetUtilization) {
+    // ONLY stop early if we hit 90%+ (not 85% or lower)
+    if (result.areaUtilizationPct >= 0.90) {
       console.log(`[13" SUCCESS] ${strategy.name} achieved ${(result.areaUtilizationPct * 100).toFixed(1)}%`);
       return result;
     }
@@ -128,13 +141,13 @@ function executeNesting13Advanced(
 
 // ADVANCED algorithm for 17" sheets using adaptive genetic algorithm
 // Replaces shelf-packing to achieve consistent 85-90%+ utilization
-function executeNesting17Advanced(
+async function executeNesting17Advanced(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.05,
   targetUtilization: number = 0.9
-): NestingResult {
-  // Rotation function for 17" sheets
+): Promise<NestingResult> {
+  // Rotation function for 17" sheets - more aggressive for wider sheets
   function canRotate(img: ManagedImage): boolean {
     if (img.dataAiHint) {
       const hint = img.dataAiHint.toLowerCase();
@@ -142,22 +155,41 @@ function executeNesting17Advanced(
       if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall') || hint.includes('horizontal')) return true;
     }
     const aspectRatio = img.width / img.height;
+    // Wider sheets benefit from more rotation flexibility
     return aspectRatio < 0.95 || aspectRatio > 1.05;
   }
 
-  // Try multiple padding strategies with adaptive GA
-  // INCREASED SPACING for easier cutting (0.25" between images)
+  // ULTRA EXTREME PARAMETERS FOR 17" SHEETS
+  // 250 population, 250 generations, 0.10" spacing
   const strategies = [
     { 
-      name: 'GA_SAFE_SPACING', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.25, canRotate, { 
-        adaptive: true  // Enable adaptive parameters
+      name: 'GA_ULTRA_EXTREME_1', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, { 
+        adaptive: false,
+        rotationSteps: 4,
+        populationSize: 250,
+        generations: 250,
+        mutationRate: 0.38
       })
     },
     { 
-      name: 'GA_NORMAL_PADDING', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, Math.max(padding, 0.25), canRotate, { 
-        adaptive: true
+      name: 'GA_ULTRA_EXTREME_2', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, { 
+        adaptive: false,
+        rotationSteps: 4,
+        populationSize: 250,
+        generations: 250,
+        mutationRate: 0.42
+      })
+    },
+    { 
+      name: 'GA_ULTRA_EXTREME_3', 
+      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.08, canRotate, { 
+        adaptive: false,
+        rotationSteps: 4,
+        populationSize: 250,
+        generations: 250,
+        mutationRate: 0.40
       })
     }
   ];
@@ -166,10 +198,16 @@ function executeNesting17Advanced(
 
   for (const strategy of strategies) {
     console.log(`[17" TRYING] ${strategy.name}...`);
-    const result = strategy.fn();
+    const result = await strategy.fn();
     
     if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
       bestResult = result;
+    }
+    
+    // ONLY stop early if we hit 90%+
+    if (result.areaUtilizationPct >= 0.90) {
+      console.log(`[17" SUCCESS] ${strategy.name} achieved ${(result.areaUtilizationPct * 100).toFixed(1)}%`);
+      return result;
     }
   }
 

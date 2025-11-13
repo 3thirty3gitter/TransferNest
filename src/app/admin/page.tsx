@@ -11,6 +11,18 @@ type OrderStatus = 'pending' | 'paid' | 'printing' | 'shipped' | 'completed';
 type PaymentStatus = 'pending' | 'paid' | 'refunded';
 type ShippingStatus = 'pending' | 'processing' | 'shipped' | 'delivered';
 
+type PrintFile = {
+  filename: string;
+  url: string;
+  path: string;
+  size: number;
+  dimensions: {
+    width: number;
+    height: number;
+    dpi: number;
+  };
+};
+
 type Order = {
   id: string;
   userId: string;
@@ -20,7 +32,7 @@ type Order = {
   paymentStatus: PaymentStatus;
   shippingStatus: ShippingStatus;
   totalAmount: number;
-  printFileUrl?: string;
+  printFiles: PrintFile[];
   sheetWidth: number;
   sheetLength: number;
   itemCount: number;
@@ -99,12 +111,29 @@ export default function AdminPage() {
   }
 
   async function downloadPrintFile(order: Order) {
-    if (!order.printFileUrl) {
-      alert('No print file available');
+    if (!order.printFiles || order.printFiles.length === 0) {
+      alert('No print files available');
       return;
     }
     
-    window.open(order.printFileUrl, '_blank');
+    // If single file, download directly
+    if (order.printFiles.length === 1) {
+      window.open(order.printFiles[0].url, '_blank');
+      return;
+    }
+    
+    // If multiple files, show selection
+    const fileNames = order.printFiles.map((f, i) => `${i + 1}. ${f.filename}`).join('\n');
+    const selection = prompt(`Select file to download:\n\n${fileNames}\n\nEnter file number (1-${order.printFiles.length}):`);
+    
+    if (!selection) return;
+    
+    const index = parseInt(selection) - 1;
+    if (index >= 0 && index < order.printFiles.length) {
+      window.open(order.printFiles[index].url, '_blank');
+    } else {
+      alert('Invalid file number');
+    }
   }
 
   function toggleOrderSelection(orderId: string) {
@@ -160,16 +189,31 @@ export default function AdminPage() {
   async function downloadAllPrintFiles() {
     const ordersWithFiles = Array.from(selectedOrders)
       .map(id => orders.find(o => o.id === id))
-      .filter(o => o?.printFileUrl);
+      .filter(o => o?.printFiles && o.printFiles.length > 0);
 
     if (ordersWithFiles.length === 0) {
       alert('No print files available for selected orders');
       return;
     }
 
+    // Count total files
+    const totalFiles = ordersWithFiles.reduce((sum, order) => 
+      sum + (order?.printFiles?.length || 0), 0
+    );
+
+    if (!confirm(`Download ${totalFiles} file(s) from ${ordersWithFiles.length} order(s)?\n\nNote: Your browser may block multiple downloads. Please allow pop-ups if prompted.`)) {
+      return;
+    }
+
+    // Download all files from all selected orders
     ordersWithFiles.forEach(order => {
-      if (order?.printFileUrl) {
-        window.open(order.printFileUrl, '_blank');
+      if (order?.printFiles) {
+        order.printFiles.forEach((file, index) => {
+          // Add small delay between downloads to avoid browser blocking
+          setTimeout(() => {
+            window.open(file.url, '_blank');
+          }, index * 200);
+        });
       }
     });
   }
@@ -373,14 +417,19 @@ export default function AdminPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button
                       onClick={() => downloadPrintFile(order)}
-                      disabled={!order.printFileUrl}
+                      disabled={!order.printFiles || order.printFiles.length === 0}
                       className={`px-3 py-1 rounded ${
-                        order.printFileUrl
+                        order.printFiles && order.printFiles.length > 0
                           ? 'bg-blue-500 text-white hover:bg-blue-600'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
+                      title={order.printFiles && order.printFiles.length > 0 
+                        ? `Download ${order.printFiles.length} file(s)` 
+                        : 'No files available'}
                     >
-                      Download
+                      {order.printFiles && order.printFiles.length > 0 
+                        ? `Download (${order.printFiles.length})` 
+                        : 'No Files'}
                     </button>
                   </td>
                 </tr>

@@ -150,9 +150,12 @@ export default function ImageManager({
   };
   
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-headline text-xl">Your Images</CardTitle>
+    <div className="glass-strong rounded-2xl p-6 shadow-xl border border-white/10">
+      <div className="flex flex-row items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400"></span>
+          Your Images
+        </h2>
         <input
             type="file"
             ref={fileInputRef}
@@ -161,21 +164,25 @@ export default function ImageManager({
             accept="image/png, image/jpeg, image/webp, image/svg+xml"
             disabled={isUploading}
             multiple
-        />        <Button onClick={handleUploadClick} size="sm" disabled={isUploading}>
+        />        <button 
+          onClick={handleUploadClick} 
+          disabled={isUploading}
+          className="py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-lg transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
+        >
           {isUploading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               Uploading...
             </>
           ) : (
             <>
-              <Upload className="mr-2 h-4 w-4" />
+              <Upload className="h-4 w-4" />
               Upload
             </>
           )}
-        </Button>
-      </CardHeader>
-      <CardContent>
+        </button>
+      </div>
+      <div>
         {images.length > 0 ? (
           <div className="space-y-6">
             {images.map((image) => (              <ImageCard
@@ -189,12 +196,12 @@ export default function ImageManager({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-             <p className="text-muted-foreground">No images uploaded yet.</p>
-            <p className="text-sm text-muted-foreground mt-1">Click "Upload" to get started!</p>
+          <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-white/20 rounded-xl bg-white/5">
+             <p className="text-slate-300">No images uploaded yet.</p>
+            <p className="text-sm text-slate-400 mt-1">Click "Upload" to get started!</p>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

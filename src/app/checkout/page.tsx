@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Header from '@/components/layout/header';
+import Footer from '@/components/layout/footer';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { CreditCard, Lock, ArrowLeft } from 'lucide-react';
+import { CreditCard, Lock, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { initSquarePayments, squareConfig } from '@/lib/square';
@@ -192,206 +192,219 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Button variant="ghost" asChild>
-          <Link href="/cart">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
+      <Header />
+      <div className="h-16"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <Link
+            href="/cart"
+            className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
             Back to Cart
           </Link>
-        </Button>
-      </div>
+        </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Checkout Form */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Checkout Form */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="glass-strong rounded-2xl p-6 border border-white/10">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400"></span>
+                Contact Information
+              </h2>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName" className="text-slate-200 font-semibold">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      value={customerInfo.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName" className="text-slate-200 font-semibold">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      value={customerInfo.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <Label htmlFor="firstName">First Name *</Label>
+                  <Label htmlFor="email" className="text-slate-200 font-semibold">Email *</Label>
                   <Input
-                    id="firstName"
-                    value={customerInfo.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    id="email"
+                    type="email"
+                    value={customerInfo.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
                     required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Label htmlFor="phone" className="text-slate-200 font-semibold">Phone *</Label>
                   <Input
-                    id="lastName"
-                    value={customerInfo.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    id="phone"
+                    type="tel"
+                    value={customerInfo.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
                     required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                   />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={customerInfo.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={customerInfo.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  required
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Shipping Address</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="address">Address *</Label>
-                <Input
-                  id="address"
-                  value={customerInfo.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    value={customerInfo.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="state">State *</Label>
-                  <Input
-                    id="state"
-                    value={customerInfo.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
-                    required
-                  />
               </div>
             </div>
-            <div>
-              <Label htmlFor="zipCode">Postal Code *</Label>
-              <Input
-                id="zipCode"
-                value={customerInfo.zipCode}
-                onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                required
-              />
+
+            <div className="glass-strong rounded-2xl p-6 border border-white/10">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"></span>
+                Shipping Address
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="address" className="text-slate-200 font-semibold">Address *</Label>
+                  <Input
+                    id="address"
+                    value={customerInfo.address}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="city" className="text-slate-200 font-semibold">City *</Label>
+                    <Input
+                      id="city"
+                      value={customerInfo.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="state" className="text-slate-200 font-semibold">State *</Label>
+                    <Input
+                      id="state"
+                      value={customerInfo.state}
+                      onChange={(e) => handleInputChange('state', e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                    />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="zipCode" className="text-slate-200 font-semibold">Postal Code *</Label>
+                <Input
+                  id="zipCode"
+                  value={customerInfo.zipCode}
+                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                  required
+                  className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                />
+              </div>
             </div>
-          </CardContent>
-        </Card>          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <CreditCard className="mr-2 h-5 w-5" />
+          </div>
+
+            <div className="glass-strong rounded-2xl p-6 border border-white/10">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <CreditCard className="h-6 w-6" />
                 Payment Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h2>
               <div 
                 id="card-container"
-                className="min-h-[60px] border rounded-md p-3 bg-background"
+                className="min-h-[60px] border border-white/20 rounded-xl p-4 bg-white/5"
               >
                 {/* Square card form will be inserted here */}
               </div>
-              <div className="flex items-center mt-4 text-sm text-muted-foreground">
+              <div className="flex items-center mt-4 text-sm text-slate-400">
                 <Lock className="mr-2 h-4 w-4" />
                 Your payment information is secure and encrypted
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
-        {/* Order Summary */}
-        <div>
-          <Card className="sticky top-4">
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {items.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <div className="flex-1">
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-muted-foreground">
-                        {item.sheetSize}" DTF Sheet • Qty: {item.quantity}
+          {/* Order Summary */}
+          <div>
+            <div className="glass-strong rounded-2xl p-6 border border-white/10 sticky top-24">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-emerald-400"></span>
+                Order Summary
+              </h2>
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  {items.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm py-3 border-b border-white/10">
+                      <div className="flex-1">
+                        <p className="font-medium text-white">{item.name}</p>
+                        <p className="text-slate-400">
+                          {item.sheetSize}" DTF Sheet • Qty: {item.quantity}
+                        </p>
+                      </div>
+                      <p className="font-medium text-white">
+                        ${(item.pricing.total * item.quantity).toFixed(2)}
                       </p>
                     </div>
-                    <p className="font-medium">
-                      ${(item.pricing.total * item.quantity).toFixed(2)}
-                    </p>
+                  ))}
+                </div>
+                
+                <div className="border-t border-white/10 pt-4">
+                  <div className="space-y-2 text-slate-300">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span className="text-white">${totalPrice.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Shipping</span>
+                      <span className="text-green-400">Free</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Tax</span>
+                      <span>Calculated at delivery</span>
+                    </div>
+                    <div className="flex justify-between text-xl font-bold pt-3 border-t border-white/10">
+                      <span className="text-white">Total</span>
+                      <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">${totalPrice.toFixed(2)}</span>
+                    </div>
                   </div>
-                ))}
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>${totalPrice.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span>Free</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tax</span>
-                  <span>Calculated at delivery</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total</span>
-                  <span>${totalPrice.toFixed(2)}</span>
-                </div>
-              </div>
 
-              <Button 
-                onClick={handlePayment}
-                disabled={isLoading}
-                className="w-full"
-                size="lg"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-background border-t-transparent mr-2" />
-                    Processing Payment...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="mr-2 h-4 w-4" />
-                    Pay ${totalPrice.toFixed(2)}
-                  </>
-                )}
-              </Button>
+                <button
+                  onClick={handlePayment}
+                  disabled={isLoading}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-xl transition-all hover:scale-105 hover:shadow-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                      Processing Payment...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-5 w-5" />
+                      Pay ${totalPrice.toFixed(2)}
+                    </>
+                  )}
+                </button>
 
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>• Secure payment processing by Square</p>
-                <p>• 256-bit SSL encryption</p>
-                <p>• Your card information is never stored</p>
+                <div className="text-xs text-slate-400 space-y-1 pt-4">
+                  <p>• Secure payment processing by Square</p>
+                  <p>• 256-bit SSL encryption</p>
+                  <p>• Your card information is never stored</p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
