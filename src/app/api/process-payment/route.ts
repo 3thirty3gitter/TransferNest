@@ -124,7 +124,6 @@ export async function POST(request: NextRequest) {
           printFiles: []
         });
       }
-      });
     } else {
       // Payment failed
       const errorMessages = result.errors?.map((error: any) => error.detail).join(', ') || 'Payment failed';
