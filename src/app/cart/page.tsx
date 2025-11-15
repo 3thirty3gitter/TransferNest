@@ -4,12 +4,20 @@ import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import { ShoppingCart, Trash2, Sparkles, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Trash2, Sparkles, ArrowRight, Edit2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
   const { items, totalItems, totalPrice, removeItem } = useCart();
   const { user } = useAuth();
+  const router = useRouter();
+
+  const handleEditItem = (itemId: string) => {
+    // Store the item ID in sessionStorage so nesting tool can load it
+    sessionStorage.setItem('editCartItemId', itemId);
+    router.push('/nesting-tool');
+  };
 
   if (!user) {
     return (
@@ -82,12 +90,22 @@ export default function CartPage() {
                       {item.sheetSize}" DTF Sheet • {item.layout.totalCopies} designs
                     </p>
                   </div>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all hover:scale-110"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEditItem(item.id)}
+                      className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all hover:scale-110"
+                      title="Edit this design"
+                    >
+                      <Edit2 className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all hover:scale-110"
+                      title="Remove from cart"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-center pt-4 border-t border-white/10">

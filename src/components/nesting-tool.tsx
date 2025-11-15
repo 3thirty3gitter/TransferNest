@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { executeNesting, ManagedImage, NestingResult } from '@/lib/nesting-algorithm';
 import SheetPreview from './sheet-preview';
 import ImageManager from './image-manager';
@@ -30,6 +30,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sheetWidth, setSheetWidth] = useState<13 | 17>(initialWidth as 13 | 17);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   
   // Progress modal state
   const [modalStage, setModalStage] = useState<'preparing' | 'genetic-algorithm' | 'optimizing' | 'complete'>('preparing');
@@ -37,9 +38,37 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
   const [currentGeneration, setCurrentGeneration] = useState(0);
   const [bestUtilization, setBestUtilization] = useState(0);
   
-  const { addItem } = useCart();
+  const { addItem, updateItem, getItemById } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Check for edit mode on mount
+  useEffect(() => {
+    const editCartItemId = sessionStorage.getItem('editCartItemId');
+    if (editCartItemId) {
+      const cartItem = getItemById(editCartItemId);
+      if (cartItem) {
+        setEditingItemId(editCartItemId);
+        setImages(cartItem.images);
+        setSheetWidth(cartItem.sheetSize === '17' ? 17 : 13);
+        
+        // Restore the nesting result
+        setNestingResult({
+          placedItems: cartItem.layout.positions,
+          sheetLength: cartItem.layout.sheetHeight,
+          areaUtilizationPct: cartItem.layout.utilization / 100,
+          wastedSpace: 0, // Will be recalculated if needed
+        } as NestingResult);
+        
+        toast({
+          title: "Editing Cart Item",
+          description: "Modify your design and save changes to update the cart.",
+        });
+      }
+      // Clear the session storage flag
+      sessionStorage.removeItem('editCartItemId');
+    }
+  }, [getItemById, toast]);
 
   const performNesting = async () => {
     if (images.length === 0) return;
@@ -181,16 +210,37 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
       quantity: 1,
     };
 
-    addItem(cartItem);
-    
-    toast({
-      title: "Added to Cart!",
-      description: `Your ${sheetSizeStr}" DTF sheet layout has been added to cart.`,
-    });
+    // Check if we're editing an existing item
+    if (editingItemId) {
+      updateItem(editingItemId, cartItem);
+      toast({
+        title: "Cart Updated!",
+        description: `Your ${sheetSizeStr}" DTF sheet has been updated.`,
+      });
+      // Clear edit mode
+      setEditingItemId(null);
+    } else {
+      addItem(cartItem);
+      toast({
+        title: "Added to Cart!",
+        description: `Your ${sheetSizeStr}" DTF sheet layout has been added to cart.`,
+      });
+    }
   };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Edit Mode Banner */}
+      {editingItemId && (
+        <div className="bg-blue-500/20 border border-blue-400/50 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-white">Editing Cart Item</h3>
+            <p className="text-sm text-slate-300">Make your changes and click "Update Cart" to save.</p>
+          </div>
+        </div>
+      )}
+
       {/* Progress Modal */}
       <NestingProgressModal
         isOpen={isProcessing}
@@ -280,7 +330,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
                       className="w-full py-3 px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-xl transition-all hover:scale-105 hover:shadow-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                       <ShoppingCart className="h-5 w-5" />
-                      Add to Cart
+                      {editingItemId ? 'Update Cart' : 'Add to Cart'}
                     </button>
                     
                     {!user && (

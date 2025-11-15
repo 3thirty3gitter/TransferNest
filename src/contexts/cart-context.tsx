@@ -34,6 +34,7 @@ type CartAction =
   | { type: 'ADD_ITEM'; payload: Omit<CartItem, 'id' | 'dateAdded'> }
   | { type: 'REMOVE_ITEM'; payload: string }
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
+  | { type: 'UPDATE_ITEM'; payload: { id: string; item: Omit<CartItem, 'id' | 'dateAdded'> } }
   | { type: 'CLEAR_CART' };
 
 const initialState: CartState = {
@@ -91,6 +92,23 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       };
     }
 
+    case 'UPDATE_ITEM': {
+      const newItems = state.items.map(item =>
+        item.id === action.payload.id
+          ? { ...action.payload.item, id: item.id, dateAdded: item.dateAdded }
+          : item
+      );
+
+      const totalItems = newItems.reduce((sum, item) => sum + item.quantity, 0);
+      const totalPrice = newItems.reduce((sum, item) => sum + (item.pricing.total * item.quantity), 0);
+
+      return {
+        items: newItems,
+        totalItems,
+        totalPrice,
+      };
+    }
+
     case 'CLEAR_CART':
       return initialState;
 
@@ -103,6 +121,8 @@ interface CartContextValue extends CartState {
   addItem: (item: Omit<CartItem, 'id' | 'dateAdded'>) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  updateItem: (id: string, item: Omit<CartItem, 'id' | 'dateAdded'>) => void;
+  getItemById: (id: string) => CartItem | undefined;
   clearCart: () => void;
 }
 
@@ -123,6 +143,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
   };
 
+  const updateItem = (id: string, item: Omit<CartItem, 'id' | 'dateAdded'>) => {
+    dispatch({ type: 'UPDATE_ITEM', payload: { id, item } });
+  };
+
+  const getItemById = (id: string): CartItem | undefined => {
+    return state.items.find(item => item.id === id);
+  };
+
   const clearCart = () => {
     dispatch({ type: 'CLEAR_CART' });
   };
@@ -134,6 +162,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         addItem,
         removeItem,
         updateQuantity,
+        updateItem,
+        getItemById,
         clearCart,
       }}
     >
