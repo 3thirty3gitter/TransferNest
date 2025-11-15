@@ -92,7 +92,7 @@ export default function CartPage() {
 
                 <div className="flex justify-between items-center pt-4 border-t border-white/10">
                   <div className="text-slate-300">
-                    <p className="text-sm">Sheet Size: {item.sheetSize}" × {item.sheetSize === '13' ? '19' : '22'}"</p>
+                    <p className="text-sm">Sheet Size: {item.layout.sheetWidth}" × {item.layout.sheetHeight}"</p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">

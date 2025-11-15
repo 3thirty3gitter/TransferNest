@@ -12,6 +12,8 @@ export interface CartItem {
     positions: Array<{ x: number; y: number; width: number; height: number; imageId: string; copyIndex: number }>;
     utilization: number;
     totalCopies: number;
+    sheetWidth: number;
+    sheetHeight: number;
   };
   pricing: {
     basePrice: number;
