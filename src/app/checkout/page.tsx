@@ -27,13 +27,23 @@ export default function CheckoutPage() {
   
   // Delivery method state
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
+  const [useShippingAddress, setUseShippingAddress] = useState(false);
   
-  // Customer information state
+  // Customer information state (includes billing/contact address)
   const [customerInfo, setCustomerInfo] = useState({
     email: user?.email || '',
     firstName: '',
     lastName: '',
     phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'CA',
+  });
+
+  // Separate shipping address (only if different from contact)
+  const [shippingAddress, setShippingAddress] = useState({
     address: '',
     city: '',
     state: '',
@@ -101,28 +111,30 @@ export default function CheckoutPage() {
     }));
   };
 
-  // Calculate tax dynamically based on location
+  const handleShippingInputChange = (field: string, value: string) => {
+    setShippingAddress(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Calculate tax dynamically based on contact location (postal code determines tax)
   const taxCalculation = useMemo(() => {
-    if (deliveryMethod === 'pickup') {
-      // Pickup uses business location (Ontario)
-      return calculateTax(totalPrice, 'ON', 'CA');
-    }
-    
-    // For shipping, calculate based on customer's province/state
+    // Tax is ALWAYS based on contact information province/state
     if (customerInfo.state && customerInfo.country) {
       return calculateTax(totalPrice, customerInfo.state, customerInfo.country);
     }
     
     // Default to Ontario if no state selected yet
     return calculateTax(totalPrice, 'ON', 'CA');
-  }, [totalPrice, customerInfo.state, customerInfo.country, deliveryMethod]);
+  }, [totalPrice, customerInfo.state, customerInfo.country]);
 
   const orderTotal = totalPrice + taxCalculation.total;
 
   const validateForm = () => {
-    const contactRequired = ['firstName', 'lastName', 'email', 'phone'] as const;
+    const contactRequired = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'] as const;
     
-    // Validate contact information
+    // Validate contact information (always required, includes address for tax calculation)
     for (const field of contactRequired) {
       if (!customerInfo[field]?.trim()) {
         toast({
@@ -134,11 +146,11 @@ export default function CheckoutPage() {
       }
     }
     
-    // Validate shipping address only if shipping is selected
-    if (deliveryMethod === 'shipping') {
-      const addressRequired = ['address', 'city', 'state', 'zipCode'] as const;
-      for (const field of addressRequired) {
-        if (!customerInfo[field]?.trim()) {
+    // Validate separate shipping address if shipping is selected AND different address is chosen
+    if (deliveryMethod === 'shipping' && useShippingAddress) {
+      const shippingRequired = ['address', 'city', 'state', 'zipCode'] as const;
+      for (const field of shippingRequired) {
+        if (!shippingAddress[field]?.trim()) {
           toast({
             title: "Missing Shipping Address",
             description: `Please fill in all shipping address fields.`,
@@ -193,7 +205,9 @@ export default function CheckoutPage() {
             amount: paymentAmount,
             currency: 'CAD',
             customerInfo,
+            shippingAddress: deliveryMethod === 'shipping' && useShippingAddress ? shippingAddress : customerInfo,
             deliveryMethod,
+            useShippingAddress,
             cartItems: items,
             userId: user.uid,
             taxAmount: taxCalculation.total,
@@ -308,6 +322,69 @@ export default function CheckoutPage() {
                     className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="contact-address" className="text-slate-200 font-semibold">Address *</Label>
+                  <Input
+                    id="contact-address"
+                    value={customerInfo.address}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    required
+                    placeholder="Street address"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contact-country" className="text-slate-200 font-semibold">Country *</Label>
+                  <select
+                    id="contact-country"
+                    value={customerInfo.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    required
+                    className="w-full bg-white/10 border border-white/20 text-white rounded-md px-3 py-2 mt-2 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="CA" className="bg-slate-800">Canada</option>
+                    <option value="US" className="bg-slate-800">United States</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="contact-city" className="text-slate-200 font-semibold">City *</Label>
+                    <Input
+                      id="contact-city"
+                      value={customerInfo.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="contact-state" className="text-slate-200 font-semibold">
+                      {customerInfo.country === 'CA' ? 'Province' : 'State'} *
+                    </Label>
+                    <Input
+                      id="contact-state"
+                      value={customerInfo.state}
+                      onChange={(e) => handleInputChange('state', e.target.value.toUpperCase())}
+                      required
+                      placeholder={customerInfo.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
+                      maxLength={2}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="contact-zipCode" className="text-slate-200 font-semibold">
+                    {customerInfo.country === 'CA' ? 'Postal Code' : 'ZIP Code'} *
+                  </Label>
+                  <Input
+                    id="contact-zipCode"
+                    value={customerInfo.zipCode}
+                    onChange={(e) => handleInputChange('zipCode', e.target.value.toUpperCase())}
+                    required
+                    placeholder={customerInfo.country === 'CA' ? 'A1A 1A1' : '12345'}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                  />
+                </div>
               </div>
             </div>
 
@@ -382,70 +459,100 @@ export default function CheckoutPage() {
                   Shipping Address
                 </h2>
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="address" className="text-slate-200 font-semibold">Address *</Label>
-                    <Input
-                      id="address"
-                      value={customerInfo.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      required
-                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                  <div className="flex items-center gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <input
+                      type="checkbox"
+                      id="useShippingAddress"
+                      checked={useShippingAddress}
+                      onChange={(e) => setUseShippingAddress(e.target.checked)}
+                      className="w-5 h-5 rounded border-2 border-blue-500 bg-white/10 checked:bg-blue-500 cursor-pointer"
                     />
+                    <Label htmlFor="useShippingAddress" className="text-white font-medium cursor-pointer">
+                      Ship to a different address
+                    </Label>
                   </div>
-                  <div>
-                    <Label htmlFor="country" className="text-slate-200 font-semibold">Country *</Label>
-                    <select
-                      id="country"
-                      value={customerInfo.country}
-                      onChange={(e) => handleInputChange('country', e.target.value)}
-                      required
-                      className="w-full bg-white/10 border border-white/20 text-white rounded-md px-3 py-2 mt-2 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="CA" className="bg-slate-800">Canada</option>
-                      <option value="US" className="bg-slate-800">United States</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="city" className="text-slate-200 font-semibold">City *</Label>
-                      <Input
-                        id="city"
-                        value={customerInfo.city}
-                        onChange={(e) => handleInputChange('city', e.target.value)}
-                        required
-                        className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                      />
+
+                  {!useShippingAddress && (
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                      <p className="text-slate-300 text-sm mb-2">Shipping to:</p>
+                      <p className="text-white font-medium">{customerInfo.address || 'Address not entered'}</p>
+                      <p className="text-white">{customerInfo.city && customerInfo.state && customerInfo.zipCode
+                        ? `${customerInfo.city}, ${customerInfo.state} ${customerInfo.zipCode}`
+                        : 'City, Province/State, Postal Code not entered'}
+                      </p>
+                      <p className="text-white">{customerInfo.country === 'CA' ? 'Canada' : 'United States'}</p>
                     </div>
-                    <div>
-                      <Label htmlFor="state" className="text-slate-200 font-semibold">
-                        {customerInfo.country === 'CA' ? 'Province' : 'State'} *
-                      </Label>
-                      <Input
-                        id="state"
-                        value={customerInfo.state}
-                        onChange={(e) => handleInputChange('state', e.target.value.toUpperCase())}
-                        required
-                        placeholder={customerInfo.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
-                        maxLength={2}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                      />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="zipCode" className="text-slate-200 font-semibold">
-                    {customerInfo.country === 'CA' ? 'Postal Code' : 'ZIP Code'} *
-                  </Label>
-                  <Input
-                    id="zipCode"
-                    value={customerInfo.zipCode}
-                    onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                    required
-                    placeholder={customerInfo.country === 'CA' ? 'A1A 1A1' : '12345'}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                  />
+                  )}
+
+                  {useShippingAddress && (
+                    <>
+                      <div>
+                        <Label htmlFor="shipping-address" className="text-slate-200 font-semibold">Address *</Label>
+                        <Input
+                          id="shipping-address"
+                          value={shippingAddress.address}
+                          onChange={(e) => handleShippingInputChange('address', e.target.value)}
+                          required
+                          placeholder="Street address"
+                          className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="shipping-country" className="text-slate-200 font-semibold">Country *</Label>
+                        <select
+                          id="shipping-country"
+                          value={shippingAddress.country}
+                          onChange={(e) => handleShippingInputChange('country', e.target.value)}
+                          required
+                          className="w-full bg-white/10 border border-white/20 text-white rounded-md px-3 py-2 mt-2 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="CA" className="bg-slate-800">Canada</option>
+                          <option value="US" className="bg-slate-800">United States</option>
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="shipping-city" className="text-slate-200 font-semibold">City *</Label>
+                          <Input
+                            id="shipping-city"
+                            value={shippingAddress.city}
+                            onChange={(e) => handleShippingInputChange('city', e.target.value)}
+                            required
+                            className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="shipping-state" className="text-slate-200 font-semibold">
+                            {shippingAddress.country === 'CA' ? 'Province' : 'State'} *
+                          </Label>
+                          <Input
+                            id="shipping-state"
+                            value={shippingAddress.state}
+                            onChange={(e) => handleShippingInputChange('state', e.target.value.toUpperCase())}
+                            required
+                            placeholder={shippingAddress.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
+                            maxLength={2}
+                            className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="shipping-zipCode" className="text-slate-200 font-semibold">
+                          {shippingAddress.country === 'CA' ? 'Postal Code' : 'ZIP Code'} *
+                        </Label>
+                        <Input
+                          id="shipping-zipCode"
+                          value={shippingAddress.zipCode}
+                          onChange={(e) => handleShippingInputChange('zipCode', e.target.value.toUpperCase())}
+                          required
+                          placeholder={shippingAddress.country === 'CA' ? 'A1A 1A1' : '12345'}
+                          className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-            </div>
             )}
 
             {deliveryMethod === 'pickup' && (
