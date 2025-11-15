@@ -576,11 +576,37 @@ export default function CheckoutPage() {
                   <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
                     <p className="text-white font-medium mb-2">Pickup Location:</p>
                     {companySettings?.companyInfo?.pickupInfo?.address ? (
-                      <p className="text-slate-300">{companySettings.companyInfo.pickupInfo.address}</p>
+                      <>
+                        <p className="text-slate-300 mb-2">{companySettings.companyInfo.pickupInfo.address}</p>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(companySettings.companyInfo.pickupInfo.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Open in Google Maps
+                        </a>
+                      </>
                     ) : (
                       <>
-                        <p className="text-slate-300">133 Church St</p>
-                        <p className="text-slate-300">St Catharines, ON L2R 3C7</p>
+                        <p className="text-slate-300 mb-2">133 Church St</p>
+                        <p className="text-slate-300 mb-2">St Catharines, ON L2R 3C7</p>
+                        <a
+                          href="https://www.google.com/maps/search/?api=1&query=133+Church+St,+St+Catharines,+ON+L2R+3C7"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Open in Google Maps
+                        </a>
                       </>
                     )}
                   </div>
