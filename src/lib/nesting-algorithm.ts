@@ -49,29 +49,29 @@ export type PackingMethod = 'bottom-left-fill' | 'maxrects' | 'BottomLeft' | 'ma
 export const VIRTUAL_SHEET_HEIGHT = 10000; // Virtual height for calculations
 
 // Main function signature
-export async function executeNesting(
+export function executeNesting(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.125,  // REDUCED: Test with tighter spacing for 90%+ target
   targetUtilization: number = 0.95  // INCREASED: Push algorithm harder
-): Promise<NestingResult> {
+): NestingResult {
   // Route to size-specific algorithm
   // Both 13" and 17" sheets now use adaptive genetic algorithm for consistency
   if (sheetWidth === 13) {
-    return await executeNesting13Advanced(images, sheetWidth, padding, targetUtilization);
+    return executeNesting13Advanced(images, sheetWidth, padding, targetUtilization);
   }
   // Use adaptive GA for 17" sheets too (instead of shelf-packing)
-  return await executeNesting17Advanced(images, sheetWidth, padding, targetUtilization);
+  return executeNesting17Advanced(images, sheetWidth, padding, targetUtilization);
 }
 
 // ADVANCED algorithm for 13" sheets using NFP approach (Deepnest-inspired)
 // This achieves 82-90%+ utilization vs 76% with shelf-packing
-async function executeNesting13Advanced(
+function executeNesting13Advanced(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.05,
   targetUtilization: number = 0.9
-): Promise<NestingResult> {
+): NestingResult {
   // Rotation function for 13" sheets
   function canRotate(img: ManagedImage): boolean {
     if (img.dataAiHint) {
@@ -122,7 +122,7 @@ async function executeNesting13Advanced(
 
   for (const strategy of strategies) {
     console.log(`[13" TRYING] ${strategy.name}...`);
-    const result = await strategy.fn();
+    const result = strategy.fn();
     
     if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
       bestResult = result;
@@ -141,12 +141,12 @@ async function executeNesting13Advanced(
 
 // ADVANCED algorithm for 17" sheets using adaptive genetic algorithm
 // Replaces shelf-packing to achieve consistent 85-90%+ utilization
-async function executeNesting17Advanced(
+function executeNesting17Advanced(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.05,
   targetUtilization: number = 0.9
-): Promise<NestingResult> {
+): NestingResult {
   // Rotation function for 17" sheets - more aggressive for wider sheets
   function canRotate(img: ManagedImage): boolean {
     if (img.dataAiHint) {
@@ -198,7 +198,7 @@ async function executeNesting17Advanced(
 
   for (const strategy of strategies) {
     console.log(`[17" TRYING] ${strategy.name}...`);
-    const result = await strategy.fn();
+    const result = strategy.fn();
     
     if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
       bestResult = result;

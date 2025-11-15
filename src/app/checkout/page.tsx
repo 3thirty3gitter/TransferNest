@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ import { CreditCard, Lock, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { initSquarePayments, squareConfig } from '@/lib/square';
+import { calculateTax, formatTaxBreakdown } from '@/lib/tax-calculator';
 
 export default function CheckoutPage() {
   const { items, totalItems, totalPrice, clearCart } = useCart();
@@ -24,6 +25,9 @@ export default function CheckoutPage() {
   const [cardPayment, setCardPayment] = useState<any>(null);
   const [payments, setPayments] = useState<any>(null);
   
+  // Delivery method state
+  const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
+  
   // Customer information state
   const [customerInfo, setCustomerInfo] = useState({
     email: user?.email || '',
@@ -34,6 +38,7 @@ export default function CheckoutPage() {
     city: '',
     state: '',
     zipCode: '',
+    country: 'CA',
   });
 
   // Redirect if not authenticated or cart is empty
@@ -96,17 +101,51 @@ export default function CheckoutPage() {
     }));
   };
 
-  const validateForm = () => {
-    const required = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'] as const;
+  // Calculate tax dynamically based on location
+  const taxCalculation = useMemo(() => {
+    if (deliveryMethod === 'pickup') {
+      // Pickup uses business location (Ontario)
+      return calculateTax(totalPrice, 'ON', 'CA');
+    }
     
-    for (const field of required) {
+    // For shipping, calculate based on customer's province/state
+    if (customerInfo.state && customerInfo.country) {
+      return calculateTax(totalPrice, customerInfo.state, customerInfo.country);
+    }
+    
+    // Default to Ontario if no state selected yet
+    return calculateTax(totalPrice, 'ON', 'CA');
+  }, [totalPrice, customerInfo.state, customerInfo.country, deliveryMethod]);
+
+  const orderTotal = totalPrice + taxCalculation.total;
+
+  const validateForm = () => {
+    const contactRequired = ['firstName', 'lastName', 'email', 'phone'] as const;
+    
+    // Validate contact information
+    for (const field of contactRequired) {
       if (!customerInfo[field]?.trim()) {
         toast({
           title: "Missing Information",
-          description: `Please fill in all required fields.`,
+          description: `Please fill in all contact information fields.`,
           variant: "destructive",
         });
         return false;
+      }
+    }
+    
+    // Validate shipping address only if shipping is selected
+    if (deliveryMethod === 'shipping') {
+      const addressRequired = ['address', 'city', 'state', 'zipCode'] as const;
+      for (const field of addressRequired) {
+        if (!customerInfo[field]?.trim()) {
+          toast({
+            title: "Missing Shipping Address",
+            description: `Please fill in all shipping address fields.`,
+            variant: "destructive",
+          });
+          return false;
+        }
       }
     }
     
@@ -132,11 +171,13 @@ export default function CheckoutPage() {
       const result = await cardPayment.tokenize();
       
       if (result.status === 'OK') {
-        const paymentAmount = Math.round(totalPrice * 100);
+        const paymentAmount = Math.round(orderTotal * 100);
         
         console.log('[CHECKOUT] Preparing payment:', {
           amount: paymentAmount,
-          totalPrice,
+          subtotal: totalPrice,
+          tax: taxCalculation.total,
+          orderTotal,
           currency: 'CAD',
           itemCount: items.length
         });
@@ -152,8 +193,16 @@ export default function CheckoutPage() {
             amount: paymentAmount,
             currency: 'CAD',
             customerInfo,
+            deliveryMethod,
             cartItems: items,
             userId: user.uid,
+            taxAmount: taxCalculation.total,
+            taxRate: taxCalculation.rate,
+            taxBreakdown: {
+              gst: taxCalculation.gst,
+              pst: taxCalculation.pst,
+              hst: taxCalculation.hst,
+            },
           }),
         });
         
@@ -265,53 +314,166 @@ export default function CheckoutPage() {
             <div className="glass-strong rounded-2xl p-6 border border-white/10">
               <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"></span>
-                Shipping Address
+                Delivery Method
               </h2>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="address" className="text-slate-200 font-semibold">Address *</Label>
-                  <Input
-                    id="address"
-                    value={customerInfo.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    required
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryMethod('shipping')}
+                  className={`w-full p-4 rounded-xl border-2 transition-all ${
+                    deliveryMethod === 'shipping'
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-white/20 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${
+                      deliveryMethod === 'shipping' ? 'border-blue-500' : 'border-white/40'
+                    }`}>
+                      {deliveryMethod === 'shipping' && (
+                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      )}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-white">Ship to Address</div>
+                      <div className="text-sm text-slate-400 mt-1">
+                        We'll ship your order to your address
+                      </div>
+                      <div className="text-sm text-green-400 mt-1">Free Shipping</div>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDeliveryMethod('pickup')}
+                  className={`w-full p-4 rounded-xl border-2 transition-all ${
+                    deliveryMethod === 'pickup'
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-white/20 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${
+                      deliveryMethod === 'pickup' ? 'border-purple-500' : 'border-white/40'
+                    }`}>
+                      {deliveryMethod === 'pickup' && (
+                        <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                      )}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-white">Local Pickup</div>
+                      <div className="text-sm text-slate-400 mt-1">
+                        Pick up your order at our location
+                      </div>
+                      <div className="text-sm text-purple-400 mt-1">
+                        133 Church St, St Catharines, ON L2R 3C7
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {deliveryMethod === 'shipping' && (
+              <div className="glass-strong rounded-2xl p-6 border border-white/10">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"></span>
+                  Shipping Address
+                </h2>
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="city" className="text-slate-200 font-semibold">City *</Label>
+                    <Label htmlFor="address" className="text-slate-200 font-semibold">Address *</Label>
                     <Input
-                      id="city"
-                      value={customerInfo.city}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      id="address"
+                      value={customerInfo.address}
+                      onChange={(e) => handleInputChange('address', e.target.value)}
                       required
                       className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="state" className="text-slate-200 font-semibold">State *</Label>
-                    <Input
-                      id="state"
-                      value={customerInfo.state}
-                      onChange={(e) => handleInputChange('state', e.target.value)}
+                    <Label htmlFor="country" className="text-slate-200 font-semibold">Country *</Label>
+                    <select
+                      id="country"
+                      value={customerInfo.country}
+                      onChange={(e) => handleInputChange('country', e.target.value)}
                       required
-                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                    />
+                      className="w-full bg-white/10 border border-white/20 text-white rounded-md px-3 py-2 mt-2 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="CA" className="bg-slate-800">Canada</option>
+                      <option value="US" className="bg-slate-800">United States</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="city" className="text-slate-200 font-semibold">City *</Label>
+                      <Input
+                        id="city"
+                        value={customerInfo.city}
+                        onChange={(e) => handleInputChange('city', e.target.value)}
+                        required
+                        className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="state" className="text-slate-200 font-semibold">
+                        {customerInfo.country === 'CA' ? 'Province' : 'State'} *
+                      </Label>
+                      <Input
+                        id="state"
+                        value={customerInfo.state}
+                        onChange={(e) => handleInputChange('state', e.target.value.toUpperCase())}
+                        required
+                        placeholder={customerInfo.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
+                        maxLength={2}
+                        className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                      />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="zipCode" className="text-slate-200 font-semibold">
+                    {customerInfo.country === 'CA' ? 'Postal Code' : 'ZIP Code'} *
+                  </Label>
+                  <Input
+                    id="zipCode"
+                    value={customerInfo.zipCode}
+                    onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                    required
+                    placeholder={customerInfo.country === 'CA' ? 'A1A 1A1' : '12345'}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                  />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="zipCode" className="text-slate-200 font-semibold">Postal Code *</Label>
-                <Input
-                  id="zipCode"
-                  value={customerInfo.zipCode}
-                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                  required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                />
-              </div>
             </div>
-          </div>
+            )}
+
+            {deliveryMethod === 'pickup' && (
+              <div className="glass-strong rounded-2xl p-6 border border-white/10">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-400 to-pink-400"></span>
+                  Pickup Information
+                </h2>
+                <div className="space-y-4">
+                  <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                    <p className="text-white font-medium mb-2">Pickup Location:</p>
+                    <p className="text-slate-300">133 Church St</p>
+                    <p className="text-slate-300">St Catharines, ON L2R 3C7</p>
+                  </div>
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <p className="text-white font-medium mb-2">Hours:</p>
+                    <p className="text-slate-300">Monday - Friday: 9:00 AM - 5:00 PM</p>
+                    <p className="text-slate-300">Saturday: 10:00 AM - 2:00 PM</p>
+                    <p className="text-slate-300">Sunday: Closed</p>
+                  </div>
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <p className="text-amber-300 text-sm">
+                      <strong>Note:</strong> You'll receive an email when your order is ready for pickup. Please bring your order confirmation and a valid ID.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="glass-strong rounded-2xl p-6 border border-white/10">
               <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
@@ -365,13 +527,31 @@ export default function CheckoutPage() {
                       <span>Shipping</span>
                       <span className="text-green-400">Free</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Tax</span>
-                      <span>Calculated at delivery</span>
+                    <div className="flex justify-between">
+                      <span>Tax {customerInfo.state && `(${customerInfo.state})`}</span>
+                      <span className="text-white">${taxCalculation.total.toFixed(2)}</span>
                     </div>
+                    {taxCalculation.gst > 0 && (
+                      <div className="flex justify-between text-sm text-slate-400 pl-4">
+                        <span>GST (5%)</span>
+                        <span>${taxCalculation.gst.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {taxCalculation.pst > 0 && (
+                      <div className="flex justify-between text-sm text-slate-400 pl-4">
+                        <span>PST ({(taxCalculation.pst / totalPrice * 100).toFixed(2)}%)</span>
+                        <span>${taxCalculation.pst.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {taxCalculation.hst > 0 && (
+                      <div className="flex justify-between text-sm text-slate-400 pl-4">
+                        <span>HST ({(taxCalculation.rate * 100).toFixed(1)}%)</span>
+                        <span>${taxCalculation.hst.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-xl font-bold pt-3 border-t border-white/10">
                       <span className="text-white">Total</span>
-                      <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">${totalPrice.toFixed(2)}</span>
+                      <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">${orderTotal.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -389,7 +569,7 @@ export default function CheckoutPage() {
                   ) : (
                     <>
                       <Lock className="h-5 w-5" />
-                      Pay ${totalPrice.toFixed(2)}
+                      Pay ${orderTotal.toFixed(2)}
                     </>
                   )}
                 </button>

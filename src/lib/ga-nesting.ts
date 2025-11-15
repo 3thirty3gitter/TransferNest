@@ -5,9 +5,6 @@
 
 import type { ManagedImage, NestedImage, NestingResult } from './nesting-algorithm';
 
-// Utility to yield control back to browser
-const asyncBreak = () => new Promise(resolve => setTimeout(resolve, 0));
-
 // Development-only logging - disabled in production to keep console clean
 const debugLog = (...args: any[]) => {
   // Only log in development or when explicitly enabled
@@ -109,7 +106,7 @@ function getAdaptiveParameters(analysis: BatchAnalysis, totalItems: number): {
  * 1. Genetic Algorithm optimizes sequence + rotations
  * 2. Bottom-Left Fill executes placement
  */
-export async function geneticAlgorithmNesting(
+export function geneticAlgorithmNesting(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.25,
@@ -121,7 +118,7 @@ export async function geneticAlgorithmNesting(
     rotationSteps?: number;
     adaptive?: boolean; // Enable adaptive parameter tuning
   } = {}
-): Promise<NestingResult> {
+): NestingResult {
   const {
     rotationSteps = 4, // 0°, 90°, 180°, 270°
     adaptive = true
@@ -340,11 +337,6 @@ export async function geneticAlgorithmNesting(
     debugLog(`[GA GEN ${gen + 1}/${generations}] Best: ${(population[0].fitness * 100).toFixed(1)}%, Diversity: ${analysis.uniqueSizes} sizes`);
 
     if (gen === generations - 1) break;
-
-    // Yield control to browser every 5 generations to prevent "page unresponsive" warnings
-    if ((gen + 1) % 5 === 0) {
-      await asyncBreak();
-    }
 
     // Create next generation
     const nextGen: Chromosome[] = [];

@@ -14,7 +14,18 @@ const client = new SquareClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const { sourceId, amount, currency, customerInfo, cartItems, userId } = await request.json();
+    const { 
+      sourceId, 
+      amount, 
+      currency, 
+      customerInfo, 
+      cartItems, 
+      userId,
+      deliveryMethod,
+      taxAmount,
+      taxRate,
+      taxBreakdown,
+    } = await request.json();
 
     // Validate Square configuration
     if (!process.env.SQUARE_ACCESS_TOKEN) {
@@ -82,10 +93,14 @@ export async function POST(request: NextRequest) {
         amount: amount / 100, // Convert back to dollars
         currency,
         customerInfo,
+        deliveryMethod,
         cartItems,
         userId,
         status: 'paid',
         printFiles: [], // Empty initially
+        taxAmount: taxAmount || 0,
+        taxRate: taxRate || 0,
+        taxBreakdown: taxBreakdown || { gst: 0, pst: 0, hst: 0 },
       });
 
       console.log(`[ORDER] Order created: ${orderId}`);
@@ -170,10 +185,10 @@ async function saveOrder(orderData: any) {
       utilization: item.utilization || 0
     }));
 
-    // Calculate totals
+    // Calculate totals using provided tax or fallback
     const subtotal = orderItems.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
-    const tax = subtotal * 0.08; // 8% tax rate
-    const shipping = subtotal > 50 ? 0 : 9.99; // Free shipping over $50
+    const tax = orderData.taxAmount || (subtotal * 0.13); // Use provided tax or default to Ontario HST
+    const shipping = 0; // Free shipping
     const total = subtotal + tax + shipping;
 
     const order = {
@@ -181,9 +196,12 @@ async function saveOrder(orderData: any) {
       paymentId: orderData.paymentId,
       status: orderData.status,
       customerInfo: orderData.customerInfo,
+      deliveryMethod: orderData.deliveryMethod || 'shipping',
       items: orderItems,
       subtotal,
       tax,
+      taxRate: orderData.taxRate || 0.13,
+      taxBreakdown: orderData.taxBreakdown || { gst: 0, pst: 0, hst: tax },
       shipping,
       total,
       currency: orderData.currency || 'CAD',
