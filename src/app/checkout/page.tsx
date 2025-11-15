@@ -14,7 +14,6 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { initSquarePayments, squareConfig } from '@/lib/square';
 import { calculateTax, formatTaxBreakdown } from '@/lib/tax-calculator';
-import { getCompanySettings, type CompanySettings } from '@/lib/company-settings';
 
 export default function CheckoutPage() {
   const { items, totalItems, totalPrice, clearCart } = useCart();
@@ -25,7 +24,6 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [cardPayment, setCardPayment] = useState<any>(null);
   const [payments, setPayments] = useState<any>(null);
-  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   
   // Delivery method state
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
@@ -64,13 +62,6 @@ export default function CheckoutPage() {
       router.push('/cart');
       return;
     }
-
-    // Load company settings for pickup info
-    getCompanySettings().then(settings => {
-      if (settings) {
-        setCompanySettings(settings);
-      }
-    });
   }, [user, items, router]);
 
   // Initialize Square Payments
@@ -453,7 +444,7 @@ export default function CheckoutPage() {
                         Pick up your order at our location
                       </div>
                       <div className="text-sm text-purple-400 mt-1">
-                        {companySettings?.companyInfo.pickupInfo.address || '133 Church St, St Catharines, ON L2R 3C7'}
+                        133 Church St, St Catharines, ON L2R 3C7
                       </div>
                     </div>
                   </div>
@@ -573,29 +564,18 @@ export default function CheckoutPage() {
                 <div className="space-y-4">
                   <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
                     <p className="text-white font-medium mb-2">Pickup Location:</p>
-                    <p className="text-slate-300">
-                      {companySettings?.companyInfo.pickupInfo.address || '133 Church St, St Catharines, ON L2R 3C7'}
-                    </p>
+                    <p className="text-slate-300">133 Church St</p>
+                    <p className="text-slate-300">St Catharines, ON L2R 3C7</p>
                   </div>
                   <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                     <p className="text-white font-medium mb-2">Hours:</p>
-                    {companySettings ? (
-                      Object.entries(companySettings.companyInfo.pickupInfo.hours).map(([day, hours]) => (
-                        <p key={day} className="text-slate-300 capitalize">
-                          {day}: {hours}
-                        </p>
-                      ))
-                    ) : (
-                      <>
-                        <p className="text-slate-300">Monday - Friday: 9:00 AM - 5:00 PM</p>
-                        <p className="text-slate-300">Saturday: 10:00 AM - 2:00 PM</p>
-                        <p className="text-slate-300">Sunday: Closed</p>
-                      </>
-                    )}
+                    <p className="text-slate-300">Monday - Friday: 9:00 AM - 5:00 PM</p>
+                    <p className="text-slate-300">Saturday: 10:00 AM - 2:00 PM</p>
+                    <p className="text-slate-300">Sunday: Closed</p>
                   </div>
                   <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                     <p className="text-amber-300 text-sm">
-                      <strong>Note:</strong> {companySettings?.companyInfo.pickupInfo.instructions || "You'll receive an email when your order is ready for pickup. Please bring your order confirmation and a valid ID."}
+                      <strong>Note:</strong> You'll receive an email when your order is ready for pickup. Please bring your order confirmation and a valid ID.
                     </p>
                   </div>
                 </div>
