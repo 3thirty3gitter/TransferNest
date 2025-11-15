@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('[Orders API] Fetching orders:', { userId, status, limit: limitParam });
+
     const db = getFirestore();
     const ordersRef = db.collection('orders');
     let queryRef: any = ordersRef;
@@ -27,14 +29,21 @@ export async function GET(request: NextRequest) {
       queryRef = queryRef.where('status', '==', status);
     }
 
-    queryRef = queryRef.orderBy('createdAt', 'desc');
+    // Only add orderBy if we have the composite index or no where clause
+    // For userId queries, we'll sort client-side to avoid index requirement
+    if (!userId || status) {
+      queryRef = queryRef.orderBy('createdAt', 'desc');
+    }
 
     if (limitParam) {
       queryRef = queryRef.limit(parseInt(limitParam));
     }
 
+    console.log('[Orders API] Executing query...');
     const snapshot = await queryRef.get();
-    const orders = snapshot.docs.map((doc: any) => ({
+    console.log('[Orders API] Query successful, docs:', snapshot.size);
+
+    let orders = snapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || null,
@@ -44,15 +53,31 @@ export async function GET(request: NextRequest) {
       deliveredAt: doc.data().deliveredAt?.toDate?.()?.toISOString?.() || null,
     }));
 
+    // Sort client-side if we couldn't sort in the query
+    if (userId && !status) {
+      orders = orders.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+    }
+
+    console.log('[Orders API] Returning', orders.length, 'orders');
+
     return NextResponse.json({
       orders,
       count: orders.length
     });
 
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    console.error('[Orders API] Error fetching orders:', error);
+    console.error('[Orders API] Error details:', error instanceof Error ? error.stack : error);
     return NextResponse.json(
-      { error: 'Failed to fetch orders', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to fetch orders', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
