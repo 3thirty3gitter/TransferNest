@@ -52,13 +52,24 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         setImages(cartItem.images);
         setSheetWidth(cartItem.sheetSize === '17' ? 17 : 13);
         
-        // Restore the nesting result
+        // Restore the nesting result with all required properties
         setNestingResult({
-          placedItems: cartItem.layout.positions,
+          placedItems: cartItem.layout.positions.map(pos => ({
+            id: pos.imageId,
+            url: cartItem.images.find(img => img.id === pos.imageId)?.url || '',
+            x: pos.x,
+            y: pos.y,
+            width: pos.width,
+            height: pos.height,
+            rotated: pos.rotated || false,
+          })),
           sheetLength: cartItem.layout.sheetHeight,
           areaUtilizationPct: cartItem.layout.utilization / 100,
-          wastedSpace: 0, // Will be recalculated if needed
-        } as NestingResult);
+          totalCount: cartItem.layout.totalCopies,
+          failedCount: 0,
+          sortStrategy: 'AREA_DESC',
+          packingMethod: 'maxrects-packer',
+        });
         
         toast({
           title: "Editing Cart Item",
