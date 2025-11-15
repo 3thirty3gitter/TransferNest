@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Sort client-side if we couldn't sort in the query
     if (userId && !status) {
-      orders = orders.sort((a, b) => {
+      orders = orders.sort((a: any, b: any) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dateB - dateA;
