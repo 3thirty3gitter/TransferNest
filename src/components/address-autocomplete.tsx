@@ -84,7 +84,10 @@ export default function AddressAutocomplete({
         autocomplete.addEventListener('gmp-placeselect', async (event: any) => {
           const { place } = event;
           
-          if (!place) return;
+          if (!place) {
+            console.warn('No place data in event');
+            return;
+          }
 
           try {
             // Fetch place details
@@ -93,7 +96,10 @@ export default function AddressAutocomplete({
             });
 
             const addressComponents = place.addressComponents;
-            if (!addressComponents) return;
+            if (!addressComponents) {
+              console.warn('No address components returned');
+              return;
+            }
 
             const components: AddressComponents = {
               address: '',
@@ -131,10 +137,14 @@ export default function AddressAutocomplete({
             });
 
             components.address = `${streetNumber} ${route}`.trim();
+            
+            console.log('Address components parsed:', components);
+            
             onChange(components.address);
 
             if (onAddressSelect) {
               onAddressSelect(components);
+              console.log('onAddressSelect callback triggered');
             }
           } catch (error) {
             console.error('Error fetching place details:', error);
