@@ -16,6 +16,7 @@ import { initSquarePayments, squareConfig } from '@/lib/square';
 import { calculateTax, formatTaxBreakdown } from '@/lib/tax-calculator';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import AddressAutocomplete from '@/components/address-autocomplete';
 
 export default function CheckoutPage() {
   const { items, totalItems, totalPrice, clearCart } = useCart();
@@ -383,13 +384,22 @@ export default function CheckoutPage() {
                 </div>
                 <div>
                   <Label htmlFor="contact-address" className="text-slate-200 font-semibold">Address *</Label>
-                  <Input
-                    id="contact-address"
+                  <AddressAutocomplete
                     value={customerInfo.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    required
-                    placeholder="Street address"
+                    onChange={(value) => handleInputChange('address', value)}
+                    onAddressSelect={(components) => {
+                      setCustomerInfo(prev => ({
+                        ...prev,
+                        address: components.address,
+                        city: components.city,
+                        state: components.state,
+                        zipCode: components.zipCode,
+                        country: components.country,
+                      }));
+                    }}
+                    placeholder="Start typing your address..."
                     className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                    country={customerInfo.country}
                   />
                 </div>
                 <div>
@@ -547,13 +557,22 @@ export default function CheckoutPage() {
                     <>
                       <div>
                         <Label htmlFor="shipping-address" className="text-slate-200 font-semibold">Address *</Label>
-                        <Input
-                          id="shipping-address"
+                        <AddressAutocomplete
                           value={shippingAddress.address}
-                          onChange={(e) => handleShippingInputChange('address', e.target.value)}
-                          required
-                          placeholder="Street address"
+                          onChange={(value) => handleShippingInputChange('address', value)}
+                          onAddressSelect={(components) => {
+                            setShippingAddress(prev => ({
+                              ...prev,
+                              address: components.address,
+                              city: components.city,
+                              state: components.state,
+                              zipCode: components.zipCode,
+                              country: components.country,
+                            }));
+                          }}
+                          placeholder="Start typing your shipping address..."
                           className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
+                          country={shippingAddress.country}
                         />
                       </div>
                       <div>

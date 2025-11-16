@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AddressAutocomplete from '@/components/address-autocomplete';
 
 interface CustomerProfile {
   firstName: string;
@@ -296,12 +297,22 @@ export default function AccountPage() {
                   Street Address
                 </Label>
                 {isEditing ? (
-                  <Input
-                    type="text"
+                  <AddressAutocomplete
                     value={profile.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    onChange={(value) => handleInputChange('address', value)}
+                    onAddressSelect={(components) => {
+                      setProfile(prev => ({
+                        ...prev,
+                        address: components.address,
+                        city: components.city,
+                        state: components.state,
+                        zipCode: components.zipCode,
+                        country: components.country,
+                      }));
+                    }}
+                    placeholder="Start typing your address..."
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="123 Main Street"
+                    country={profile.country}
                   />
                 ) : (
                   <p className="text-white text-lg">{profile.address || 'Not set'}</p>
