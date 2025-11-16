@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Input } from '@/components/ui/input';
 
 interface AddressComponents {
   address: string;
@@ -29,8 +30,9 @@ export default function AddressAutocomplete({
   disabled = false,
   country = "ca",
 }: AddressAutocompleteProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const elementRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
   useEffect(() => {
     const loadGoogleMaps = async () => {
@@ -41,162 +43,105 @@ export default function AddressAutocomplete({
         return;
       }
 
-      // Check if already loaded
-      if (window.google?.maps?.places?.PlaceAutocompleteElement) {
-        initAutocomplete();
+      if (window.google?.maps?.places) {
+        setIsScriptLoaded(true);
         return;
       }
 
-      // Load script
       if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=Function.prototype`;
         script.async = true;
-        script.onload = () => initAutocomplete();
+        script.onload = () => setIsScriptLoaded(true);
+        script.onerror = () => console.error('Failed to load Google Maps');
         document.head.appendChild(script);
       }
     };
 
-    const initAutocomplete = () => {
-      if (!containerRef.current || elementRef.current) return;
+    loadGoogleMaps();
+  }, []);
 
-      try {
-        const { PlaceAutocompleteElement } = google.maps.places;
+  useEffect(() => {
+    if (!isScriptLoaded || !inputRef.current || autocompleteRef.current) {
+      return;
+    }
+
+    try {
+      const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+        types: ['address'],
+        componentRestrictions: { country: country.toLowerCase() },
+        fields: ['address_components', 'formatted_address'],
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
         
-        const autocompleteElement = new PlaceAutocompleteElement({
-          componentRestrictions: { country: country.toLowerCase() },
-        });
+        if (!place.address_components) return;
 
-        autocompleteElement.id = 'place-autocomplete';
-        
-        // Apply custom styling
-        Object.assign(autocompleteElement.style, {
-          width: '100%',
-          height: '48px',
-        });
+        const components: AddressComponents = {
+          address: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: country.toUpperCase(),
+        };
 
-        // Listen for place selection
-        autocompleteElement.addEventListener('gmp-placeselect', async (event: any) => {
-          const place = event.place;
-          
-          if (!place) return;
+        let streetNumber = '';
+        let route = '';
 
-          try {
-            await place.fetchFields({
-              fields: ['addressComponents', 'formattedAddress'],
-            });
+        place.address_components.forEach((component) => {
+          const types = component.types;
 
-            const addressComponents = place.addressComponents;
-            if (!addressComponents) return;
-
-            const components: AddressComponents = {
-              address: '',
-              city: '',
-              state: '',
-              zipCode: '',
-              country: country.toUpperCase(),
-            };
-
-            let streetNumber = '';
-            let route = '';
-
-            addressComponents.forEach((component: any) => {
-              const types = component.types;
-
-              if (types.includes('street_number')) {
-                streetNumber = component.longText;
-              }
-              if (types.includes('route')) {
-                route = component.longText;
-              }
-              if (types.includes('locality')) {
-                components.city = component.longText;
-              }
-              if (types.includes('administrative_area_level_1')) {
-                components.state = component.shortText;
-              }
-              if (types.includes('postal_code')) {
-                components.zipCode = component.longText;
-              }
-              if (types.includes('country')) {
-                components.country = component.shortText;
-              }
-            });
-
-            components.address = `${streetNumber} ${route}`.trim();
-            onChange(components.address);
-
-            if (onAddressSelect) {
-              onAddressSelect(components);
-            }
-          } catch (error) {
-            console.error('Error fetching place details:', error);
+          if (types.includes('street_number')) {
+            streetNumber = component.long_name;
+          }
+          if (types.includes('route')) {
+            route = component.long_name;
+          }
+          if (types.includes('locality')) {
+            components.city = component.long_name;
+          }
+          if (types.includes('administrative_area_level_1')) {
+            components.state = component.short_name;
+          }
+          if (types.includes('postal_code')) {
+            components.zipCode = component.long_name;
+          }
+          if (types.includes('country')) {
+            components.country = component.short_name;
           }
         });
 
-        containerRef.current.innerHTML = '';
-        containerRef.current.appendChild(autocompleteElement);
-        elementRef.current = autocompleteElement;
-      } catch (error) {
-        console.error('Error initializing autocomplete:', error);
-      }
-    };
+        components.address = `${streetNumber} ${route}`.trim();
+        onChange(components.address);
 
-    loadGoogleMaps();
+        if (onAddressSelect) {
+          onAddressSelect(components);
+        }
+      });
+
+      autocompleteRef.current = autocomplete;
+    } catch (error) {
+      console.error('Error initializing autocomplete:', error);
+    }
 
     return () => {
-      if (elementRef.current) {
-        elementRef.current = null;
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [country, onChange, onAddressSelect]);
+  }, [isScriptLoaded, country, onChange, onAddressSelect]);
 
   return (
-    <div className={className}>
-      <div ref={containerRef} />
-      <style jsx global>{`
-        #place-autocomplete {
-          width: 100% !important;
-        }
-        #place-autocomplete input {
-          width: 100% !important;
-          padding: 12px 16px !important;
-          background: rgba(255, 255, 255, 0.05) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 12px !important;
-          color: white !important;
-          font-size: 14px !important;
-        }
-        #place-autocomplete input::placeholder {
-          color: rgba(148, 163, 184, 1) !important;
-        }
-        #place-autocomplete input:focus {
-          outline: none !important;
-          ring: 2px !important;
-          ring-color: rgb(59, 130, 246) !important;
-          background: rgba(255, 255, 255, 0.1) !important;
-        }
-        .pac-container {
-          background-color: rgb(30, 41, 59) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 12px !important;
-          margin-top: 4px !important;
-        }
-        .pac-item {
-          color: white !important;
-          padding: 8px 12px !important;
-          border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-        .pac-item:hover {
-          background-color: rgba(59, 130, 246, 0.2) !important;
-        }
-        .pac-item-query {
-          color: rgb(147, 197, 253) !important;
-        }
-        .pac-icon {
-          display: none !important;
-        }
-      `}</style>
-    </div>
+    <Input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={className}
+      disabled={disabled}
+      autoComplete="off"
+    />
   );
 }
