@@ -25,6 +25,9 @@ interface Product {
   buttonHoverGradient?: string;
   checkmarkColor?: string;
   features?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string[];
 }
 
 export default function Home() {
