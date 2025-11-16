@@ -7,7 +7,7 @@ export async function generateProductDescription(keywords: string): Promise<stri
     throw new Error('GEMINI_API_KEY environment variable is not set');
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const prompt = `Write a compelling, SEO-optimized product description for a DTF (Direct-to-Film) transfer product.
 
@@ -45,7 +45,7 @@ export async function generateProductSEO(productName: string, description: strin
     throw new Error('GEMINI_API_KEY environment variable is not set');
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const prompt = `Generate SEO metadata for this DTF transfer product:
 
