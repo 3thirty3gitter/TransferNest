@@ -316,7 +316,8 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
                   {/* Pricing Breakdown */}
                   <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
                     <div className="text-sm font-semibold mb-3 text-white">Pricing Breakdown</div>
-                    <div className="space-y-2 text-sm">\n                      <div className="flex justify-between py-1">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between py-1">
                         <span className="text-slate-300">Base Price:</span>
                         <span className="font-semibold text-white">${calculatePricing().basePrice.toFixed(2)}</span>
                       </div>
