@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[AI Description] Initializing Gemini...');
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY
+    });
 
     const prompt = `Write a compelling, SEO-optimized product description for a DTF (Direct-to-Film) transfer product.
 
@@ -42,9 +43,11 @@ Requirements:
 Write only the description, no additional text:`;
 
     console.log('[AI Description] Generating with keywords:', keywords);
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const description = response.text().trim();
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
+      contents: prompt,
+    });
+    const description = (response.text || '').trim();
     console.log('[AI Description] Generated successfully');
 
     return NextResponse.json({ description });

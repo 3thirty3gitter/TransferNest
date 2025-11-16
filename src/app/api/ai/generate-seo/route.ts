@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[AI SEO] Initializing Gemini...');
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY
+    });
 
     const prompt = `Generate SEO metadata for this DTF transfer product:
 
@@ -56,9 +57,11 @@ Return ONLY valid JSON in this exact format:
   "keywords": "keyword1, keyword2, keyword3"
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
+      contents: prompt,
+    });
+    const text = (result.text || '').trim();
     
     // Extract JSON from response (handle markdown code blocks)
     let jsonText = text;
