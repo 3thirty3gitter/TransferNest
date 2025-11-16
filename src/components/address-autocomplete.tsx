@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import '@googlemaps/extended-component-library/place_picker.js';
 
 interface AddressComponents {
   address: string;
@@ -39,147 +40,124 @@ export default function AddressAutocomplete({
       return;
     }
 
-    let autocompleteWidget: any = null;
+    if (!containerRef.current) return;
 
-    const initAutocomplete = async () => {
-      if (!containerRef.current) return;
+    // Create the place picker element
+    const pickerElement = document.createElement('gmpx-place-picker') as any;
+    
+    // Set attributes
+    pickerElement.setAttribute('type', 'address');
+    pickerElement.setAttribute('country', country.toLowerCase());
+    if (placeholder) {
+      pickerElement.setAttribute('placeholder', placeholder);
+    }
+
+    // Listen for place changed event
+    const handlePlaceChange = async () => {
+      const place = pickerElement.value;
+      
+      if (!place) {
+        console.warn('No place selected');
+        return;
+      }
+
+      console.log('Place selected:', place);
 
       try {
-        // Load the Google Maps JavaScript API
-        if (!(window as any).google?.maps) {
-          await new Promise<void>((resolve) => {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
-            script.async = true;
-            script.onload = () => resolve();
-            document.head.appendChild(script);
-          });
-        }
+        const components: AddressComponents = {
+          address: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: country.toUpperCase(),
+        };
 
-        // Wait for API to be ready
-        await new Promise<void>((resolve) => {
-          const check = () => {
-            if ((window as any).google?.maps?.places) {
-              resolve();
-            } else {
-              setTimeout(check, 100);
-            }
-          };
-          check();
-        });
+        let streetNumber = '';
+        let route = '';
 
-        const { places } = (window as any).google.maps;
-
-        // Create input element
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = value;
-        input.placeholder = placeholder;
-        input.className = className.replace('w-full', '').trim();
-        input.style.width = '100%';
-        input.disabled = disabled;
-
-        // Create autocomplete
-        const autocomplete = new places.Autocomplete(input, {
-          types: ['address'],
-          componentRestrictions: { country: country.toLowerCase() },
-          fields: ['address_components', 'formatted_address'],
-        });
-
-        // Listen for place selection
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          
-          if (!place.address_components) {
-            console.warn('No address components in selected place');
-            return;
-          }
-
-          const components: AddressComponents = {
-            address: '',
-            city: '',
-            state: '',
-            zipCode: '',
-            country: country.toUpperCase(),
-          };
-
-          let streetNumber = '';
-          let route = '';
-
-          place.address_components.forEach((component: any) => {
+        // Parse address components from the place object
+        if (place.addressComponents) {
+          place.addressComponents.forEach((component: any) => {
             const types = component.types;
 
             if (types.includes('street_number')) {
-              streetNumber = component.long_name;
+              streetNumber = component.longText || component.shortText || '';
             }
             if (types.includes('route')) {
-              route = component.long_name;
+              route = component.longText || component.shortText || '';
             }
             if (types.includes('locality')) {
-              components.city = component.long_name;
+              components.city = component.longText || component.shortText || '';
             }
             if (types.includes('administrative_area_level_1')) {
-              components.state = component.short_name;
+              components.state = component.shortText || component.longText || '';
             }
             if (types.includes('postal_code')) {
-              components.zipCode = component.long_name;
+              components.zipCode = component.longText || component.shortText || '';
             }
             if (types.includes('country')) {
-              components.country = component.short_name;
+              components.country = component.shortText || component.longText || '';
             }
           });
+        }
 
-          components.address = `${streetNumber} ${route}`.trim();
-          
-          console.log('Address components parsed:', components);
-          
-          onChange(components.address);
-
-          if (onAddressSelect) {
-            onAddressSelect(components);
-            console.log('onAddressSelect callback triggered');
-          }
-        });
-
-        // Listen for manual input changes
-        input.addEventListener('input', (e) => {
-          onChange((e.target as HTMLInputElement).value);
-        });
-
-        // Clear and append
-        containerRef.current.innerHTML = '';
-        containerRef.current.appendChild(input);
+        components.address = `${streetNumber} ${route}`.trim();
         
-        autocompleteWidget = { autocomplete, input };
+        console.log('Address components parsed:', components);
+        
+        onChange(components.address);
 
+        if (onAddressSelect) {
+          onAddressSelect(components);
+          console.log('onAddressSelect callback triggered');
+        }
       } catch (error) {
-        console.error('Error initializing autocomplete:', error);
+        console.error('Error parsing place details:', error);
       }
     };
 
-    initAutocomplete();
+    pickerElement.addEventListener('gmpx-placechange', handlePlaceChange);
+
+    // Clear container and append
+    containerRef.current.innerHTML = '';
+    containerRef.current.appendChild(pickerElement);
 
     return () => {
-      if (autocompleteWidget) {
-        const { google } = window as any;
-        if (google?.maps?.event) {
-          google.maps.event.clearInstanceListeners(autocompleteWidget.autocomplete);
-        }
-      }
+      pickerElement.removeEventListener('gmpx-placechange', handlePlaceChange);
     };
-  }, [country, onChange, onAddressSelect, placeholder, className, disabled]);
-
-  // Update input value when prop changes
-  useEffect(() => {
-    if (containerRef.current) {
-      const input = containerRef.current.querySelector('input');
-      if (input && input.value !== value) {
-        input.value = value;
-      }
-    }
-  }, [value]);
+  }, [country, onChange, onAddressSelect, placeholder]);
 
   return (
-    <div ref={containerRef} className="w-full" />
+    <>
+      <div ref={containerRef} className={`w-full ${className}`} />
+      <style jsx global>{`
+        gmpx-place-picker {
+          width: 100% !important;
+          display: block !important;
+        }
+        
+        gmpx-place-picker input {
+          width: 100% !important;
+          padding: 12px 16px !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 12px !important;
+          color: white !important;
+          font-size: 14px !important;
+          line-height: 1.5 !important;
+        }
+        
+        gmpx-place-picker input::placeholder {
+          color: rgba(148, 163, 184, 1) !important;
+        }
+        
+        gmpx-place-picker input:focus {
+          outline: none !important;
+          border-color: rgb(59, 130, 246) !important;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+      `}</style>
+    </>
   );
 }
