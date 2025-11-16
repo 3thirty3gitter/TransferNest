@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Plus, Edit2, Trash2, DollarSign, Package } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, DollarSign, Package, Sparkles, Wand2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface Product {
@@ -22,6 +22,9 @@ interface Product {
   pricePerInch: number;
   basePrice: number;
   isActive: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,9 +33,12 @@ export default function ProductsManagementPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [generatingSEO, setGeneratingSEO] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [keywords, setKeywords] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -41,6 +47,9 @@ export default function ProductsManagementPage() {
     pricePerInch: 0,
     basePrice: 0,
     isActive: true,
+    metaTitle: '',
+    metaDescription: '',
+    metaKeywords: [] as string[],
   });
 
   useEffect(() => {
@@ -137,8 +146,115 @@ export default function ProductsManagementPage() {
       pricePerInch: product.pricePerInch,
       basePrice: product.basePrice,
       isActive: product.isActive,
+      metaTitle: product.metaTitle || '',
+      metaDescription: product.metaDescription || '',
+      metaKeywords: product.metaKeywords || [],
     });
     setIsAddingNew(true);
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!keywords.trim()) {
+      toast({
+        title: 'Keywords Required',
+        description: 'Please enter keywords to generate a description',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setGeneratingDescription(true);
+    try {
+      const response = await fetch('/api/ai/generate-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          keywords: keywords.trim(),
+          productName: formData.name,
+          sheetSize: formData.sheetSize
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate description');
+      }
+
+      const data = await response.json();
+      setFormData({ ...formData, description: data.description });
+      
+      toast({
+        title: 'Success',
+        description: 'Description generated successfully',
+      });
+    } catch (error) {
+      console.error('Error generating description:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate description',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
+
+  const handleGenerateSEO = async () => {
+    if (!formData.name || !formData.description) {
+      toast({
+        title: 'Required Fields Missing',
+        description: 'Product name and description are required to generate SEO',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!keywords.trim()) {
+      toast({
+        title: 'Keywords Required',
+        description: 'Please enter keywords to generate SEO metadata',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setGeneratingSEO(true);
+    try {
+      const response = await fetch('/api/ai/generate-seo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: formData.name,
+          description: formData.description,
+          keywords: keywords.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate SEO');
+      }
+
+      const data = await response.json();
+      setFormData({
+        ...formData,
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
+        metaKeywords: typeof data.keywords === 'string' ? data.keywords.split(',').map((k: string) => k.trim()) : data.keywords,
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'SEO metadata generated successfully',
+      });
+    } catch (error) {
+      console.error('Error generating SEO:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate SEO metadata',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingSEO(false);
+    }
   };
 
   const handleDelete = async (productId: string) => {
@@ -172,7 +288,11 @@ export default function ProductsManagementPage() {
       pricePerInch: 0,
       basePrice: 0,
       isActive: true,
+      metaTitle: '',
+      metaDescription: '',
+      metaKeywords: [],
     });
+    setKeywords('');
     setEditingProduct(null);
     setIsAddingNew(false);
   };
@@ -233,14 +353,41 @@ export default function ProductsManagementPage() {
 
                 <div>
                   <Label htmlFor="description" className="text-white">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
-                    placeholder="Product description..."
-                    className="glass border-white/20 text-white min-h-[100px]"
-                  />
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        id="keywords"
+                        value={keywords}
+                        onChange={(e) => setKeywords(e.target.value)}
+                        placeholder="Enter keywords (e.g., DTF transfers, custom printing, t-shirts)"
+                        className="glass border-white/20 text-white"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleGenerateDescription}
+                        disabled={generatingDescription || !keywords.trim()}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 whitespace-nowrap"
+                      >
+                        {generatingDescription ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-1" />
+                            AI Write
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      required
+                      placeholder="Product description..."
+                      className="glass border-white/20 text-white min-h-[100px]"
+                    />
+                    <p className="text-xs text-slate-400">Enter keywords above and click "AI Write" to generate an SEO-optimized description</p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -284,6 +431,66 @@ export default function ProductsManagementPage() {
                     className="h-4 w-4"
                   />
                   <Label htmlFor="isActive" className="text-white">Active (visible to customers)</Label>
+                </div>
+
+                {/* SEO Section */}
+                <div className="pt-6 border-t border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white">SEO Metadata</h3>
+                    <Button
+                      type="button"
+                      onClick={handleGenerateSEO}
+                      disabled={generatingSEO || !formData.name || !formData.description || !keywords.trim()}
+                      className="bg-gradient-to-r from-blue-600 to-cyan-600"
+                    >
+                      {generatingSEO ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Wand2 className="h-4 w-4 mr-2" />
+                      )}
+                      Generate SEO
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="metaTitle" className="text-white">Meta Title</Label>
+                      <Input
+                        id="metaTitle"
+                        value={formData.metaTitle}
+                        onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
+                        placeholder="SEO-optimized title (50-60 chars)"
+                        className="glass border-white/20 text-white"
+                        maxLength={60}
+                      />
+                      <p className="text-xs text-slate-400 mt-1">{formData.metaTitle.length}/60 characters</p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="metaDescription" className="text-white">Meta Description</Label>
+                      <Textarea
+                        id="metaDescription"
+                        value={formData.metaDescription}
+                        onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
+                        placeholder="SEO-optimized description (150-160 chars)"
+                        className="glass border-white/20 text-white min-h-[80px]"
+                        maxLength={160}
+                      />
+                      <p className="text-xs text-slate-400 mt-1">{formData.metaDescription.length}/160 characters</p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="metaKeywords" className="text-white">Meta Keywords</Label>
+                      <Input
+                        id="metaKeywords"
+                        value={formData.metaKeywords.join(', ')}
+                        onChange={(e) => setFormData({ ...formData, metaKeywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean) })}
+                        placeholder="keyword1, keyword2, keyword3"
+                        className="glass border-white/20 text-white"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Comma-separated list of keywords</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-4">
