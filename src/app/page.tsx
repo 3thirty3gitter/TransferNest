@@ -1,4 +1,8 @@
+'use client';
 
+import { useState, useEffect } from 'react';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import Header from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp } from 'lucide-react';
@@ -6,7 +10,50 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/layout/footer';
 
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  sheetSize: string;
+  pricePerInch: number;
+  basePrice: number;
+  isActive: boolean;
+  badge?: string;
+  badgeColor?: string;
+  gradient?: string;
+  buttonGradient?: string;
+  buttonHoverGradient?: string;
+  checkmarkColor?: string;
+  features?: string[];
+}
+
 export default function Home() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const productsRef = collection(db, 'products');
+        const q = query(productsRef, where('isActive', '==', true), orderBy('sheetSize'));
+        const snapshot = await getDocs(q);
+        
+        const productsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Product[];
+        
+        setProducts(productsData);
+      } catch (error) {
+        console.error('Error loading products:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadProducts();
+  }, []);
+
   return (
     <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white overflow-hidden">
       <Header />
@@ -108,91 +155,60 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-              {/* 13-inch Product Card */}
-              <div className="glass-strong rounded-3xl overflow-hidden hover:scale-105 transition-all duration-300 hover:glow group">
-                <div className="p-8 md:p-10">
-                  <div className="inline-flex px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-semibold mb-4">
-                    MOST POPULAR
-                  </div>
-                  <h3 className="text-3xl md:text-4xl font-bold mb-4">13" Gang Sheet</h3>
-                  <p className="text-slate-300 text-lg leading-relaxed mb-8">
-                    Perfect for standard t-shirts, logos, and smaller designs. The cost-effective choice for most businesses.
-                  </p>
-                  
-                  <ul className="space-y-3 mb-8">
-                    <li className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-cyan-400 flex-shrink-0" />
-                      <span>Ideal for logos & standard designs</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-cyan-400 flex-shrink-0" />
-                      <span>Most economical option</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-cyan-400 flex-shrink-0" />
-                      <span>Perfect for t-shirt businesses</span>
-                    </li>
-                  </ul>
+              {loading ? (
+                <div className="col-span-2 text-center py-12">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
+                  <p className="mt-4 text-slate-300">Loading products...</p>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="col-span-2 text-center py-12">
+                  <p className="text-slate-300">No products available at this time.</p>
+                </div>
+              ) : (
+                products.map((product) => (
+                  <div key={product.id} className="glass-strong rounded-3xl overflow-hidden hover:scale-105 transition-all duration-300 hover:glow group">
+                    <div className="p-8 md:p-10">
+                      {product.badge && (
+                        <div className={`inline-flex px-3 py-1 rounded-full bg-gradient-to-r ${product.badgeColor || 'from-blue-500 to-cyan-500'} text-white text-sm font-semibold mb-4`}>
+                          {product.badge}
+                        </div>
+                      )}
+                      <h3 className="text-3xl md:text-4xl font-bold mb-4">{product.name}</h3>
+                      <p className="text-slate-300 text-lg leading-relaxed mb-8">
+                        {product.description}
+                      </p>
+                      
+                      {product.features && product.features.length > 0 && (
+                        <ul className="space-y-3 mb-8">
+                          {product.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-center gap-3 text-slate-300">
+                              <CheckCircle className={`h-5 w-5 ${product.checkmarkColor || 'text-cyan-400'} flex-shrink-0`} />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
 
-                  <div className="mb-6">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">$0.45</span>
-                      <span className="text-slate-400 text-lg">/ linear inch</span>
+                      <div className="mb-6">
+                        <div className="flex items-baseline gap-2">
+                          <span className={`text-5xl md:text-6xl font-bold bg-gradient-to-r ${product.gradient || 'from-blue-400 to-cyan-400'} bg-clip-text text-transparent`}>
+                            ${product.pricePerInch.toFixed(2)}
+                          </span>
+                          <span className="text-slate-400 text-lg">/ linear inch</span>
+                        </div>
+                      </div>
+
+                      <Button asChild size="lg" className={`w-full bg-gradient-to-r ${product.buttonGradient || 'from-blue-600 to-cyan-600'} hover:${product.buttonHoverGradient || 'from-blue-700 to-cyan-700'} text-white border-0 py-6 text-lg group-hover:scale-105 transition-transform`}>
+                        <Link href="/nesting-tool" className="flex items-center justify-center gap-2">
+                          <Scissors className="h-5 w-5" />
+                          Build {product.sheetSize}" Sheet
+                          <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                      </Button>
                     </div>
                   </div>
-
-                  <Button asChild size="lg" className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 py-6 text-lg group-hover:scale-105 transition-transform">
-                    <Link href="/nesting-tool" className="flex items-center justify-center gap-2">
-                      <Scissors className="h-5 w-5" />
-                      Build 13" Sheet
-                      <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-
-              {/* 17-inch Product Card */}
-              <div className="glass-strong rounded-3xl overflow-hidden hover:scale-105 transition-all duration-300 hover:glow group">
-                <div className="p-8 md:p-10">
-                  <div className="inline-flex px-3 py-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold mb-4">
-                    MAXIMUM SIZE
-                  </div>
-                  <h3 className="text-3xl md:text-4xl font-bold mb-4">17" Gang Sheet</h3>
-                  <p className="text-slate-300 text-lg leading-relaxed mb-8">
-                    Ideal for oversized prints, hoodies, and maximizing designs per sheet for high-volume orders.
-                  </p>
-                  
-                  <ul className="space-y-3 mb-8">
-                    <li className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                      <span>Perfect for oversized designs</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                      <span>More designs per sheet</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                      <span>Great for hoodies & jackets</span>
-                    </li>
-                  </ul>
-
-                  <div className="mb-6">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">$0.59</span>
-                      <span className="text-slate-400 text-lg">/ linear inch</span>
-                    </div>
-                  </div>
-
-                  <Button asChild size="lg" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 py-6 text-lg group-hover:scale-105 transition-transform">
-                    <Link href="/nesting-tool" className="flex items-center justify-center gap-2">
-                      <Scissors className="h-5 w-5" />
-                      Build 17" Sheet
-                      <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </div>
         </section>
