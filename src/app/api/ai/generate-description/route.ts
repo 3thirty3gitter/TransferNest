@@ -5,6 +5,15 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(request: NextRequest) {
   try {
+    // Check for API key
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('[AI Description] GEMINI_API_KEY not configured');
+      return NextResponse.json(
+        { error: 'AI service not configured. Please add GEMINI_API_KEY to environment variables.' },
+        { status: 503 }
+      );
+    }
+
     const { keywords, productName, sheetSize } = await request.json();
 
     if (!keywords || typeof keywords !== 'string' || keywords.trim().length === 0) {
