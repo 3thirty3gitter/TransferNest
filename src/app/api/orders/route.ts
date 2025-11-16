@@ -17,7 +17,20 @@ export async function GET(request: NextRequest) {
 
     console.log('[Orders API] Fetching orders:', { userId, status, limit: limitParam });
 
-    const db = getFirestore();
+    let db;
+    try {
+      db = getFirestore();
+    } catch (dbError) {
+      console.error('[Orders API] Firebase Admin initialization error:', dbError);
+      return NextResponse.json(
+        { 
+          error: 'Database connection failed',
+          details: dbError instanceof Error ? dbError.message : 'Could not connect to Firestore'
+        },
+        { status: 500 }
+      );
+    }
+
     const ordersRef = db.collection('orders');
     let queryRef: any = ordersRef;
 
