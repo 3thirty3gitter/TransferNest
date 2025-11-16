@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `Write a compelling, SEO-optimized product description for a DTF (Direct-to-Film) transfer product.
 
@@ -41,13 +41,17 @@ Requirements:
 
 Write only the description, no additional text:`;
 
+    console.log('[AI Description] Generating with keywords:', keywords);
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const description = response.text().trim();
+    console.log('[AI Description] Generated successfully');
 
     return NextResponse.json({ description });
   } catch (error) {
     console.error('[AI Description] Error:', error);
+    console.error('[AI Description] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('[AI Description] Error message:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
       { 
         error: 'Failed to generate description',

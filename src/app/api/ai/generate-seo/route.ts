@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `Generate SEO metadata for this DTF transfer product:
 
@@ -82,6 +82,8 @@ Return ONLY valid JSON in this exact format:
     return NextResponse.json(seoData);
   } catch (error) {
     console.error('[AI SEO] Error:', error);
+    console.error('[AI SEO] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('[AI SEO] Error message:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
       { 
         error: 'Failed to generate SEO metadata',
