@@ -164,3 +164,36 @@ body {
                 0 0 40px rgba(0, 168, 150, 0.2);
   }
 }
+
+/* Google Places Autocomplete Dark Theme */
+.pac-container {
+  background-color: rgb(30, 41, 59) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  margin-top: 4px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+}
+
+.pac-item {
+  color: white !important;
+  padding: 10px 14px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  cursor: pointer !important;
+}
+
+.pac-item:hover {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+.pac-item-query {
+  color: rgb(147, 197, 253) !important;
+}
+
+.pac-matched {
+  color: rgb(96, 165, 250) !important;
+  font-weight: 600 !important;
+}
+
+.pac-icon {
+  display: none !important;
+}
