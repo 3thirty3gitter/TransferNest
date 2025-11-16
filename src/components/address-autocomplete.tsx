@@ -48,7 +48,7 @@ export default function AddressAutocomplete({
 
       const script = document.createElement('script');
       // Use v=beta for access to new components and marker library for extended component library
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&v=beta`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&v=beta&loading=async`;
       script.async = true;
       script.defer = true;
       script.onload = initAutocomplete;
