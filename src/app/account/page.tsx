@@ -5,19 +5,44 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import { User, Mail, Calendar, Package, LogOut, Edit2, Save, X } from 'lucide-react';
+import { User, Mail, Calendar, Package, LogOut, Edit2, Save, X, MapPin, Phone } from 'lucide-react';
 import { signOut, updateProfile } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+interface CustomerProfile {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
 
 export default function AccountPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [profile, setProfile] = useState<CustomerProfile>({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'CA',
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -25,11 +50,44 @@ export default function AccountPage() {
     }
   }, [user, loading, router]);
 
+  // Load customer profile from Firestore
   useEffect(() => {
-    if (user?.displayName) {
-      setDisplayName(user.displayName);
-    }
-  }, [user]);
+    const loadProfile = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        const profileRef = doc(db, 'customers', user.uid);
+        const profileSnap = await getDoc(profileRef);
+        
+        if (profileSnap.exists()) {
+          const data = profileSnap.data() as CustomerProfile;
+          setProfile(data);
+        } else {
+          // Initialize from displayName if available
+          if (user.displayName) {
+            const nameParts = user.displayName.trim().split(' ');
+            setProfile(prev => ({
+              ...prev,
+              firstName: nameParts[0] || '',
+              lastName: nameParts.slice(1).join(' ') || '',
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        toast({
+          title: 'Error Loading Profile',
+          description: 'Could not load your profile information.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadProfile();
+  }, [user, toast]);
 
   const handleSignOut = async () => {
     try {
@@ -41,11 +99,32 @@ export default function AccountPage() {
   };
 
   const handleSaveProfile = async () => {
-    if (!user || !displayName.trim()) return;
+    if (!user) return;
+    
+    // Validate required fields
+    if (!profile.firstName.trim() || !profile.lastName.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'First name and last name are required.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     setIsSaving(true);
     try {
-      await updateProfile(user, { displayName: displayName.trim() });
+      // Update displayName in Firebase Auth
+      const fullName = `${profile.firstName.trim()} ${profile.lastName.trim()}`;
+      await updateProfile(user, { displayName: fullName });
+      
+      // Save full profile to Firestore
+      const profileRef = doc(db, 'customers', user.uid);
+      await setDoc(profileRef, {
+        ...profile,
+        email: user.email,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+      
       toast({
         title: 'Profile Updated',
         description: 'Your profile has been updated successfully.',
@@ -63,12 +142,32 @@ export default function AccountPage() {
     }
   };
 
-  const handleCancelEdit = () => {
-    setDisplayName(user?.displayName || '');
+  const handleCancelEdit = async () => {
+    // Reload profile from Firestore
+    if (!user) return;
+    
+    try {
+      const profileRef = doc(db, 'customers', user.uid);
+      const profileSnap = await getDoc(profileRef);
+      
+      if (profileSnap.exists()) {
+        setProfile(profileSnap.data() as CustomerProfile);
+      }
+    } catch (error) {
+      console.error('Error reloading profile:', error);
+    }
+    
     setIsEditing(false);
   };
 
-  if (loading) {
+  const handleInputChange = (field: keyof CustomerProfile, value: string) => {
+    setProfile(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  if (loading || isLoading) {
     return (
       <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
         <Header />
@@ -128,38 +227,171 @@ export default function AccountPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Display Name */}
-              <div>
-                <label className="text-sm text-slate-400 mb-2 block">Display Name</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Your name"
-                  />
-                ) : (
-                  <p className="text-white text-lg">{user.displayName || 'Not set'}</p>
-                )}
+              {/* Name Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-slate-400 mb-2 block">First Name *</Label>
+                  {isEditing ? (
+                    <Input
+                      type="text"
+                      value={profile.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="First name"
+                    />
+                  ) : (
+                    <p className="text-white text-lg">{profile.firstName || 'Not set'}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label className="text-sm text-slate-400 mb-2 block">Last Name *</Label>
+                  {isEditing ? (
+                    <Input
+                      type="text"
+                      value={profile.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Last name"
+                    />
+                  ) : (
+                    <p className="text-white text-lg">{profile.lastName || 'Not set'}</p>
+                  )}
+                </div>
               </div>
 
               {/* Email */}
               <div>
-                <label className="text-sm text-slate-400 mb-2 block flex items-center gap-2">
+                <Label className="text-sm text-slate-400 mb-2 block flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   Email Address
-                </label>
+                </Label>
                 <p className="text-white text-lg">{user.email}</p>
                 <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
               </div>
 
+              {/* Phone */}
+              <div>
+                <Label className="text-sm text-slate-400 mb-2 block flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Phone Number
+                </Label>
+                {isEditing ? (
+                  <Input
+                    type="tel"
+                    value={profile.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="(555) 555-5555"
+                  />
+                ) : (
+                  <p className="text-white text-lg">{profile.phone || 'Not set'}</p>
+                )}
+              </div>
+
+              {/* Address */}
+              <div>
+                <Label className="text-sm text-slate-400 mb-2 block flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Street Address
+                </Label>
+                {isEditing ? (
+                  <Input
+                    type="text"
+                    value={profile.address}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="123 Main Street"
+                  />
+                ) : (
+                  <p className="text-white text-lg">{profile.address || 'Not set'}</p>
+                )}
+              </div>
+
+              {/* City, State, Zip */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-sm text-slate-400 mb-2 block">City</Label>
+                  {isEditing ? (
+                    <Input
+                      type="text"
+                      value={profile.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="City"
+                    />
+                  ) : (
+                    <p className="text-white text-lg">{profile.city || 'Not set'}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label className="text-sm text-slate-400 mb-2 block">Province/State</Label>
+                  {isEditing ? (
+                    <select
+                      value={profile.state}
+                      onChange={(e) => handleInputChange('state', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select...</option>
+                      <option value="AB">Alberta</option>
+                      <option value="BC">British Columbia</option>
+                      <option value="MB">Manitoba</option>
+                      <option value="NB">New Brunswick</option>
+                      <option value="NL">Newfoundland and Labrador</option>
+                      <option value="NS">Nova Scotia</option>
+                      <option value="ON">Ontario</option>
+                      <option value="PE">Prince Edward Island</option>
+                      <option value="QC">Quebec</option>
+                      <option value="SK">Saskatchewan</option>
+                      <option value="NT">Northwest Territories</option>
+                      <option value="NU">Nunavut</option>
+                      <option value="YT">Yukon</option>
+                    </select>
+                  ) : (
+                    <p className="text-white text-lg">{profile.state || 'Not set'}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label className="text-sm text-slate-400 mb-2 block">Postal Code</Label>
+                  {isEditing ? (
+                    <Input
+                      type="text"
+                      value={profile.zipCode}
+                      onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="A1A 1A1"
+                    />
+                  ) : (
+                    <p className="text-white text-lg">{profile.zipCode || 'Not set'}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Country */}
+              <div>
+                <Label className="text-sm text-slate-400 mb-2 block">Country</Label>
+                {isEditing ? (
+                  <select
+                    value={profile.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="CA">Canada</option>
+                    <option value="US">United States</option>
+                  </select>
+                ) : (
+                  <p className="text-white text-lg">{profile.country === 'CA' ? 'Canada' : 'United States'}</p>
+                )}
+              </div>
+
               {/* Member Since */}
               <div>
-                <label className="text-sm text-slate-400 mb-2 block flex items-center gap-2">
+                <Label className="text-sm text-slate-400 mb-2 block flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Member Since
-                </label>
+                </Label>
                 <p className="text-white text-lg">{memberSince}</p>
               </div>
 
@@ -168,7 +400,7 @@ export default function AccountPage() {
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={handleSaveProfile}
-                    disabled={isSaving || !displayName.trim()}
+                    disabled={isSaving}
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-xl transition-all hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     <Save className="h-4 w-4" />

@@ -14,6 +14,8 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { initSquarePayments, squareConfig } from '@/lib/square';
 import { calculateTax, formatTaxBreakdown } from '@/lib/tax-calculator';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function CheckoutPage() {
   const { items, totalItems, totalPrice, clearCart } = useCart();
@@ -32,7 +34,7 @@ export default function CheckoutPage() {
   
   // Customer information state (includes billing/contact address)
   const [customerInfo, setCustomerInfo] = useState({
-    email: user?.email || '',
+    email: '',
     firstName: '',
     lastName: '',
     phone: '',
@@ -63,6 +65,52 @@ export default function CheckoutPage() {
       router.push('/cart');
       return;
     }
+
+    // Load customer profile from Firestore
+    const loadCustomerProfile = async () => {
+      try {
+        const profileRef = doc(db, 'customers', user.uid);
+        const profileSnap = await getDoc(profileRef);
+        
+        if (profileSnap.exists()) {
+          const profileData = profileSnap.data();
+          setCustomerInfo({
+            email: user.email || '',
+            firstName: profileData.firstName || '',
+            lastName: profileData.lastName || '',
+            phone: profileData.phone || '',
+            address: profileData.address || '',
+            city: profileData.city || '',
+            state: profileData.state || '',
+            zipCode: profileData.zipCode || '',
+            country: profileData.country || 'CA',
+          });
+        } else {
+          // Fallback to basic user info if no profile exists
+          setCustomerInfo(prev => {
+            const updates: any = { email: user.email || '' };
+            
+            if (user.displayName) {
+              const nameParts = user.displayName.trim().split(' ');
+              if (nameParts.length >= 2) {
+                updates.firstName = nameParts[0];
+                updates.lastName = nameParts.slice(1).join(' ');
+              } else if (nameParts.length === 1) {
+                updates.firstName = nameParts[0];
+              }
+            }
+            
+            return { ...prev, ...updates };
+          });
+        }
+      } catch (error) {
+        console.error('Error loading customer profile:', error);
+        // Still populate email even if profile load fails
+        setCustomerInfo(prev => ({ ...prev, email: user.email || '' }));
+      }
+    };
+
+    loadCustomerProfile();
 
     // Load company settings
     fetch('/api/company-settings')
