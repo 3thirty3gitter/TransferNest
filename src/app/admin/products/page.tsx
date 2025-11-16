@@ -50,7 +50,7 @@ export default function ProductsManagementPage() {
         return;
       }
 
-      const isAdmin = await checkAdminAccess(user.uid);
+      const isAdmin = await checkAdminAccess();
       if (!isAdmin) {
         router.push('/');
         return;
