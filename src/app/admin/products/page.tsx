@@ -175,11 +175,13 @@ export default function ProductsManagementPage() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to generate description');
+        // Show detailed error message from server
+        throw new Error(data.error || data.details || 'Failed to generate description');
       }
 
-      const data = await response.json();
       setFormData({ ...formData, description: data.description });
       
       toast({
@@ -188,11 +190,22 @@ export default function ProductsManagementPage() {
       });
     } catch (error) {
       console.error('Error generating description:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate description';
+      
       toast({
-        title: 'Error',
-        description: 'Failed to generate description',
+        title: 'AI Generation Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
+      
+      // Provide helpful fallback message
+      if (errorMessage.includes('AI service not configured')) {
+        toast({
+          title: 'Setup Required',
+          description: 'Please add GEMINI_API_KEY to Vercel environment variables. See AI_SETUP.md for instructions.',
+          variant: 'default',
+        });
+      }
     } finally {
       setGeneratingDescription(false);
     }
@@ -229,11 +242,12 @@ export default function ProductsManagementPage() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to generate SEO');
+        throw new Error(data.error || data.details || 'Failed to generate SEO');
       }
 
-      const data = await response.json();
       setFormData({
         ...formData,
         metaTitle: data.metaTitle,
@@ -247,11 +261,21 @@ export default function ProductsManagementPage() {
       });
     } catch (error) {
       console.error('Error generating SEO:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate SEO metadata';
+      
       toast({
-        title: 'Error',
-        description: 'Failed to generate SEO metadata',
+        title: 'AI Generation Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
+      
+      if (errorMessage.includes('AI service not configured')) {
+        toast({
+          title: 'Setup Required',
+          description: 'Please add GEMINI_API_KEY to Vercel environment variables. See AI_SETUP.md for instructions.',
+          variant: 'default',
+        });
+      }
     } finally {
       setGeneratingSEO(false);
     }
