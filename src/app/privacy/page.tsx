@@ -5,7 +5,7 @@ export default function PrivacyPolicy() {
   return (
     <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
       <Header />
-      <div className="h-16"></div>
+      <div className="h-20"></div>
       
       <main className="flex-1 container mx-auto px-4 py-16 max-w-4xl">
         <div className="glass-strong rounded-3xl p-8 md:p-12">
