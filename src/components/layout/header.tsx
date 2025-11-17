@@ -32,9 +32,9 @@ export default function Header() {
             <Image 
               src="/logo.png" 
               alt="DTF Wholesale" 
-              width={180} 
-              height={50} 
-              className="h-10 w-auto"
+              width={234} 
+              height={65} 
+              className="h-13 w-auto"
               priority
             />
           </Link>
