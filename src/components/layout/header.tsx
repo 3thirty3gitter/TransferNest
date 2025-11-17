@@ -38,8 +38,8 @@ export default function Header() {
   `;
 
   const logoClasses = `
-    transition-all duration-300 ease-in-out
-    ${isShrunk ? 'h-auto w-40' : 'h-auto w-52'}
+    transition-all duration-300 ease-in-out object-contain
+    ${isShrunk ? 'h-10 w-auto max-w-[160px]' : 'h-14 w-auto max-w-[200px]'}
   `;
 
   const navLinkClasses = `
