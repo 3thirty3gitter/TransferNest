@@ -123,32 +123,23 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md">
         {/* Tabs Toggle */}
-        <div className="glass-strong rounded-2xl p-2 mb-4 border border-white/20">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => document.getElementById('sign-in-tab')?.click()}
-              className={`py-3 px-4 rounded-xl font-semibold transition-all ${
-                true ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' : 'text-slate-300 hover:bg-white/10'
-              }`}
-              id="sign-in-trigger"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => document.getElementById('sign-up-tab')?.click()}
-              className="py-3 px-4 rounded-xl font-semibold text-slate-300 hover:bg-white/10 transition-all"
-              id="sign-up-trigger"
-            >
-              Sign Up
-            </button>
-          </div>
-        </div>
-
         <Tabs defaultValue="sign-in" className="w-full">
-          <TabsList className="hidden">
-            <TabsTrigger value="sign-in" id="sign-in-tab">Sign In</TabsTrigger>
-            <TabsTrigger value="sign-up" id="sign-up-tab">Sign Up</TabsTrigger>
-          </TabsList>
+          <div className="glass-strong rounded-2xl p-2 mb-4 border border-white/20">
+            <TabsList className="grid grid-cols-2 gap-2 bg-transparent">
+              <TabsTrigger
+                value="sign-in"
+                className="py-3 px-4 rounded-xl font-semibold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:bg-white/10"
+              >
+                Sign In
+              </TabsTrigger>
+              <TabsTrigger
+                value="sign-up"
+                className="py-3 px-4 rounded-xl font-semibold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:bg-white/10"
+              >
+                Sign Up
+              </TabsTrigger>
+            </TabsList>
+          </div>
           <TabsContent value="sign-in">
             <div className="glass-strong rounded-2xl p-8 border border-white/20 shadow-xl">
               <div className="mb-6">
