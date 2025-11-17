@@ -15,7 +15,7 @@ export default function Footer() {
                 alt="DTF Wholesale" 
                 width={234} 
                 height={65} 
-                className="h-10 w-auto"
+                className="h-auto w-40"
               />
             </div>
             <p className="text-sm text-slate-400">
