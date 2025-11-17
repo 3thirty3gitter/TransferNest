@@ -54,7 +54,32 @@ export default function LoginPage() {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Create or update user document in Firestore
+      const { doc, setDoc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      const userDocRef = doc(db, 'users', result.user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
+        // Create new user document
+        const nameParts = result.user.displayName?.split(' ') || ['', ''];
+        await setDoc(userDocRef, {
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          email: result.user.email || '',
+          phone: '',
+          address: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: 'Canada',
+          createdAt: new Date().toISOString(),
+        });
+      }
+      
       toast({ title: 'Successfully signed in with Google!' });
       router.push('/');
     } catch (error: any) {
@@ -105,26 +130,32 @@ export default function LoginPage() {
       // Save additional profile data to Firestore
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('@/lib/firebase');
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        firstName: signupFirstName,
-        lastName: signupLastName,
-        email: signupEmail,
-        phone: signupPhone,
-        address: signupAddress,
-        city: signupCity,
-        state: signupState,
-        zipCode: signupZipCode,
-        country: signupCountry,
-        createdAt: new Date().toISOString(),
-      });
+      
+      try {
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          firstName: signupFirstName,
+          lastName: signupLastName,
+          email: signupEmail,
+          phone: signupPhone,
+          address: signupAddress,
+          city: signupCity,
+          state: signupState,
+          zipCode: signupZipCode,
+          country: signupCountry,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (firestoreError) {
+        console.error('Error saving to Firestore:', firestoreError);
+        // Continue anyway - user is created in Auth
+      }
       
       toast({ title: 'Account created successfully!' });
       router.push('/');
     } catch (error: any) {
       console.error('Error signing up with email', error);
       let description = 'An unexpected error occurred. Please try again.';
-      if (error.code === AuthErrorCodes.EMAIL_EXISTS) {
-        description = 'An account with this email address already exists.';
+      if (error.code === AuthErrorCodes.EMAIL_EXISTS || error.code === 'auth/email-already-in-use') {
+        description = 'An account with this email address already exists. Please sign in instead or use a different email.';
       } else if (error.code === AuthErrorCodes.WEAK_PASSWORD) {
         description = 'The password is too weak. Please choose a stronger password.';
       }
@@ -133,6 +164,9 @@ export default function LoginPage() {
         title: 'Sign-Up Failed',
         description,
       });
+      setIsLoading(false);
+    }
+  };
       setIsLoading(false);
     }
   };
