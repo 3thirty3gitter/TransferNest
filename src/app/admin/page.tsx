@@ -233,10 +233,10 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <h1 className="text-4xl font-bold text-white">Admin Dashboard</h1>
           <div className="flex gap-3">
             <a
               href="/admin/products"
@@ -294,7 +294,7 @@ export default function AdminPage() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6">
+        <div className="glass-strong rounded-lg border border-white/10 mb-6">
           <div className="flex border-b">
             {(['all', 'pending', 'paid', 'printing', 'shipped', 'completed'] as const).map(status => (
               <button
@@ -354,7 +354,7 @@ export default function AdminPage() {
         )}
 
         {/* Orders Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="glass-strong rounded-lg border border-white/10 overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -377,7 +377,7 @@ export default function AdminPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-white/10">
               {filteredOrders.map(order => (
                 <tr key={order.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -489,8 +489,8 @@ function StatCard({ title, count, color }: { title: string; count: number; color
   }[color];
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="text-sm font-medium text-gray-500 mb-2">{title}</div>
+    <div className="glass-strong rounded-lg border border-white/10 p-6">
+      <div className="text-sm font-medium text-slate-300 mb-2">{title}</div>
       <div className={`text-3xl font-bold ${colorClasses}`}>{count}</div>
     </div>
   );

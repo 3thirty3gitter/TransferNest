@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Plus, Edit2, Trash2, DollarSign, Package, Sparkles, Wand2 } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, DollarSign, Package, Sparkles, Wand2, ArrowLeft } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface Product {
@@ -22,6 +22,13 @@ interface Product {
   pricePerInch: number;
   basePrice: number;
   isActive: boolean;
+  badge?: string;
+  badgeColor?: string;
+  gradient?: string;
+  buttonGradient?: string;
+  buttonHoverGradient?: string;
+  checkmarkColor?: string;
+  features?: string[];
   metaTitle?: string;
   metaDescription?: string;
   metaKeywords?: string[];
@@ -47,6 +54,13 @@ export default function ProductsManagementPage() {
     pricePerInch: 0,
     basePrice: 0,
     isActive: true,
+    badge: '',
+    badgeColor: 'from-blue-500 to-cyan-500',
+    gradient: 'from-blue-400 to-cyan-400',
+    buttonGradient: 'from-blue-600 to-cyan-600',
+    buttonHoverGradient: 'from-blue-700 to-cyan-700',
+    checkmarkColor: 'text-cyan-400',
+    features: [] as string[],
     metaTitle: '',
     metaDescription: '',
     metaKeywords: [] as string[],
@@ -146,6 +160,13 @@ export default function ProductsManagementPage() {
       pricePerInch: product.pricePerInch,
       basePrice: product.basePrice,
       isActive: product.isActive,
+      badge: product.badge || '',
+      badgeColor: product.badgeColor || 'from-blue-500 to-cyan-500',
+      gradient: product.gradient || 'from-blue-400 to-cyan-400',
+      buttonGradient: product.buttonGradient || 'from-blue-600 to-cyan-600',
+      buttonHoverGradient: product.buttonHoverGradient || 'from-blue-700 to-cyan-700',
+      checkmarkColor: product.checkmarkColor || 'text-cyan-400',
+      features: product.features || [],
       metaTitle: product.metaTitle || '',
       metaDescription: product.metaDescription || '',
       metaKeywords: product.metaKeywords || [],
@@ -312,6 +333,13 @@ export default function ProductsManagementPage() {
       pricePerInch: 0,
       basePrice: 0,
       isActive: true,
+      badge: '',
+      badgeColor: 'from-blue-500 to-cyan-500',
+      gradient: 'from-blue-400 to-cyan-400',
+      buttonGradient: 'from-blue-600 to-cyan-600',
+      buttonHoverGradient: 'from-blue-700 to-cyan-700',
+      checkmarkColor: 'text-cyan-400',
+      features: [],
       metaTitle: '',
       metaDescription: '',
       metaKeywords: [],
@@ -332,9 +360,21 @@ export default function ProductsManagementPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Product Management</h1>
-          <p className="text-slate-300">Manage DTF transfer pricing and products</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Button
+                onClick={() => window.location.href = '/admin'}
+                variant="outline"
+                className="glass border-white/20 text-white hover:bg-white/10"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Button>
+            </div>
+            <h1 className="text-4xl font-bold text-white mb-2">Product Management</h1>
+            <p className="text-slate-300">Manage DTF transfer pricing and products</p>
+          </div>
         </div>
 
         {/* Add/Edit Product Form */}
@@ -455,6 +495,100 @@ export default function ProductsManagementPage() {
                     className="h-4 w-4"
                   />
                   <Label htmlFor="isActive" className="text-white">Active (visible to customers)</Label>
+                </div>
+
+                {/* Styling Section */}
+                <div className="pt-6 border-t border-white/10">
+                  <h3 className="text-lg font-semibold text-white mb-4">Visual Styling</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="badge" className="text-white">Badge Text (optional)</Label>
+                      <Input
+                        id="badge"
+                        value={formData.badge}
+                        onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
+                        placeholder="e.g., Most Popular, Best Value"
+                        className="glass border-white/20 text-white"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Small badge shown at top of product card</p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="badgeColor" className="text-white">Badge Gradient</Label>
+                      <select
+                        id="badgeColor"
+                        value={formData.badgeColor}
+                        onChange={(e) => setFormData({ ...formData, badgeColor: e.target.value })}
+                        className="w-full h-10 px-3 rounded-md glass border border-white/20 text-white"
+                      >
+                        <option value="from-blue-500 to-cyan-500">Blue to Cyan</option>
+                        <option value="from-purple-500 to-pink-500">Purple to Pink</option>
+                        <option value="from-green-500 to-emerald-500">Green to Emerald</option>
+                        <option value="from-orange-500 to-red-500">Orange to Red</option>
+                        <option value="from-yellow-500 to-orange-500">Yellow to Orange</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="gradient" className="text-white">Price Gradient</Label>
+                      <select
+                        id="gradient"
+                        value={formData.gradient}
+                        onChange={(e) => setFormData({ ...formData, gradient: e.target.value })}
+                        className="w-full h-10 px-3 rounded-md glass border border-white/20 text-white"
+                      >
+                        <option value="from-blue-400 to-cyan-400">Blue to Cyan</option>
+                        <option value="from-purple-400 to-pink-400">Purple to Pink</option>
+                        <option value="from-green-400 to-emerald-400">Green to Emerald</option>
+                        <option value="from-orange-400 to-red-400">Orange to Red</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="buttonGradient" className="text-white">Button Gradient</Label>
+                      <select
+                        id="buttonGradient"
+                        value={formData.buttonGradient}
+                        onChange={(e) => setFormData({ ...formData, buttonGradient: e.target.value })}
+                        className="w-full h-10 px-3 rounded-md glass border border-white/20 text-white"
+                      >
+                        <option value="from-blue-600 to-cyan-600">Blue to Cyan</option>
+                        <option value="from-purple-600 to-pink-600">Purple to Pink</option>
+                        <option value="from-green-600 to-emerald-600">Green to Emerald</option>
+                        <option value="from-orange-600 to-red-600">Orange to Red</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="checkmarkColor" className="text-white">Checkmark Color</Label>
+                      <select
+                        id="checkmarkColor"
+                        value={formData.checkmarkColor}
+                        onChange={(e) => setFormData({ ...formData, checkmarkColor: e.target.value })}
+                        className="w-full h-10 px-3 rounded-md glass border border-white/20 text-white"
+                      >
+                        <option value="text-cyan-400">Cyan</option>
+                        <option value="text-blue-400">Blue</option>
+                        <option value="text-purple-400">Purple</option>
+                        <option value="text-pink-400">Pink</option>
+                        <option value="text-green-400">Green</option>
+                        <option value="text-emerald-400">Emerald</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="features" className="text-white">Features (one per line)</Label>
+                      <Textarea
+                        id="features"
+                        value={formData.features.join('\n')}
+                        onChange={(e) => setFormData({ ...formData, features: e.target.value.split('\n').filter(f => f.trim()) })}
+                        placeholder="Perfect for small orders&#10;Great for testing designs&#10;Fast turnaround"
+                        className="glass border-white/20 text-white min-h-[100px]"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Each line becomes a bullet point with checkmark</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* SEO Section */}

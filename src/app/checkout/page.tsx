@@ -1,22 +1,18 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/layout/header';
-import Footer from '@/components/layout/footer';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CreditCard, Lock, ArrowLeft, Sparkles } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { CreditCard, Lock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { initSquarePayments, squareConfig } from '@/lib/square';
-import { calculateTax, formatTaxBreakdown } from '@/lib/tax-calculator';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import AddressAutocomplete from '@/components/address-autocomplete';
 
 export default function CheckoutPage() {
   const { items, totalItems, totalPrice, clearCart } = useCart();
@@ -27,15 +23,10 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [cardPayment, setCardPayment] = useState<any>(null);
   const [payments, setPayments] = useState<any>(null);
-  const [companySettings, setCompanySettings] = useState<any>(null);
   
-  // Delivery method state
-  const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
-  const [useShippingAddress, setUseShippingAddress] = useState(false);
-  
-  // Customer information state (includes billing/contact address)
+  // Customer information state
   const [customerInfo, setCustomerInfo] = useState({
-    email: '',
+    email: user?.email || '',
     firstName: '',
     lastName: '',
     phone: '',
@@ -43,16 +34,6 @@ export default function CheckoutPage() {
     city: '',
     state: '',
     zipCode: '',
-    country: 'CA',
-  });
-
-  // Separate shipping address (only if different from contact)
-  const [shippingAddress, setShippingAddress] = useState({
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'CA',
   });
 
   // Redirect if not authenticated or cart is empty
@@ -66,62 +47,6 @@ export default function CheckoutPage() {
       router.push('/cart');
       return;
     }
-
-    // Load customer profile from Firestore
-    const loadCustomerProfile = async () => {
-      try {
-        const profileRef = doc(db, 'customers', user.uid);
-        const profileSnap = await getDoc(profileRef);
-        
-        if (profileSnap.exists()) {
-          const profileData = profileSnap.data();
-          setCustomerInfo({
-            email: user.email || '',
-            firstName: profileData.firstName || '',
-            lastName: profileData.lastName || '',
-            phone: profileData.phone || '',
-            address: profileData.address || '',
-            city: profileData.city || '',
-            state: profileData.state || '',
-            zipCode: profileData.zipCode || '',
-            country: profileData.country || 'CA',
-          });
-        } else {
-          // Fallback to basic user info if no profile exists
-          setCustomerInfo(prev => {
-            const updates: any = { email: user.email || '' };
-            
-            if (user.displayName) {
-              const nameParts = user.displayName.trim().split(' ');
-              if (nameParts.length >= 2) {
-                updates.firstName = nameParts[0];
-                updates.lastName = nameParts.slice(1).join(' ');
-              } else if (nameParts.length === 1) {
-                updates.firstName = nameParts[0];
-              }
-            }
-            
-            return { ...prev, ...updates };
-          });
-        }
-      } catch (error) {
-        console.error('Error loading customer profile:', error);
-        // Still populate email even if profile load fails
-        setCustomerInfo(prev => ({ ...prev, email: user.email || '' }));
-      }
-    };
-
-    loadCustomerProfile();
-
-    // Load company settings
-    fetch('/api/company-settings')
-      .then(res => res.json())
-      .then(result => {
-        if (result.success) {
-          setCompanySettings(result.data);
-        }
-      })
-      .catch(err => console.error('Failed to load company settings:', err));
   }, [user, items, router]);
 
   // Initialize Square Payments
@@ -171,53 +96,17 @@ export default function CheckoutPage() {
     }));
   };
 
-  const handleShippingInputChange = (field: string, value: string) => {
-    setShippingAddress(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  // Calculate tax dynamically based on contact location (postal code determines tax)
-  const taxCalculation = useMemo(() => {
-    // Tax is ALWAYS based on contact information province/state
-    if (customerInfo.state && customerInfo.country) {
-      return calculateTax(totalPrice, customerInfo.state, customerInfo.country);
-    }
-    
-    // Default to Ontario if no state selected yet
-    return calculateTax(totalPrice, 'ON', 'CA');
-  }, [totalPrice, customerInfo.state, customerInfo.country]);
-
-  const orderTotal = totalPrice + taxCalculation.total;
-
   const validateForm = () => {
-    const contactRequired = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'] as const;
+    const required = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'] as const;
     
-    // Validate contact information (always required, includes address for tax calculation)
-    for (const field of contactRequired) {
+    for (const field of required) {
       if (!customerInfo[field]?.trim()) {
         toast({
           title: "Missing Information",
-          description: `Please fill in all contact information fields.`,
+          description: `Please fill in all required fields.`,
           variant: "destructive",
         });
         return false;
-      }
-    }
-    
-    // Validate separate shipping address if shipping is selected AND different address is chosen
-    if (deliveryMethod === 'shipping' && useShippingAddress) {
-      const shippingRequired = ['address', 'city', 'state', 'zipCode'] as const;
-      for (const field of shippingRequired) {
-        if (!shippingAddress[field]?.trim()) {
-          toast({
-            title: "Missing Shipping Address",
-            description: `Please fill in all shipping address fields.`,
-            variant: "destructive",
-          });
-          return false;
-        }
       }
     }
     
@@ -243,13 +132,11 @@ export default function CheckoutPage() {
       const result = await cardPayment.tokenize();
       
       if (result.status === 'OK') {
-        const paymentAmount = Math.round(orderTotal * 100);
+        const paymentAmount = Math.round(totalPrice * 100);
         
         console.log('[CHECKOUT] Preparing payment:', {
           amount: paymentAmount,
-          subtotal: totalPrice,
-          tax: taxCalculation.total,
-          orderTotal,
+          totalPrice,
           currency: 'CAD',
           itemCount: items.length
         });
@@ -265,18 +152,8 @@ export default function CheckoutPage() {
             amount: paymentAmount,
             currency: 'CAD',
             customerInfo,
-            shippingAddress: deliveryMethod === 'shipping' && useShippingAddress ? shippingAddress : customerInfo,
-            deliveryMethod,
-            useShippingAddress,
             cartItems: items,
             userId: user.uid,
-            taxAmount: taxCalculation.total,
-            taxRate: taxCalculation.rate,
-            taxBreakdown: {
-              gst: taxCalculation.gst,
-              pst: taxCalculation.pst,
-              hst: taxCalculation.hst,
-            },
           }),
         });
         
@@ -315,503 +192,206 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
-      <Header />
-      <div className="h-16"></div>
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Link
-            href="/cart"
-            className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <Button variant="ghost" asChild>
+          <Link href="/cart">
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Cart
           </Link>
-        </div>
+        </Button>
+      </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Checkout Form */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="glass-strong rounded-2xl p-6 border border-white/10">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400"></span>
-                Contact Information
-              </h2>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName" className="text-slate-200 font-semibold">First Name *</Label>
-                    <Input
-                      id="firstName"
-                      value={customerInfo.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
-                      required
-                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName" className="text-slate-200 font-semibold">Last Name *</Label>
-                    <Input
-                      id="lastName"
-                      value={customerInfo.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
-                      required
-                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                    />
-                  </div>
-                </div>
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Checkout Form */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="email" className="text-slate-200 font-semibold">Email *</Label>
+                  <Label htmlFor="firstName">First Name *</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    value={customerInfo.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    id="firstName"
+                    value={customerInfo.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
                     required
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone" className="text-slate-200 font-semibold">Phone *</Label>
+                  <Label htmlFor="lastName">Last Name *</Label>
                   <Input
-                    id="phone"
-                    type="tel"
-                    value={customerInfo.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    id="lastName"
+                    value={customerInfo.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
                     required
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                   />
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={customerInfo.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={customerInfo.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  required
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Shipping Address</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="address">Address *</Label>
+                <Input
+                  id="address"
+                  value={customerInfo.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="contact-address" className="text-slate-200 font-semibold">Address *</Label>
-                  <AddressAutocomplete
-                    value={customerInfo.address}
-                    onChange={(value) => handleInputChange('address', value)}
-                    onAddressSelect={(components) => {
-                      setCustomerInfo(prev => ({
-                        ...prev,
-                        address: components.address,
-                        city: components.city,
-                        state: components.state,
-                        zipCode: components.zipCode,
-                        country: components.country,
-                      }));
-                    }}
-                    placeholder="Start typing your address..."
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                    country={customerInfo.country}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contact-country" className="text-slate-200 font-semibold">Country *</Label>
-                  <select
-                    id="contact-country"
-                    value={customerInfo.country}
-                    onChange={(e) => handleInputChange('country', e.target.value)}
-                    required
-                    className="w-full bg-white/10 border border-white/20 text-white rounded-md px-3 py-2 mt-2 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="CA" className="bg-slate-800">Canada</option>
-                    <option value="US" className="bg-slate-800">United States</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="contact-city" className="text-slate-200 font-semibold">City *</Label>
-                    <Input
-                      id="contact-city"
-                      value={customerInfo.city}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
-                      required
-                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="contact-state" className="text-slate-200 font-semibold">
-                      {customerInfo.country === 'CA' ? 'Province' : 'State'} *
-                    </Label>
-                    <Input
-                      id="contact-state"
-                      value={customerInfo.state}
-                      onChange={(e) => handleInputChange('state', e.target.value.toUpperCase())}
-                      required
-                      placeholder={customerInfo.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
-                      maxLength={2}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="contact-zipCode" className="text-slate-200 font-semibold">
-                    {customerInfo.country === 'CA' ? 'Postal Code' : 'ZIP Code'} *
-                  </Label>
+                  <Label htmlFor="city">City *</Label>
                   <Input
-                    id="contact-zipCode"
-                    value={customerInfo.zipCode}
-                    onChange={(e) => handleInputChange('zipCode', e.target.value.toUpperCase())}
+                    id="city"
+                    value={customerInfo.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
                     required
-                    placeholder={customerInfo.country === 'CA' ? 'A1A 1A1' : '12345'}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="state">State *</Label>
+                  <Input
+                    id="state"
+                    value={customerInfo.state}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
+                    required
+                  />
               </div>
             </div>
-
-            <div className="glass-strong rounded-2xl p-6 border border-white/10">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"></span>
-                Delivery Method
-              </h2>
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setDeliveryMethod('shipping')}
-                  className={`w-full p-4 rounded-xl border-2 transition-all ${
-                    deliveryMethod === 'shipping'
-                      ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-white/20 bg-white/5 hover:bg-white/10'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${
-                      deliveryMethod === 'shipping' ? 'border-blue-500' : 'border-white/40'
-                    }`}>
-                      {deliveryMethod === 'shipping' && (
-                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="font-semibold text-white">Ship to Address</div>
-                      <div className="text-sm text-slate-400 mt-1">
-                        We'll ship your order to your address
-                      </div>
-                      <div className="text-sm text-green-400 mt-1">Free Shipping</div>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDeliveryMethod('pickup')}
-                  className={`w-full p-4 rounded-xl border-2 transition-all ${
-                    deliveryMethod === 'pickup'
-                      ? 'border-purple-500 bg-purple-500/10'
-                      : 'border-white/20 bg-white/5 hover:bg-white/10'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${
-                      deliveryMethod === 'pickup' ? 'border-purple-500' : 'border-white/40'
-                    }`}>
-                      {deliveryMethod === 'pickup' && (
-                        <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="font-semibold text-white">Local Pickup</div>
-                      <div className="text-sm text-slate-400 mt-1">
-                        Pick up your order at our location
-                      </div>
-                      <div className="text-sm text-purple-400 mt-1">
-                        {companySettings?.companyInfo?.pickupInfo?.address || '133 Church St, St Catharines, ON L2R 3C7'}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              </div>
+            <div>
+              <Label htmlFor="zipCode">Postal Code *</Label>
+              <Input
+                id="zipCode"
+                value={customerInfo.zipCode}
+                onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                required
+              />
             </div>
-
-            {deliveryMethod === 'shipping' && (
-              <div className="glass-strong rounded-2xl p-6 border border-white/10">
-                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"></span>
-                  Shipping Address
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                    <input
-                      type="checkbox"
-                      id="useShippingAddress"
-                      checked={useShippingAddress}
-                      onChange={(e) => setUseShippingAddress(e.target.checked)}
-                      className="w-5 h-5 rounded border-2 border-blue-500 bg-white/10 checked:bg-blue-500 cursor-pointer"
-                    />
-                    <Label htmlFor="useShippingAddress" className="text-white font-medium cursor-pointer">
-                      Ship to a different address
-                    </Label>
-                  </div>
-
-                  {!useShippingAddress && (
-                    <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                      <p className="text-slate-300 text-sm mb-2">Shipping to:</p>
-                      <p className="text-white font-medium">{customerInfo.address || 'Address not entered'}</p>
-                      <p className="text-white">{customerInfo.city && customerInfo.state && customerInfo.zipCode
-                        ? `${customerInfo.city}, ${customerInfo.state} ${customerInfo.zipCode}`
-                        : 'City, Province/State, Postal Code not entered'}
-                      </p>
-                      <p className="text-white">{customerInfo.country === 'CA' ? 'Canada' : 'United States'}</p>
-                    </div>
-                  )}
-
-                  {useShippingAddress && (
-                    <>
-                      <div>
-                        <Label htmlFor="shipping-address" className="text-slate-200 font-semibold">Address *</Label>
-                        <AddressAutocomplete
-                          value={shippingAddress.address}
-                          onChange={(value) => handleShippingInputChange('address', value)}
-                          onAddressSelect={(components) => {
-                            setShippingAddress(prev => ({
-                              ...prev,
-                              address: components.address,
-                              city: components.city,
-                              state: components.state,
-                              zipCode: components.zipCode,
-                              country: components.country,
-                            }));
-                          }}
-                          placeholder="Start typing your shipping address..."
-                          className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                          country={shippingAddress.country}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="shipping-country" className="text-slate-200 font-semibold">Country *</Label>
-                        <select
-                          id="shipping-country"
-                          value={shippingAddress.country}
-                          onChange={(e) => handleShippingInputChange('country', e.target.value)}
-                          required
-                          className="w-full bg-white/10 border border-white/20 text-white rounded-md px-3 py-2 mt-2 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="CA" className="bg-slate-800">Canada</option>
-                          <option value="US" className="bg-slate-800">United States</option>
-                        </select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="shipping-city" className="text-slate-200 font-semibold">City *</Label>
-                          <Input
-                            id="shipping-city"
-                            value={shippingAddress.city}
-                            onChange={(e) => handleShippingInputChange('city', e.target.value)}
-                            required
-                            className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="shipping-state" className="text-slate-200 font-semibold">
-                            {shippingAddress.country === 'CA' ? 'Province' : 'State'} *
-                          </Label>
-                          <Input
-                            id="shipping-state"
-                            value={shippingAddress.state}
-                            onChange={(e) => handleShippingInputChange('state', e.target.value.toUpperCase())}
-                            required
-                            placeholder={shippingAddress.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
-                            maxLength={2}
-                            className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="shipping-zipCode" className="text-slate-200 font-semibold">
-                          {shippingAddress.country === 'CA' ? 'Postal Code' : 'ZIP Code'} *
-                        </Label>
-                        <Input
-                          id="shipping-zipCode"
-                          value={shippingAddress.zipCode}
-                          onChange={(e) => handleShippingInputChange('zipCode', e.target.value.toUpperCase())}
-                          required
-                          placeholder={shippingAddress.country === 'CA' ? 'A1A 1A1' : '12345'}
-                          className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {deliveryMethod === 'pickup' && (
-              <div className="glass-strong rounded-2xl p-6 border border-white/10">
-                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-400 to-pink-400"></span>
-                  Pickup Information
-                </h2>
-                <div className="space-y-4">
-                  <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-                    <p className="text-white font-medium mb-2">Pickup Location:</p>
-                    {companySettings?.companyInfo?.pickupInfo?.address ? (
-                      <>
-                        <p className="text-slate-300 mb-2">{companySettings.companyInfo.pickupInfo.address}</p>
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(companySettings.companyInfo.pickupInfo.address)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-sm"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          Open in Google Maps
-                        </a>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-slate-300 mb-2">133 Church St</p>
-                        <p className="text-slate-300 mb-2">St Catharines, ON L2R 3C7</p>
-                        <a
-                          href="https://www.google.com/maps/search/?api=1&query=133+Church+St,+St+Catharines,+ON+L2R+3C7"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-sm"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          Open in Google Maps
-                        </a>
-                      </>
-                    )}
-                  </div>
-                  <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                    <p className="text-white font-medium mb-2">Hours:</p>
-                    {companySettings?.companyInfo?.pickupInfo?.hours ? (
-                      Object.entries(companySettings.companyInfo.pickupInfo.hours).map(([day, hours]: [string, any]) => (
-                        <p key={day} className="text-slate-300 capitalize">
-                          {day}: {hours}
-                        </p>
-                      ))
-                    ) : (
-                      <>
-                        <p className="text-slate-300">Monday - Friday: 9:00 AM - 5:00 PM</p>
-                        <p className="text-slate-300">Saturday: 10:00 AM - 2:00 PM</p>
-                        <p className="text-slate-300">Sunday: Closed</p>
-                      </>
-                    )}
-                  </div>
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                    <p className="text-amber-300 text-sm">
-                      <strong>Note:</strong> {companySettings?.companyInfo?.pickupInfo?.instructions || "You'll receive an email when your order is ready for pickup. Please bring your order confirmation and a valid ID."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="glass-strong rounded-2xl p-6 border border-white/10">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <CreditCard className="h-6 w-6" />
+          </CardContent>
+        </Card>          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <CreditCard className="mr-2 h-5 w-5" />
                 Payment Information
-              </h2>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <div 
                 id="card-container"
-                className="min-h-[60px] border border-white/20 rounded-xl p-4 bg-white/5"
+                className="min-h-[60px] border rounded-md p-3 bg-background"
               >
                 {/* Square card form will be inserted here */}
               </div>
-              <div className="flex items-center mt-4 text-sm text-slate-400">
+              <div className="flex items-center mt-4 text-sm text-muted-foreground">
                 <Lock className="mr-2 h-4 w-4" />
                 Your payment information is secure and encrypted
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Order Summary */}
-          <div>
-            <div className="glass-strong rounded-2xl p-6 border border-white/10 sticky top-24">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-emerald-400"></span>
-                Order Summary
-              </h2>
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm py-3 border-b border-white/10">
-                      <div className="flex-1">
-                        <p className="font-medium text-white">{item.name}</p>
-                        <p className="text-slate-400">
-                          {item.sheetSize}" DTF Sheet • Qty: {item.quantity}
-                        </p>
-                      </div>
-                      <p className="font-medium text-white">
-                        ${(item.pricing.total * item.quantity).toFixed(2)}
+        {/* Order Summary */}
+        <div>
+          <Card className="sticky top-4">
+            <CardHeader>
+              <CardTitle>Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <div className="flex-1">
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-muted-foreground">
+                        {item.sheetSize}" DTF Sheet • Qty: {item.quantity}
                       </p>
                     </div>
-                  ))}
-                </div>
-                
-                <div className="border-t border-white/10 pt-4">
-                  <div className="space-y-2 text-slate-300">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span className="text-white">${totalPrice.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span className="text-green-400">Free</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tax {customerInfo.state && `(${customerInfo.state})`}</span>
-                      <span className="text-white">${taxCalculation.total.toFixed(2)}</span>
-                    </div>
-                    {taxCalculation.gst > 0 && (
-                      <div className="flex justify-between text-sm text-slate-400 pl-4">
-                        <span>GST (5%)</span>
-                        <span>${taxCalculation.gst.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {taxCalculation.pst > 0 && (
-                      <div className="flex justify-between text-sm text-slate-400 pl-4">
-                        <span>PST ({(taxCalculation.pst / totalPrice * 100).toFixed(2)}%)</span>
-                        <span>${taxCalculation.pst.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {taxCalculation.hst > 0 && (
-                      <div className="flex justify-between text-sm text-slate-400 pl-4">
-                        <span>HST ({(taxCalculation.rate * 100).toFixed(1)}%)</span>
-                        <span>${taxCalculation.hst.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-xl font-bold pt-3 border-t border-white/10">
-                      <span className="text-white">Total</span>
-                      <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">${orderTotal.toFixed(2)}</span>
-                    </div>
+                    <p className="font-medium">
+                      ${(item.pricing.total * item.quantity).toFixed(2)}
+                    </p>
                   </div>
+                ))}
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>${totalPrice.toFixed(2)}</span>
                 </div>
-
-                <button
-                  onClick={handlePayment}
-                  disabled={isLoading}
-                  className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-xl transition-all hover:scale-105 hover:shadow-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-                      Processing Payment...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="h-5 w-5" />
-                      Pay ${orderTotal.toFixed(2)}
-                    </>
-                  )}
-                </button>
-
-                <div className="text-xs text-slate-400 space-y-1 pt-4">
-                  <p>• Secure payment processing by Square</p>
-                  <p>• 256-bit SSL encryption</p>
-                  <p>• Your card information is never stored</p>
+                <div className="flex justify-between">
+                  <span>Shipping</span>
+                  <span>Free</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax</span>
+                  <span>Calculated at delivery</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total</span>
+                  <span>${totalPrice.toFixed(2)}</span>
                 </div>
               </div>
-            </div>
-          </div>
+
+              <Button 
+                onClick={handlePayment}
+                disabled={isLoading}
+                className="w-full"
+                size="lg"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-background border-t-transparent mr-2" />
+                    Processing Payment...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="mr-2 h-4 w-4" />
+                    Pay ${totalPrice.toFixed(2)}
+                  </>
+                )}
+              </Button>
+
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>• Secure payment processing by Square</p>
+                <p>• 256-bit SSL encryption</p>
+                <p>• Your card information is never stored</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

@@ -38,7 +38,7 @@ export default function Home() {
     async function loadProducts() {
       try {
         const productsRef = collection(db, 'products');
-        const q = query(productsRef, where('isActive', '==', true), orderBy('sheetSize'));
+        const q = query(productsRef, where('isActive', '==', true));
         const snapshot = await getDocs(q);
         
         const productsData = snapshot.docs.map(doc => ({
@@ -46,6 +46,10 @@ export default function Home() {
           ...doc.data(),
         })) as Product[];
         
+        // Sort by sheetSize in memory instead of in query
+        productsData.sort((a, b) => a.sheetSize.localeCompare(b.sheetSize));
+        
+        console.log('Loaded products:', productsData.length);
         setProducts(productsData);
       } catch (error) {
         console.error('Error loading products:', error);

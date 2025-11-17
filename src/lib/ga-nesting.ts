@@ -68,7 +68,6 @@ function analyzeBatchDiversity(images: ManagedImage[]): BatchAnalysis {
 
 /**
  * Determine adaptive GA parameters based on batch complexity
- * EXTREME: Aggressive parameters for 90%+ utilization
  */
 function getAdaptiveParameters(analysis: BatchAnalysis, totalItems: number): {
   populationSize: number;
@@ -76,24 +75,23 @@ function getAdaptiveParameters(analysis: BatchAnalysis, totalItems: number): {
   mutationRate: number;
   eliteCount: number;
 } {
-  // EXTREME: Start with very high base values
-  const basePopulation = 150;  // Was 60, now 150
-  const baseGenerations = 150;  // Was 40, now 150
+  const basePopulation = 50;
+  const baseGenerations = 30;
   
-  // Scale up aggressively for complexity
-  const complexityMultiplier = Math.min(1 + analysis.complexityScore * 0.8, 2.5);  // Was 0.6/2.2, now 0.8/2.5
+  // Scale up for high diversity/complexity
+  const complexityMultiplier = Math.min(1 + analysis.complexityScore * 0.5, 2.0);
   
   // Scale up for large batches
-  const sizeMultiplier = Math.min(1 + Math.log10(totalItems / 30) * 0.5, 2.0);  // Was 0.4/1.7, now 0.5/2.0
+  const sizeMultiplier = Math.min(1 + Math.log10(totalItems / 30) * 0.3, 1.5);
   
-  const populationSize = Math.round(basePopulation * complexityMultiplier * sizeMultiplier);
+  const populationSize = Math.round(basePopulation * complexityMultiplier);
   const generations = Math.round(baseGenerations * complexityMultiplier);
   
-  // MAXIMUM mutation for exploration
-  const mutationRate = Math.min(0.30 + analysis.complexityScore * 0.15, 0.45);  // Was 0.20/0.12/0.40, now 0.30/0.15/0.45
+  // Higher mutation for more diverse batches
+  const mutationRate = Math.min(0.15 + analysis.complexityScore * 0.1, 0.35);
   
   // More elites for larger populations
-  const eliteCount = Math.max(5, Math.min(Math.round(populationSize * 0.10), Math.round(populationSize * 0.15)));  // Was 3/0.08/0.10, now 5/0.10/0.15
+  const eliteCount = Math.max(2, Math.round(populationSize * 0.05));
   
   debugLog(`[GA ADAPTIVE] Complexity: ${analysis.complexityScore.toFixed(2)}, Pop: ${populationSize}, Gen: ${generations}, Mutation: ${(mutationRate * 100).toFixed(0)}%`);
   debugLog(`[GA BATCH] ${analysis.uniqueSizes} unique sizes, ${totalItems} total items, aspect range: ${analysis.aspectRatioRange.toFixed(2)}`);
@@ -145,100 +143,18 @@ export function geneticAlgorithmNesting(
   
   const { populationSize, generations, mutationRate, eliteCount } = adaptiveParams;
 
-  // ENHANCED: Initialize population with proven heuristic strategies
-  // This dramatically improves starting quality and convergence speed
+  // Initialize population with diversity-aware strategies
   let population: Chromosome[] = [];
   
-  // Strategy 1: Area descending (largest first) - proven effective
-  const areaDesc = expanded.slice().sort((a, b) => (b.width * b.height) - (a.width * a.height));
+  // Strategy 1: Largest-first (good baseline)
+  const sorted = expanded.slice().sort((a, b) => (b.width * b.height) - (a.width * a.height));
   population.push({
-    sequence: areaDesc,
-    rotations: areaDesc.map(img => canRotate(img) ? (Math.random() < 0.5 ? 90 : 0) : 0),
+    sequence: sorted,
+    rotations: sorted.map(img => canRotate(img) ? (Math.random() < 0.5 ? 90 : 0) : 0),
     fitness: 0
   });
 
-  // Strategy 2: Perimeter descending - works well for mixed shapes
-  const perimeterDesc = expanded.slice().sort((a, b) => 
-    ((b.width + b.height) * 2) - ((a.width + a.height) * 2)
-  );
-  population.push({
-    sequence: perimeterDesc,
-    rotations: perimeterDesc.map(img => canRotate(img) ? (Math.random() < 0.5 ? 90 : 0) : 0),
-    fitness: 0
-  });
-
-  // Strategy 3: Width descending - good for horizontal packing
-  const widthDesc = expanded.slice().sort((a, b) => b.width - a.width);
-  population.push({
-    sequence: widthDesc,
-    rotations: widthDesc.map(img => canRotate(img) ? (Math.random() < 0.3 ? 90 : 0) : 0),
-    fitness: 0
-  });
-
-  // Strategy 4: Height descending - good for vertical stacking
-  const heightDesc = expanded.slice().sort((a, b) => b.height - a.height);
-  population.push({
-    sequence: heightDesc,
-    rotations: heightDesc.map(img => canRotate(img) ? (Math.random() < 0.7 ? 90 : 0) : 0),
-    fitness: 0
-  });
-
-  // Strategy 5: Aspect ratio descending - handles elongated pieces
-  const aspectDesc = expanded.slice().sort((a, b) => 
-    (b.width / b.height) - (a.width / a.height)
-  );
-  population.push({
-    sequence: aspectDesc,
-    rotations: aspectDesc.map(img => {
-      if (!canRotate(img)) return 0;
-      const ar = img.width / img.height;
-      return ar > 1.5 ? 90 : 0; // Rotate wide pieces
-    }),
-    fitness: 0
-  });
-
-  // Strategy 6: Aspect ratio ascending - complementary approach
-  const aspectAsc = expanded.slice().sort((a, b) => 
-    (a.width / a.height) - (b.width / b.height)
-  );
-  population.push({
-    sequence: aspectAsc,
-    rotations: aspectAsc.map(img => {
-      if (!canRotate(img)) return 0;
-      const ar = img.width / img.height;
-      return ar < 0.7 ? 90 : 0; // Rotate tall pieces
-    }),
-    fitness: 0
-  });
-
-  // Strategy 7: Diagonal descending (longest diagonal first)
-  const diagonalDesc = expanded.slice().sort((a, b) => 
-    Math.sqrt(b.width**2 + b.height**2) - Math.sqrt(a.width**2 + a.height**2)
-  );
-  population.push({
-    sequence: diagonalDesc,
-    rotations: diagonalDesc.map(img => canRotate(img) ? 0 : 0),
-    fitness: 0
-  });
-
-  // Strategy 8: Alternating large/small (better gap filling)
-  const alternating = [];
-  const sortedByArea = expanded.slice().sort((a, b) => (b.width * b.height) - (a.width * a.height));
-  const halfPoint = Math.floor(sortedByArea.length / 2);
-  for (let i = 0; i < halfPoint; i++) {
-    alternating.push(sortedByArea[i]);
-    if (i + halfPoint < sortedByArea.length) {
-      alternating.push(sortedByArea[sortedByArea.length - 1 - i]);
-    }
-  }
-  if (sortedByArea.length % 2 === 1) alternating.push(sortedByArea[halfPoint]);
-  population.push({
-    sequence: alternating,
-    rotations: alternating.map(img => canRotate(img) ? (Math.random() < 0.5 ? 90 : 0) : 0),
-    fitness: 0
-  });
-
-  // Strategy 9: Group by size buckets (for diverse batches)
+  // Strategy 2: Group by size (helps with diverse batches)
   if (analysis.uniqueSizes > 5) {
     const sizeGroups = new Map<string, ManagedImage[]>();
     expanded.forEach(img => {
@@ -257,38 +173,30 @@ export function geneticAlgorithmNesting(
     });
   }
 
-  // Strategy 10: Best-fit-decreasing inspired (sort by "fit score")
-  const fitScore = expanded.slice().sort((a, b) => {
-    const scoreA = a.width * a.height + Math.min(a.width, a.height) * 10;
-    const scoreB = b.width * b.height + Math.min(b.width, b.height) * 10;
-    return scoreB - scoreA;
-  });
-  population.push({
-    sequence: fitScore,
-    rotations: fitScore.map(img => canRotate(img) ? (Math.random() < 0.5 ? 90 : 0) : 0),
-    fitness: 0
-  });
+  // Strategy 3: Aspect ratio sorted (helps with mixed shapes)
+  if (analysis.aspectRatioRange > 0.5) {
+    const aspectSorted = expanded.slice().sort((a, b) => 
+      (b.width / b.height) - (a.width / a.height)
+    );
+    population.push({
+      sequence: aspectSorted,
+      rotations: aspectSorted.map(img => canRotate(img) ? 0 : 0),
+      fitness: 0
+    });
+  }
 
-  // Rest of population: random with smart rotation bias
+  // Rest of population: random with biased rotations for elongated shapes
   while (population.length < populationSize) {
     const sequence = shuffleArray(expanded.slice());
     const rotations = sequence.map(img => {
       if (!canRotate(img)) return 0;
       
-      // Smart rotation bias based on aspect ratio
+      // Bias rotation for elongated shapes
       const aspectRatio = img.width / img.height;
-      if (aspectRatio > 2) {
-        // Very wide: 80% chance to rotate
-        return Math.random() < 0.8 ? 90 : 0;
-      } else if (aspectRatio < 0.5) {
-        // Very tall: 80% chance to rotate
-        return Math.random() < 0.8 ? 90 : 0;
-      } else if (aspectRatio > 1.3 || aspectRatio < 0.7) {
-        // Moderately elongated: 60% chance to rotate
-        return Math.random() < 0.6 ? 90 : 0;
+      if (aspectRatio > 2 || aspectRatio < 0.5) {
+        return Math.random() < 0.7 ? 90 : 0; // 70% chance to rotate elongated
       }
       
-      // Near-square: random rotation
       return [0, 90, 180, 270][Math.floor(Math.random() * rotationSteps)];
     });
     population.push({ sequence, rotations, fitness: 0 });
@@ -298,7 +206,7 @@ export function geneticAlgorithmNesting(
 
   // Evolve over generations
   for (let gen = 0; gen < generations; gen++) {
-    // ENHANCED: Evaluate fitness with multi-objective optimization
+    // Evaluate fitness for each chromosome
     for (const chromosome of population) {
       const result = bottomLeftPlacement(
         chromosome.sequence,
@@ -306,25 +214,7 @@ export function geneticAlgorithmNesting(
         sheetWidth,
         padding
       );
-      
-      // Multi-objective fitness: utilization (primary) + compactness bonus
-      let fitness = result.areaUtilizationPct;
-      
-      // Bonus for placing all items
-      if (result.failedCount === 0) {
-        fitness += 0.05; // 5% bonus for complete placement
-      }
-      
-      // Bonus for compact layouts (lower sheet length)
-      const compactness = Math.min(1.0, sheetWidth / Math.max(1, result.sheetLength));
-      fitness += compactness * 0.02; // Up to 2% bonus for square-ish layouts
-      
-      // Penalty for failed placements (exponential)
-      if (result.failedCount > 0) {
-        fitness *= Math.pow(0.95, result.failedCount);
-      }
-      
-      chromosome.fitness = fitness;
+      chromosome.fitness = result.areaUtilizationPct;
       
       if (!bestEver || chromosome.fitness > bestEver.fitness) {
         bestEver = chromosome;
@@ -372,13 +262,8 @@ export function geneticAlgorithmNesting(
 }
 
 /**
- * OPTIMIZED Bottom-Left Placement with Smart Candidate Generation
- * Balances speed and quality for 90%+ utilization
- * 
- * Key improvements over basic bottom-left:
- * - Comprehensive candidate generation (corners, edges, grid points)
- * - Simple but effective position scoring
- * - Fast collision detection
+ * Bottom-Left Fill placement algorithm
+ * Places each item as close to bottom-left as possible without overlaps
  */
 function bottomLeftPlacement(
   sequence: ManagedImage[],
@@ -388,6 +273,7 @@ function bottomLeftPlacement(
 ): NestingResult {
   const placedItems: NestedImage[] = [];
   const usedRects: Array<{x: number; y: number; width: number; height: number}> = [];
+  let maxY = padding;
   let usedArea = 0;
 
   for (let i = 0; i < sequence.length; i++) {
@@ -402,90 +288,71 @@ function bottomLeftPlacement(
     const itemWidth = w + padding;
     const itemHeight = h + padding;
 
-    // Generate comprehensive candidate positions
-    const candidates: Array<{x: number; y: number}> = [];
-    const seen = new Set<string>();
+    // Find bottom-left position
+    let bestX = padding;
+    let bestY = padding;
+    let placed = false;
+
+    // Try positions in bottom-left order
+    const candidates: Array<{x: number; y: number}> = [{ x: padding, y: padding }];
     
-    // Add base position
-    addCandidateSimple(padding, padding, candidates, seen);
-    
-    // Add positions from existing rectangles
     for (const rect of usedRects) {
-      // Right and top edges (primary positions)
-      addCandidateSimple(rect.x + rect.width, rect.y, candidates, seen);
-      addCandidateSimple(rect.x, rect.y + rect.height, candidates, seen);
-      
-      // Left edge at various heights (helps with narrow spaces)
-      addCandidateSimple(padding, rect.y, candidates, seen);
-      addCandidateSimple(padding, rect.y + rect.height, candidates, seen);
-      
-      // Right edge at base (helps with row starts)
-      addCandidateSimple(rect.x + rect.width, padding, candidates, seen);
+      candidates.push({ x: rect.x + rect.width, y: rect.y });
+      candidates.push({ x: rect.x, y: rect.y + rect.height });
     }
-    
-    // Sort by bottom-left priority with simple scoring
+
+    // Sort by bottom-left priority (Y first, then X)
     candidates.sort((a, b) => {
-      // Primary: lower Y position (bottom)
-      const yDiff = a.y - b.y;
-      if (Math.abs(yDiff) > 0.01) return yDiff;
-      
-      // Secondary: lower X position (left)
-      return a.x - b.x;
+      if (Math.abs(a.y - b.y) < 0.01) return a.x - b.x;
+      return a.y - b.y;
     });
 
-    // Find first valid position
-    let bestPos: {x: number; y: number} | null = null;
-    
     for (const pos of candidates) {
-      // Check if fits within sheet width
-      if (pos.x + itemWidth > sheetWidth + 0.001) continue;
+      if (pos.x + itemWidth > sheetWidth) continue;
 
-      // Fast collision check
+      // Check collision
       let collision = false;
       for (const rect of usedRects) {
-        if (!(pos.x + itemWidth <= rect.x + 0.001 ||
-              pos.x >= rect.x + rect.width - 0.001 ||
-              pos.y + itemHeight <= rect.y + 0.001 ||
-              pos.y >= rect.y + rect.height - 0.001)) {
+        if (!(pos.x + itemWidth <= rect.x ||
+              pos.x >= rect.x + rect.width ||
+              pos.y + itemHeight <= rect.y ||
+              pos.y >= rect.y + rect.height)) {
           collision = true;
           break;
         }
       }
 
       if (!collision) {
-        bestPos = pos;
-        break; // Take first valid position (already sorted optimally)
+        bestX = pos.x;
+        bestY = pos.y;
+        placed = true;
+        break;
       }
     }
 
-    // If no valid position found, skip this item
-    if (!bestPos) continue;
+    if (!placed) continue;
 
-    // Place the item
     placedItems.push({
       id: img.id,
       url: img.url,
-      x: bestPos.x,
-      y: bestPos.y,
+      x: bestX,
+      y: bestY,
       width: img.width,
       height: img.height,
       rotated: isRotated
     });
 
     usedRects.push({
-      x: bestPos.x,
-      y: bestPos.y,
+      x: bestX,
+      y: bestY,
       width: itemWidth,
       height: itemHeight
     });
 
     usedArea += img.width * img.height;
+    maxY = Math.max(maxY, bestY + itemHeight);
   }
 
-  // Calculate final sheet dimensions
-  const maxY = usedRects.length > 0 
-    ? Math.max(...usedRects.map(r => r.y + r.height))
-    : padding;
   const sheetLength = maxY + padding;
   const sheetArea = sheetWidth * sheetLength;
   const areaUtilizationPct = sheetArea === 0 ? 0 : usedArea / sheetArea;
@@ -499,19 +366,6 @@ function bottomLeftPlacement(
     sortStrategy: '',
     packingMethod: ''
   };
-}
-
-function addCandidateSimple(
-  x: number, 
-  y: number, 
-  candidates: Array<{x: number; y: number}>,
-  seen: Set<string>
-) {
-  const key = `${x.toFixed(2)},${y.toFixed(2)}`;
-  if (!seen.has(key)) {
-    seen.add(key);
-    candidates.push({ x, y });
-  }
 }
 
 // Tournament selection

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { executeNesting, ManagedImage, NestingResult } from '@/lib/nesting-algorithm';
 import SheetPreview from './sheet-preview';
 import ImageManager from './image-manager';
@@ -30,7 +30,6 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sheetWidth, setSheetWidth] = useState<13 | 17>(initialWidth as 13 | 17);
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   
   // Progress modal state
   const [modalStage, setModalStage] = useState<'preparing' | 'genetic-algorithm' | 'optimizing' | 'complete'>('preparing');
@@ -38,48 +37,9 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
   const [currentGeneration, setCurrentGeneration] = useState(0);
   const [bestUtilization, setBestUtilization] = useState(0);
   
-  const { addItem, updateItem, getItemById } = useCart();
+  const { addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
-
-  // Check for edit mode on mount
-  useEffect(() => {
-    const editCartItemId = sessionStorage.getItem('editCartItemId');
-    if (editCartItemId) {
-      const cartItem = getItemById(editCartItemId);
-      if (cartItem) {
-        setEditingItemId(editCartItemId);
-        setImages(cartItem.images);
-        setSheetWidth(cartItem.sheetSize === '17' ? 17 : 13);
-        
-        // Restore the nesting result with all required properties
-        setNestingResult({
-          placedItems: cartItem.layout.positions.map(pos => ({
-            id: pos.imageId,
-            url: cartItem.images.find(img => img.id === pos.imageId)?.url || '',
-            x: pos.x,
-            y: pos.y,
-            width: pos.width,
-            height: pos.height,
-            rotated: pos.rotated || false,
-          })),
-          sheetLength: cartItem.layout.sheetHeight,
-          areaUtilizationPct: cartItem.layout.utilization / 100,
-          totalCount: cartItem.layout.totalCopies,
-          failedCount: 0,
-          sortStrategy: 'AREA_DESC',
-          packingMethod: 'maxrects-packer',
-        });
-        
-        toast({
-          title: "Editing Cart Item",
-          description: "Modify your design and save changes to update the cart.",
-        });
-      }
-      // Clear the session storage flag
-      sessionStorage.removeItem('editCartItemId');
-    }
-  }, [getItemById, toast]);
 
   const performNesting = async () => {
     if (images.length === 0) return;
@@ -128,7 +88,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         });
       }, 100); // Update every 100ms for smooth progress
 
-      const result = await executeNesting(images, sheetWidth);
+      const result = executeNesting(images, sheetWidth);
       
       clearInterval(progressInterval);
       
@@ -214,44 +174,21 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         })),
         utilization: nestingResult.areaUtilizationPct * 100,
         totalCopies: nestingResult.placedItems.length,
-        sheetWidth: sheetWidth,
-        sheetHeight: nestingResult.sheetLength,
       },
       pricing,
       quantity: 1,
     };
 
-    // Check if we're editing an existing item
-    if (editingItemId) {
-      updateItem(editingItemId, cartItem);
-      toast({
-        title: "Cart Updated!",
-        description: `Your ${sheetSizeStr}" DTF sheet has been updated.`,
-      });
-      // Clear edit mode
-      setEditingItemId(null);
-    } else {
-      addItem(cartItem);
-      toast({
-        title: "Added to Cart!",
-        description: `Your ${sheetSizeStr}" DTF sheet layout has been added to cart.`,
-      });
-    }
+    addItem(cartItem);
+    
+    toast({
+      title: "Added to Cart!",
+      description: `Your ${sheetSizeStr}" DTF sheet layout has been added to cart.`,
+    });
   };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Edit Mode Banner */}
-      {editingItemId && (
-        <div className="bg-blue-500/20 border border-blue-400/50 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-white">Editing Cart Item</h3>
-            <p className="text-sm text-slate-300">Make your changes and click "Update Cart" to save.</p>
-          </div>
-        </div>
-      )}
-
       {/* Progress Modal */}
       <NestingProgressModal
         isOpen={isProcessing}
@@ -266,60 +203,48 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
       <div className="flex flex-col lg:flex-row gap-6">
         
         {/* Left Panel - Controls (Sticky) */}
-        <div className="lg:w-1/3 space-y-6 lg:sticky lg:top-24 lg:h-fit">
-          <div className="glass-strong rounded-2xl p-6 shadow-xl border border-white/10">
-            <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400"></span>
-              Configuration
-            </h2>
+        <div className="lg:w-1/3 space-y-6 lg:sticky lg:top-6 lg:h-fit">
+          <div className="bg-card p-4 rounded-lg border">
+            <h2 className="text-xl font-semibold mb-4">Nesting Configuration</h2>
 
             {/* Sheet Width Selector */}
-            <div className="mb-6">
-              <label className="text-sm font-semibold mb-3 block text-slate-300">Sheet Width</label>
-              <div className="flex gap-3">
-                <button
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-2 block">Sheet Width</label>
+              <div className="flex gap-2">
+                <Button
+                  variant={sheetWidth === 13 ? 'default' : 'outline'}
                   onClick={() => setSheetWidth(13)}
-                  className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${
-                    sheetWidth === 13 
-                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg scale-105' 
-                      : 'bg-white/10 text-slate-300 hover:bg-white/20 border border-white/20'
-                  }`}
+                  className="flex-1"
+                  size="sm"
                 >
                   13"
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant={sheetWidth === 17 ? 'default' : 'outline'}
                   onClick={() => setSheetWidth(17)}
-                  className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${
-                    sheetWidth === 17 
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg scale-105' 
-                      : 'bg-white/10 text-slate-300 hover:bg-white/20 border border-white/20'
-                  }`}
+                  className="flex-1"
+                  size="sm"
                 >
                   17"
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Results Display */}
             {nestingResult && (
-              <div className="mt-6 p-5 bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/20 backdrop-blur-sm">
-                <h3 className="font-bold mb-4 text-white text-lg flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-green-400 to-emerald-400"></span>
-                  Your Gang Sheet
-                </h3>
-                <div className="space-y-3 text-slate-200">
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-sm">Sheet Length:</span>
-                    <span className="font-bold text-white">{nestingResult.sheetLength.toFixed(2)}"</span>
-                  </div>
+              <div className="mt-4 p-3 bg-muted rounded">
+                <h3 className="font-medium mb-2">Your Gang Sheet</h3>
+                <div className="text-sm space-y-1">
+                  <div>Sheet Length: {nestingResult.sheetLength.toFixed(2)}"</div>
+                  <div>Cost: ${(nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59)).toFixed(2)}</div>
                   
                   {/* Pricing Breakdown */}
-                  <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                    <div className="text-sm font-semibold mb-3 text-white">Pricing Breakdown</div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between py-1">
-                        <span className="text-slate-300">Base Price:</span>
-                        <span className="font-semibold text-white">${calculatePricing().basePrice.toFixed(2)}</span>
+                  <div className="mt-4 p-3 bg-muted rounded-md">
+                    <div className="text-sm font-medium mb-2">Pricing Breakdown:</div>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Base Price:</span>
+                        <span>${calculatePricing().basePrice.toFixed(2)}</span>
                       </div>
                       {/* Setup Fee - Commented out for now, can be re-enabled later
                       <div className="flex justify-between">
@@ -327,26 +252,27 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
                         <span>${calculatePricing().setupFee.toFixed(2)}</span>
                       </div>
                       */}
-                      <div className="flex justify-between font-bold border-t border-white/20 pt-3 mt-2">
-                        <span className="text-white">Total:</span>
-                        <span className="text-xl bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">${calculatePricing().total.toFixed(2)}</span>
+                      <div className="flex justify-between font-medium border-t pt-1">
+                        <span>Total:</span>
+                        <span>${calculatePricing().total.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Add to Cart Button */}
-                  <div className="mt-5 space-y-2">
-                    <button
+                  <div className="mt-4 space-y-2">
+                    <Button 
                       onClick={handleAddToCart}
                       disabled={!user}
-                      className="w-full py-3 px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-xl transition-all hover:scale-105 hover:shadow-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      className="w-full"
+                      size="lg"
                     >
-                      <ShoppingCart className="h-5 w-5" />
-                      {editingItemId ? 'Update Cart' : 'Add to Cart'}
-                    </button>
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Add to Cart
+                    </Button>
                     
                     {!user && (
-                      <p className="text-xs text-slate-400 text-center">
+                      <p className="text-xs text-muted-foreground text-center">
                         Please sign in to add items to cart
                       </p>
                     )}
@@ -356,13 +282,13 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
             )}
 
             {/* Manual Re-nest Button */}
-            <button
+            <Button 
               onClick={performNesting}
               disabled={images.length === 0 || isProcessing}
-              className="w-full mt-6 py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-xl transition-all hover:scale-105 hover:shadow-xl disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full mt-4"
             >
-              {isProcessing ? 'Processing...' : '✨ Nest Images'}
-            </button>
+              {isProcessing ? 'Processing...' : 'Nest Images'}
+            </Button>
           </div>
 
           {/* Image Management */}
@@ -374,17 +300,13 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
 
         {/* Right Panel - Sheet Preview */}
         <div className="lg:w-2/3">
-          <div className="glass-strong rounded-2xl p-6 shadow-xl border border-white/10">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"></span>
-                Live Preview
-                <Badge className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-0">
-                  {sheetWidth}"
-                </Badge>
+          <div className="bg-card p-4 rounded-lg border">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                {sheetWidth}" Gang Sheet Preview
               </h2>
             </div>
-            <SheetPreview
+              <SheetPreview
               sheetWidth={sheetWidth}
               sheetLength={nestingResult?.sheetLength || 0}
               nestedLayout={nestingResult?.placedItems || null}
