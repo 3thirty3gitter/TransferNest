@@ -174,6 +174,8 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         })),
         utilization: nestingResult.areaUtilizationPct * 100,
         totalCopies: nestingResult.placedItems.length,
+        sheetWidth: sheetWidth,
+        sheetHeight: nestingResult.sheetLength,
       },
       pricing,
       quantity: 1,
