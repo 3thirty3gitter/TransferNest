@@ -34,12 +34,12 @@ export default function Header() {
 
   const headerClasses = `
     fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-lg border-b border-white/20 shadow-lg transition-all duration-300 ease-in-out
-    ${isShrunk ? 'h-20' : 'h-28'}
+    ${isShrunk ? 'h-24' : 'h-32'}
   `;
 
   const logoClasses = `
     transition-all duration-300 ease-in-out object-contain
-    ${isShrunk ? 'h-12 w-auto' : 'h-16 w-auto'}
+    ${isShrunk ? 'h-16 w-auto' : 'h-20 w-auto'}
   `;
 
   const navLinkClasses = `
