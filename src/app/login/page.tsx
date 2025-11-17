@@ -38,9 +38,16 @@ export default function LoginPage() {
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [signupName, setSignupName] = useState('');
+  const [signupFirstName, setSignupFirstName] = useState('');
+  const [signupLastName, setSignupLastName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
+  const [signupAddress, setSignupAddress] = useState('');
+  const [signupCity, setSignupCity] = useState('');
+  const [signupState, setSignupState] = useState('');
+  const [signupZipCode, setSignupZipCode] = useState('');
+  const [signupCountry, setSignupCountry] = useState('Canada');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -92,7 +99,25 @@ export default function LoginPage() {
         signupEmail,
         signupPassword
       );
-      await updateProfile(userCredential.user, { displayName: signupName });
+      const displayName = `${signupFirstName} ${signupLastName}`.trim();
+      await updateProfile(userCredential.user, { displayName });
+      
+      // Save additional profile data to Firestore
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        firstName: signupFirstName,
+        lastName: signupLastName,
+        email: signupEmail,
+        phone: signupPhone,
+        address: signupAddress,
+        city: signupCity,
+        state: signupState,
+        zipCode: signupZipCode,
+        country: signupCountry,
+        createdAt: new Date().toISOString(),
+      });
+      
       toast({ title: 'Account created successfully!' });
       router.push('/');
     } catch (error: any) {
@@ -209,21 +234,36 @@ export default function LoginPage() {
                 </p>
               </div>
               <form onSubmit={handleEmailSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name" className="text-slate-200 font-semibold">Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="John Smith"
-                    required
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    disabled={isLoading}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-firstname" className="text-slate-200 font-semibold">First Name *</Label>
+                    <Input
+                      id="signup-firstname"
+                      type="text"
+                      placeholder="John"
+                      required
+                      value={signupFirstName}
+                      onChange={(e) => setSignupFirstName(e.target.value)}
+                      disabled={isLoading}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-lastname" className="text-slate-200 font-semibold">Last Name *</Label>
+                    <Input
+                      id="signup-lastname"
+                      type="text"
+                      placeholder="Smith"
+                      required
+                      value={signupLastName}
+                      onChange={(e) => setSignupLastName(e.target.value)}
+                      disabled={isLoading}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email" className="text-slate-200 font-semibold">Email</Label>
+                  <Label htmlFor="signup-email" className="text-slate-200 font-semibold">Email *</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -236,7 +276,7 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="text-slate-200 font-semibold">Password</Label>
+                  <Label htmlFor="signup-password" className="text-slate-200 font-semibold">Password *</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -244,6 +284,82 @@ export default function LoginPage() {
                     minLength={6}
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20"
+                    placeholder="Min. 6 characters"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone" className="text-slate-200 font-semibold">Phone Number</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    placeholder="(416) 555-1234"
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(e.target.value)}
+                    disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-address" className="text-slate-200 font-semibold">Street Address</Label>
+                  <Input
+                    id="signup-address"
+                    type="text"
+                    placeholder="123 Main Street"
+                    value={signupAddress}
+                    onChange={(e) => setSignupAddress(e.target.value)}
+                    disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-city" className="text-slate-200 font-semibold">City</Label>
+                    <Input
+                      id="signup-city"
+                      type="text"
+                      placeholder="Toronto"
+                      value={signupCity}
+                      onChange={(e) => setSignupCity(e.target.value)}
+                      disabled={isLoading}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-state" className="text-slate-200 font-semibold">Province</Label>
+                    <select
+                      id="signup-state"
+                      value={signupState}
+                      onChange={(e) => setSignupState(e.target.value)}
+                      disabled={isLoading}
+                      className="w-full h-10 px-3 bg-white/10 border border-white/20 rounded-md text-white focus:bg-white/20"
+                    >
+                      <option value="">Select...</option>
+                      <option value="AB">Alberta</option>
+                      <option value="BC">British Columbia</option>
+                      <option value="MB">Manitoba</option>
+                      <option value="NB">New Brunswick</option>
+                      <option value="NL">Newfoundland and Labrador</option>
+                      <option value="NS">Nova Scotia</option>
+                      <option value="ON">Ontario</option>
+                      <option value="PE">Prince Edward Island</option>
+                      <option value="QC">Quebec</option>
+                      <option value="SK">Saskatchewan</option>
+                      <option value="NT">Northwest Territories</option>
+                      <option value="NU">Nunavut</option>
+                      <option value="YT">Yukon</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-zipcode" className="text-slate-200 font-semibold">Postal Code</Label>
+                  <Input
+                    id="signup-zipcode"
+                    type="text"
+                    placeholder="M5V 3A8"
+                    value={signupZipCode}
+                    onChange={(e) => setSignupZipCode(e.target.value)}
                     disabled={isLoading}
                     className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20"
                   />
