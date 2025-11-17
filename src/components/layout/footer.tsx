@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center">
               <Image 
-                src="/logo.png" 
+                src="/DTF Wholesale Canadian Owned.png" 
                 alt="DTF Wholesale" 
                 width={234} 
                 height={65} 

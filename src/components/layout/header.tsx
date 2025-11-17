@@ -54,7 +54,7 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Image 
-              src="/logo.png" 
+              src="/DTF Wholesale Canadian Owned.png" 
               alt="DTF Wholesale" 
               width={234} 
               height={65} 
