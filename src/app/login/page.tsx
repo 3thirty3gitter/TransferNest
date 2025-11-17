@@ -167,9 +167,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
