@@ -55,6 +55,23 @@ export async function GET(request: NextRequest) {
     console.log('[Orders API] Executing query...');
     const snapshot = await queryRef.get();
     console.log('[Orders API] Query successful, docs:', snapshot.size);
+    
+    // Log all orders with their userIds for debugging
+    if (snapshot.size === 0 && userId) {
+      console.log('[Orders API] No orders found for userId:', userId);
+      // Check if there are any orders at all
+      const allOrdersSnapshot = await db.collection('orders').limit(5).get();
+      console.log('[Orders API] Total orders in database:', allOrdersSnapshot.size);
+      allOrdersSnapshot.docs.forEach((doc: any) => {
+        const data = doc.data();
+        console.log('[Orders API] Sample order:', {
+          id: doc.id,
+          userId: data.userId,
+          status: data.status,
+          createdAt: data.createdAt?.toDate?.()?.toISOString?.() || 'no date'
+        });
+      });
+    }
 
     let orders = snapshot.docs.map((doc: any) => ({
       id: doc.id,
