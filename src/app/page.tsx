@@ -65,7 +65,7 @@ export default function Home() {
     <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white overflow-hidden">
       <Header />
       {/* Spacer for fixed header */}
-      <div className="h-32"></div>
+      <div className="h-40"></div>
       <main className="flex-1">
         {/* Hero Section with Animated Gradient Background */}
         <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
