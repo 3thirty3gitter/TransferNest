@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Mail, MapPin, Phone, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import { Mail, MapPin, Phone } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -8,9 +9,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-white">
-              <Sparkles className="h-6 w-6 text-blue-400" />
-              <span className="text-xl font-bold">TransferNest</span>
+            <div className="flex items-center">
+              <Image 
+                src="/logo.png" 
+                alt="DTF Wholesale" 
+                width={180} 
+                height={50} 
+                className="h-8 w-auto"
+              />
             </div>
             <p className="text-sm text-slate-400">
               Premium DTF transfers with cutting-edge AI nesting technology for Canadian businesses.
@@ -49,15 +55,15 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Support</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="mailto:support@transfernest.com" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <a href="mailto:support@dtfwholesale.ca" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  support@transfernest.com
+                  support@dtfwholesale.ca
                 </a>
               </li>
               <li>
-                <a href="tel:+1234567890" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <a href="tel:+14165551234" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  (123) 456-7890
+                  (416) 555-1234
                 </a>
               </li>
               <li className="text-slate-400 flex items-start gap-2">
@@ -81,7 +87,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-slate-400 text-center md:text-left">
-            &copy; {new Date().getFullYear()} TransferNest. All Rights Reserved.
+            &copy; {new Date().getFullYear()} DTF Wholesale. All Rights Reserved.
           </p>
           <div className="flex gap-6 text-sm">
             <Link href="/privacy" className="text-slate-400 hover:text-white transition-colors">

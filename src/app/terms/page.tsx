@@ -17,7 +17,7 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Acceptance of Terms</h2>
               <p>
-                By accessing and using TransferNest's services, you agree to be bound by these Terms of Service. 
+                By accessing and using DTF Wholesale's services, you agree to be bound by these Terms of Service. 
                 If you do not agree to these terms, please do not use our services.
               </p>
             </section>
@@ -25,7 +25,7 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Service Description</h2>
               <p>
-                TransferNest provides DTF (Direct-to-Film) transfer printing services with AI-powered 
+                DTF Wholesale provides DTF (Direct-to-Film) transfer printing services with AI-powered 
                 gang sheet nesting. We offer tools to upload designs, optimize layouts, and order 
                 professional transfers for apparel decoration.
               </p>
@@ -71,7 +71,7 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Limitation of Liability</h2>
               <p>
-                TransferNest is not liable for indirect, incidental, or consequential damages arising 
+                DTF Wholesale is not liable for indirect, incidental, or consequential damages arising 
                 from the use of our services. Our total liability shall not exceed the amount paid 
                 for the specific order in question.
               </p>
@@ -88,7 +88,7 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Contact</h2>
               <p>
-                For questions about these Terms of Service, contact us at support@transfernest.com
+                For questions about these Terms of Service, contact us at support@dtfwholesale.ca
               </p>
             </section>
 

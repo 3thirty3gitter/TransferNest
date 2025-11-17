@@ -83,7 +83,7 @@ export default function Home() {
             {/* Floating Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-strong mb-8 animate-float">
               <Sparkles className="h-4 w-4 text-yellow-400" />
-              <span className="text-sm font-medium">Canada's Premier DTF Transfer Service</span>
+              <span className="text-sm font-medium">Premium DTF Transfers for Canadian Businesses</span>
             </div>
 
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6">
@@ -95,7 +95,7 @@ export default function Home() {
             </h1>
             
             <p className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-slate-300 leading-relaxed">
-              Premium DTF transfers with cutting-edge nesting technology. Upload your designs, 
+              Premium DTF transfers with cutting-edge AI nesting technology. Upload your designs, 
               watch our AI optimize your gang sheets, and get professional results in minutes.
             </p>
 
@@ -414,7 +414,7 @@ export default function Home() {
               </h2>
 
               <p className="text-slate-300 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl mx-auto">
-                Experience the quality and convenience of TransferNest. Create your first gang sheet in minutes and see the difference premium DTF transfers make.
+                Experience the quality and convenience of DTF Wholesale. Create your first gang sheet in minutes and see the difference premium DTF transfers make.
               </p>
 
               <div className="flex flex-wrap justify-center gap-4">

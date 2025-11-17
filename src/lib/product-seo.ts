@@ -29,24 +29,24 @@ export async function generateProductMetadata(): Promise<Metadata> {
     ['dtf transfers', 'gang sheets', 'direct to film', 'custom transfers', 'dtf printing'].forEach(kw => allKeywords.add(kw));
     
     return {
-      title: 'TransferNest - Premium DTF Transfers & Gang Sheets | AI-Powered Nesting',
+      title: 'DTF Wholesale - Premium DTF Transfers & Gang Sheets | AI-Powered Nesting',
       description: 'Professional DTF transfers with 90%+ sheet utilization. 13" & 17" gang sheets, fast turnaround, premium quality. Order custom Direct-to-Film transfers for your business today.',
       keywords: Array.from(allKeywords).join(', '),
       openGraph: {
-        title: 'TransferNest - Premium DTF Transfers & Gang Sheets',
+        title: 'DTF Wholesale - Premium DTF Transfers & Gang Sheets',
         description: 'Professional DTF transfers with AI-powered nesting technology. 13" & 17" gang sheets available.',
         type: 'website',
       },
       twitter: {
         card: 'summary_large_image',
-        title: 'TransferNest - Premium DTF Transfers',
+        title: 'DTF Wholesale - Premium DTF Transfers',
         description: 'Professional DTF transfers with 90%+ sheet utilization',
       },
     };
   } catch (error) {
     console.error('Error generating metadata:', error);
     return {
-      title: 'TransferNest - Premium DTF Transfers & Gang Sheets',
+      title: 'DTF Wholesale - Premium DTF Transfers & Gang Sheets',
       description: 'Professional DTF transfers with AI-powered nesting technology',
     };
   }

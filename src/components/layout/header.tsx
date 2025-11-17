@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
 import { useCart } from '@/contexts/cart-context';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { User, LogOut, ShoppingCart, Menu, X, Sparkles } from 'lucide-react';
+import { User, LogOut, ShoppingCart, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Header() {
@@ -27,9 +28,15 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white hover:opacity-80 transition-opacity" style={{textShadow: '1px 1px 4px rgba(0,0,0,0.3)'}}>
-            <Sparkles className="h-6 w-6" />
-            <span>TransferNest</span>
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Image 
+              src="/logo.png" 
+              alt="DTF Wholesale" 
+              width={180} 
+              height={50} 
+              className="h-10 w-auto"
+              priority
+            />
           </Link>
           
           {/* Desktop Navigation */}

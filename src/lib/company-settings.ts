@@ -141,10 +141,10 @@ export async function updateCompanySettings(
 export function getDefaultSettings(): CompanySettings {
   return {
     companyInfo: {
-      name: 'TransferNest',
+      name: 'DTF Wholesale',
       tagline: 'Professional DTF Printing Solutions',
       description: 'High-quality Direct-to-Film printing services for custom apparel and merchandise.',
-      email: 'info@transfernest.com',
+      email: 'info@dtfwholesale.ca',
       phone: '(555) 123-4567',
       address: {
         street: '133 Church St',

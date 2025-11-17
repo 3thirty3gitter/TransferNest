@@ -223,7 +223,7 @@ export default function LoginPage() {
                   <Input
                     id="signup-name"
                     type="text"
-                    placeholder="Your Name"
+                    placeholder="John Smith"
                     required
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
@@ -236,7 +236,7 @@ export default function LoginPage() {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="m@example.com"
+                    placeholder="your.email@example.com"
                     required
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}

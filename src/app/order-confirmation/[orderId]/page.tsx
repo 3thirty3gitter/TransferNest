@@ -114,8 +114,8 @@ export default function OrderConfirmationPage() {
         {/* Support Message */}
         <p className="text-center text-sm text-muted-foreground max-w-md">
           Have questions about your order? Contact us at{' '}
-          <a href="mailto:support@transfernest.com" className="text-primary hover:underline">
-            support@transfernest.com
+          <a href="mailto:support@dtfwholesale.ca" className="text-primary hover:underline">
+            support@dtfwholesale.ca
           </a>
         </p>
       </div>

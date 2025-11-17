@@ -50,7 +50,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-2xl font-bold text-white mb-4">Your Rights</h2>
               <p>
                 You have the right to access, update, or delete your personal information. 
-                Contact us at support@transfernest.com to exercise these rights.
+                Contact us at support@dtfwholesale.ca to exercise these rights.
               </p>
             </section>
 
@@ -58,7 +58,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-2xl font-bold text-white mb-4">Contact Us</h2>
               <p>
                 If you have any questions about this Privacy Policy, please contact us at 
-                support@transfernest.com
+                support@dtfwholesale.ca
               </p>
             </section>
 
