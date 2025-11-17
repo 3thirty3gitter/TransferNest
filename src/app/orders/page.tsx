@@ -21,7 +21,7 @@ interface Order {
   status: string;
   total: number;
   currency: string;
-  createdAt: { seconds: number };
+  createdAt: { seconds: number } | string;
   items: Array<{
     sheetSize: string;
     quantity: number;
@@ -37,6 +37,7 @@ interface Order {
     };
   }>;
   trackingNumber?: string;
+  userId?: string;
 }
 
 const statusIcons = {
@@ -79,8 +80,11 @@ export default function OrdersPage() {
         }
         
         const data = await response.json();
+        console.log('Orders data:', data);
+        console.log('User UID:', user.uid);
         setOrders(data.orders || []);
       } catch (err) {
+        console.error('Error fetching orders:', err);
         setError(err instanceof Error ? err.message : 'Failed to load orders');
       } finally {
         setLoading(false);
@@ -183,7 +187,9 @@ export default function OrdersPage() {
                   <div>
                     <CardTitle className="text-lg">Order #{order.id.slice(-8)}</CardTitle>
                     <CardDescription>
-                      Placed on {new Date(order.createdAt.seconds * 1000).toLocaleDateString()}
+                      Placed on {typeof order.createdAt === 'string' 
+                        ? new Date(order.createdAt).toLocaleDateString()
+                        : new Date(order.createdAt.seconds * 1000).toLocaleDateString()}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
