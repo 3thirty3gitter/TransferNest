@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
 
 // Helper function to save order to database
 async function saveOrder(orderData: any) {
+  console.log('[SAVE ORDER] Starting to save order for userId:', orderData.userId);
   try {
     const orderManager = new OrderManager();
     
@@ -165,14 +166,19 @@ async function saveOrder(orderData: any) {
       printFiles: []
     };
 
+    console.log('[SAVE ORDER] Order object created, calling createOrder...');
     const orderId = await orderManager.createOrder(order);
-    console.log('Order saved to Firestore:', orderId);
+    console.log('[SAVE ORDER] Order saved to Firestore successfully:', orderId);
     
     return orderId;
   } catch (error) {
-    console.error('Error saving order:', error);
+    console.error('[SAVE ORDER] Error saving order:', error);
+    console.error('[SAVE ORDER] Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('[SAVE ORDER] Error stack:', error instanceof Error ? error.stack : 'No stack');
     // Fallback to temporary ID if Firestore fails
-    return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log('[SAVE ORDER] Returning temporary ID:', tempId);
+    return tempId;
   }
 }
 
