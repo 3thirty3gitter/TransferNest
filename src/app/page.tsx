@@ -80,12 +80,6 @@ export default function Home() {
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJ2LTJoLTJ6bTAgNHYyaDJ2LTJoLTJ6bS0yIDJ2Mmgydi0yaC0yem0wLTRoMnYtMmgtMnYyem0tMiAwdjJoMnYtMmgtMnptMC00aDJ2LTJoLTJ2MnptLTIgNHYyaDJ2LTJoLTJ6bTItMnYtMmgtMnYyaDJ6bS0yLTJ2LTJoLTJ2Mmgyem0tMiAwdi0yaC0ydjJoMnptMCAyaDJ2LTJoLTJ2MnptMCAydjJoMnYtMmgtMnptLTIgMHYyaDJ2LTJoLTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
 
           <div className="container relative z-10 text-center px-4">
-            {/* Floating Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-strong mb-8 animate-float">
-              <Sparkles className="h-4 w-4 text-yellow-400" />
-              <span className="text-sm font-medium">Premium DTF Transfers for Canadian Businesses</span>
-            </div>
-
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6">
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Transform Your
@@ -126,16 +120,6 @@ export default function Home() {
                 <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-400 to-red-400 bg-clip-text text-transparent">24hr</div>
                 <div className="text-sm text-slate-400 mt-2">Turnaround</div>
               </div>
-            </div>
-          </div>
-
-          {/* Scroll Indicator */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-            <div className="flex flex-col items-center gap-2 text-white/60">
-              <span className="text-sm font-medium">Scroll to explore</span>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
             </div>
           </div>
         </section>
