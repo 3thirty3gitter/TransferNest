@@ -82,7 +82,7 @@ export class OrderManagerAdmin {
       const snapshot = await query.get();
       const orders: Order[] = [];
       
-      snapshot.forEach((doc) => {
+      snapshot.forEach((doc: any) => {
         orders.push({ id: doc.id, ...doc.data() } as Order);
       });
 
@@ -180,7 +180,7 @@ export class OrderManagerAdmin {
       const snapshot = await query.get();
       const orders: Order[] = [];
       
-      snapshot.forEach((doc) => {
+      snapshot.forEach((doc: any) => {
         orders.push({ id: doc.id, ...doc.data() } as Order);
       });
 
@@ -208,7 +208,7 @@ export class OrderManagerAdmin {
       const snapshot = await query.get();
       const orders: Order[] = [];
       
-      snapshot.forEach((doc) => {
+      snapshot.forEach((doc: any) => {
         orders.push({ id: doc.id, ...doc.data() } as Order);
       });
 
