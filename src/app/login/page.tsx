@@ -180,7 +180,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md">
         <Tabs defaultValue="sign-in" className="w-full">
           <div className="glass-strong rounded-2xl p-2 mb-4 border border-white/20">
-            <TabsList className="grid w-full grid-cols-2 gap-2 bg-transparent">
+            <TabsList className="w-full grid grid-cols-2 gap-2 bg-transparent h-auto">
               <TabsTrigger
                 value="sign-in"
                 className="py-3 px-4 rounded-xl font-semibold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-slate-300 data-[state=inactive]:hover:bg-white/10"
