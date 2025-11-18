@@ -35,7 +35,10 @@ service cloud.firestore {
     // User profiles
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow write: if isOwner(userId);
+      // Allow users to create their own profile and update their own data
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isAdmin();
     }
     
     // Customer profiles (for checkout data)
