@@ -3,7 +3,7 @@ import { SquareClient, SquareEnvironment } from 'square';
 import { randomUUID } from 'crypto';
 import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorage } from '@/lib/print-storage';
-import { OrderManager } from '@/lib/order-manager';
+import { OrderManagerAdmin } from '@/lib/order-manager-admin';
 
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 async function saveOrder(orderData: any) {
   console.log('[SAVE ORDER] Starting to save order for userId:', orderData.userId);
   try {
-    const orderManager = new OrderManager();
+    const orderManager = new OrderManagerAdmin();
     
     // Transform cart items to order items
     const orderItems = orderData.cartItems.map((item: any) => ({
