@@ -15,8 +15,13 @@ export default function Header() {
   const { totalItems } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isShrunk, setIsShrunk] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Set initial scroll state on mount to prevent flash
+    setIsShrunk(window.scrollY > 50);
+    setMounted(true);
+    
     const handleScroll = () => {
       setIsShrunk(window.scrollY > 50);
     };
@@ -48,7 +53,7 @@ export default function Header() {
   `;
 
   return (
-    <header className={headerClasses}>
+    <header className={headerClasses} style={{ height: isShrunk ? '7rem' : '10rem' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
         <div className="flex justify-between items-center h-full">
           {/* Logo */}
@@ -59,6 +64,7 @@ export default function Header() {
               width={234} 
               height={65} 
               className={logoClasses}
+              style={{ height: isShrunk ? '5rem' : '7rem', width: 'auto' }}
               priority
             />
           </Link>
