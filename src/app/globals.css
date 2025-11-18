@@ -125,9 +125,9 @@ body {
     user-select: text;
   }
   
-  /* Buttons and links should have pointer cursor */
-  button, a {
-    cursor: pointer;
+  /* Buttons and links should have pointer cursor - including all children */
+  button, a, button *, a * {
+    cursor: pointer !important;
   }
 }
 
