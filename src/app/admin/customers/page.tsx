@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Mail, Phone, MapPin, Calendar } from 'lucide-react';
+import { Users, Mail, Phone, MapPin, Calendar, Eye } from 'lucide-react';
+import Link from 'next/link';
 
 interface Customer {
   id: string;
@@ -183,12 +184,20 @@ export default function CustomersPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-end">
+                    <div className="flex flex-col gap-2 items-end justify-center">
+                      <Link
+                        href={`/admin/customers/${customer.id}`}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-semibold inline-flex items-center gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View Details
+                      </Link>
                       <button
                         onClick={() => window.location.href = `mailto:${customer.email}`}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-semibold"
                       >
-                        Contact Customer
+                        <Mail className="h-4 w-4 inline mr-1" />
+                        Contact
                       </button>
                     </div>
                   </div>
