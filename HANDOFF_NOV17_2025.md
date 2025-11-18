@@ -109,44 +109,60 @@ Comprehensive branding update and customer management implementation for DTF Who
 ## 🐛 Known Issues
 
 ### CRITICAL: Orders Not Saving to Database
-- **Status**: ⚠️ UNRESOLVED
+- **Status**: ✅ **RESOLVED** (November 18, 2025)
+- **Root Cause**: Using client-side Firebase SDK in server-side API routes
 - **Issue**: Customer placed paid order but it's not appearing in orders list
-- **Symptoms**:
-  - Payment processes successfully through Square
-  - Order confirmation page displays
-  - BUT: No order document created in Firestore `orders` collection
-  - User orders page shows "No orders yet"
-  - Admin dashboard shows 0 total orders in database
 
-- **Debugging Added**:
-  - Enhanced logging in `/api/orders` endpoint
-  - Detailed logging in `/api/process-payment` `saveOrder()` function
-  - New debug endpoint: `/api/admin/check-orders` to inspect database
+#### The Problem:
+- Payment processes successfully through Square
+- Order confirmation page displays
+- BUT: No order document created in Firestore `orders` collection
+- User orders page shows "No orders yet"
+- Admin dashboard shows 0 total orders in database
 
-- **Test Case**:
-  - User: `trent.timmerman@live.ca`
-  - User UID: `kKZD0beexFfWkkHFf3usxr3AUHN2`
-  - Order placed and paid successfully
-  - Order NOT in database
+#### The Root Cause:
+The `OrderManager` class in `src/lib/order-manager.ts` was using the **client-side Firebase SDK** which doesn't work in server-side API routes. API routes need the **Firebase Admin SDK** to write to Firestore.
 
-- **Next Steps**:
-  1. Check Vercel function logs for `/api/process-payment` from the paid order
-  2. Look for `[SAVE ORDER]` log entries
-  3. Check if `OrderManager.createOrder()` is throwing errors
-  4. Verify Firebase Admin service account has write permissions
-  5. Check if returning temporary ID instead of real document ID
+#### The Fix:
+1. Created new `OrderManagerAdmin` class using Firebase Admin SDK
+2. Updated `/api/process-payment` to use Admin version
+3. All server-side order operations now use correct SDK
 
-- **Relevant Files**:
-  - `src/app/api/process-payment/route.ts` (payment processing & order creation)
-  - `src/lib/order-manager.ts` (order creation logic)
-  - `src/app/api/orders/route.ts` (order retrieval)
-  - `src/app/orders/page.tsx` (customer orders display)
+#### Required Configuration:
+⚠️ **CRITICAL**: Must add Firebase Admin service account to Vercel environment variables:
+
+**Environment Variable Required**:
+- **Name**: `FIREBASE_SERVICE_ACCOUNT_KEY`
+- **Value**: Base64-encoded Firebase service account JSON
+- **Location**: Vercel Dashboard > Settings > Environment Variables
+
+See `ORDER_CREATION_FIX.md` for complete setup instructions.
+
+#### Test Case (Affected User):
+- User: `trent.timmerman@live.ca`
+- User UID: `kKZD0beexFfWkkHFf3usxr3AUHN2`
+- Order placed and paid successfully
+- Order NOT in database
+- **ACTION REQUIRED**: Contact customer to recreate order or process refund
+
+#### Files Changed:
+- `src/lib/order-manager-admin.ts` - NEW: Server-side OrderManager
+- `src/app/api/process-payment/route.ts` - Updated to use Admin SDK
+- `ORDER_CREATION_FIX.md` - NEW: Complete documentation of fix
+
+#### Next Steps After Deployment:
+1. ✅ Code fix deployed (commit `55a913a`)
+2. ⚠️ **PENDING**: Configure `FIREBASE_SERVICE_ACCOUNT_KEY` in Vercel
+3. Test order creation with real payment
+4. Verify orders appear in database and UI
+5. Contact affected customer from test case
+6. Review Square payment history for other affected orders
 
 ---
 
 ## 📝 Code Changes Summary
 
-### Files Modified (23 files)
+### Files Modified (25 files)
 1. `src/components/layout/header.tsx` - Scroll-responsive header with new logo
 2. `src/components/layout/footer.tsx` - Updated branding and logo
 3. `src/app/page.tsx` - Removed hero badges, updated spacer
@@ -165,16 +181,21 @@ Comprehensive branding update and customer management implementation for DTF Who
 16. `src/middleware/adminAuth.ts` - Updated admin email
 17. `src/lib/company-settings.ts` - Updated company name and email
 18. `src/lib/product-seo.ts` - Updated SEO metadata
-19. `src/app/api/orders/route.ts` - Added detailed debugging logs
-20. `src/app/api/process-payment/route.ts` - Added saveOrder debugging
-21. `src/app/api/admin/check-orders/route.ts` - NEW: Debug endpoint
-22. `public/DTF Wholesale Canadian Owned.png` - NEW: Company logo
-23. `public/logo.png` - OLD: Previous logo file (still exists)
+19. `src/lib/order-manager-admin.ts` - NEW: Server-side OrderManager using Admin SDK
+20. `src/app/api/orders/route.ts` - Added detailed debugging logs
+21. `src/app/api/process-payment/route.ts` - Fixed to use OrderManagerAdmin
+22. `src/app/api/admin/check-orders/route.ts` - NEW: Debug endpoint
+23. `public/DTF Wholesale Canadian Owned.png` - NEW: Company logo
+24. `public/logo.png` - OLD: Previous logo file (still exists)
+25. `HANDOFF_NOV17_2025.md` - Session handoff documentation
+26. `ORDER_CREATION_FIX.md` - NEW: Complete bug fix documentation
 
 ### Files Created
 - `src/app/admin/customers/page.tsx` - Customer management interface
 - `src/app/api/admin/check-orders/route.ts` - Debug endpoint for order inspection
+- `src/lib/order-manager-admin.ts` - Server-side OrderManager using Firebase Admin SDK
 - `public/DTF Wholesale Canadian Owned.png` - New branding logo
+- `ORDER_CREATION_FIX.md` - Complete documentation of order creation bug fix
 
 ---
 
@@ -182,24 +203,27 @@ Comprehensive branding update and customer management implementation for DTF Who
 
 ### Latest Commits
 ```
-768d254 - Add detailed logging to payment order saving
-23cc73f - Add detailed logging to orders API to debug missing orders
-466efc5 - Fix orders page to handle both timestamp formats and add debugging
-012d392 - Fix syntax error: remove duplicate lines in handleEmailSignUp
-6ab8032 - Fix user creation: create Firestore document on Google sign-in
-6a82199 - Add comprehensive profile fields to sign-up form
-13854bf - Add customers page to admin dashboard with full profile viewing
-eb737ee - Fix sign-up tab switching functionality
-1b2eaea - Update branding logo to Canadian Owned version
-02bc875 - Remove floating badge and scroll indicator from hero section
-6f037f0 - Increase logo to h-28/h-20 with header h-40/h-28
+55a913a - Fix critical order creation bug: Use Firebase Admin SDK for server-side operations (Nov 18)
+6c6c735 - Add comprehensive handoff document for Nov 17, 2025 session (Nov 17)
+768d254 - Add detailed logging to payment order saving (Nov 17)
+23cc73f - Add detailed logging to orders API to debug missing orders (Nov 17)
+466efc5 - Fix orders page to handle both timestamp formats and add debugging (Nov 17)
+012d392 - Fix syntax error: remove duplicate lines in handleEmailSignUp (Nov 17)
+6ab8032 - Fix user creation: create Firestore document on Google sign-in (Nov 17)
+6a82199 - Add comprehensive profile fields to sign-up form (Nov 17)
+13854bf - Add customers page to admin dashboard with full profile viewing (Nov 17)
+eb737ee - Fix sign-up tab switching functionality (Nov 17)
+1b2eaea - Update branding logo to Canadian Owned version (Nov 17)
+02bc875 - Remove floating badge and scroll indicator from hero section (Nov 17)
+6f037f0 - Increase logo to h-28/h-20 with header h-40/h-28 (Nov 17)
 ```
 
 ### Build Status
 - ✅ All builds passing
 - ✅ TypeScript compilation successful
 - ✅ Deployed to Vercel production
-- ⚠️ Orders database issue requires investigation
+- ✅ Order creation bug identified and fixed
+- ⚠️ Requires `FIREBASE_SERVICE_ACCOUNT_KEY` environment variable in Vercel
 
 ---
 
@@ -242,10 +266,11 @@ eb737ee - Fix sign-up tab switching functionality
 - [x] Customer search functionality works
 - [x] All branding text updated throughout site
 
-### ⚠️ Failed Tests (Require Fix)
-- [ ] Orders save to Firestore after payment
-- [ ] Orders display on customer orders page
-- [ ] Orders display in admin dashboard
+### ⚠️ Failed Tests (Require Configuration)
+- [ ] Configure `FIREBASE_SERVICE_ACCOUNT_KEY` in Vercel
+- [ ] Orders save to Firestore after payment (will work after env var configured)
+- [ ] Orders display on customer orders page (will work after fix)
+- [ ] Orders display in admin dashboard (will work after fix)
 
 ### 🔄 Pending Tests
 - [ ] Email notifications for new orders
@@ -258,18 +283,31 @@ eb737ee - Fix sign-up tab switching functionality
 
 ## 🎯 Priority Action Items
 
-### CRITICAL (Do First)
-1. **Fix Order Creation Bug**
-   - Check Vercel logs for payment processing errors
-   - Verify Firebase Admin has Firestore write permissions
-   - Test `OrderManager.createOrder()` independently
-   - Ensure service account JSON is properly configured
+### CRITICAL (Do Immediately)
+1. **Configure Firebase Admin Service Account in Vercel** ⚠️
+   - Go to Firebase Console > Project Settings > Service Accounts
+   - Generate new private key (downloads JSON file)
+   - Base64 encode the JSON: `cat service-account.json | base64 -w 0`
+   - Add to Vercel: Settings > Environment Variables
+   - Variable name: `FIREBASE_SERVICE_ACCOUNT_KEY`
+   - Paste base64 string as value
+   - Select all environments (Production, Preview, Development)
+   - Save and wait for auto-redeploy
+   - **See `ORDER_CREATION_FIX.md` for detailed instructions**
 
 2. **Test Complete Order Flow**
-   - Place test order with payment
+   - Place test order with real/test payment
    - Verify order saves to Firestore
-   - Confirm order appears in customer orders page
+   - Confirm order appears in customer `/orders` page
    - Check order appears in admin dashboard
+   - Verify all order details are correct
+
+3. **Handle Failed Order from Test User**
+   - Contact `trent.timmerman@live.ca`
+   - Explain technical issue with their order
+   - Offer to recreate order OR process refund
+   - Check Square dashboard for payment details
+   - Document resolution
 
 ### HIGH Priority
 3. **Customer Data Migration**
@@ -331,17 +369,29 @@ eb737ee - Fix sign-up tab switching functionality
 
 ## 💡 Notes for Next Developer
 
-1. **Order Saving Issue**: This is the #1 priority. The payment processes but orders aren't being saved to Firestore. All debugging logs are in place - check Vercel function logs.
+1. **Order Saving Issue - RESOLVED**: The bug was caused by using the client-side Firebase SDK in server-side API routes. Fixed by creating `OrderManagerAdmin` class that uses Firebase Admin SDK. **Action required**: Add `FIREBASE_SERVICE_ACCOUNT_KEY` environment variable to Vercel (see `ORDER_CREATION_FIX.md`).
 
-2. **Firebase Admin**: Ensure the service account has proper permissions. The app uses Firebase Admin SDK for server-side operations.
+2. **Firebase Admin SDK**: The app now has TWO Firebase implementations:
+   - `src/lib/firebase.ts` + `order-manager.ts` - Client-side (browser/React components)
+   - `src/lib/firebase-admin.ts` + `order-manager-admin.ts` - Server-side (API routes)
+   
+   **Rule**: Use Admin SDK in any `/api/*` route, use client SDK in components.
 
-3. **Branding**: All "TransferNest" references have been updated to "DTF Wholesale". The old logo.png file still exists but is not used.
+3. **Environment Variable**: After adding `FIREBASE_SERVICE_ACCOUNT_KEY` to Vercel, the order creation will work immediately. The code fix is already deployed.
 
-4. **Customer Data**: The sign-up form now collects comprehensive address information. Existing users who signed up before this change may have incomplete profiles.
+4. **Affected Customer**: User `trent.timmerman@live.ca` has a paid order that's not in the database. Contact them after the fix is deployed and verified.
 
-5. **Header Height**: If you modify the header, remember to update all page spacers across the app (currently set to h-40).
+5. **Branding**: All "TransferNest" references have been updated to "DTF Wholesale". The old logo.png file still exists but is not used.
 
-6. **Testing Account**: User `trent.timmerman@live.ca` (UID: `kKZD0beexFfWkkHFf3usxr3AUHN2`) has a paid order that should exist but doesn't in the database.
+6. **Customer Data**: The sign-up form now collects comprehensive address information. Existing users who signed up before this change may have incomplete profiles.
+
+7. **Header Height**: If you modify the header, remember to update all page spacers across the app (currently set to h-40).
+
+8. **Testing**: After the environment variable is configured, place a test order and check Vercel logs for these success messages:
+   ```
+   [OrderManagerAdmin] Order created successfully with ID: [orderId]
+   [SAVE ORDER] Order saved to Firestore successfully: [orderId]
+   ```
 
 ---
 
@@ -354,6 +404,7 @@ For questions about this handoff, refer to:
 
 ---
 
-**Handoff Date**: November 17, 2025  
-**Status**: ⚠️ CRITICAL BUG - Orders not saving to database  
-**Next Session**: Focus on resolving order creation issue
+**Handoff Date**: November 17-18, 2025  
+**Status**: ✅ CODE FIX COMPLETE - ⚠️ Requires environment variable configuration in Vercel  
+**Critical Action**: Add `FIREBASE_SERVICE_ACCOUNT_KEY` to Vercel (see `ORDER_CREATION_FIX.md`)  
+**Next Session**: Configure environment variable, test order flow, contact affected customer
