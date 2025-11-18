@@ -32,23 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-       <div className="flex flex-col min-h-dvh">
-         <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
-            <div className="container flex h-16 items-center justify-between">
-                <Link href="/" className="text-2xl font-bold font-headline text-primary md:text-3xl">
-                  DTF Wholesale Canada
-                </Link>
-                <div className="flex items-center gap-4">
-                    <Skeleton className="h-8 w-24" />
-                    <Skeleton className="h-10 w-10" />
-                    <Skeleton className="h-10 w-24" />
-                </div>
-            </div>
-         </header>
-         <main className="flex-1 p-8">
-            <Skeleton className="h-[50vh] w-full" />
-            <div className="mt-8 flex justify-center">
-              <Skeleton className="h-12 w-64" />
+       <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
+         <div className="h-40"></div>
+         <main className="flex-1 p-8 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-white text-lg">Loading...</p>
             </div>
          </main>
        </div>
