@@ -61,10 +61,9 @@ export default function Header() {
             <Image 
               src="/DTF Wholesale Canadian Owned.png" 
               alt="DTF Wholesale" 
-              width={234} 
-              height={65} 
-              className={logoClasses}
-              style={{ height: isShrunk ? '5rem' : '7rem', width: 'auto' }}
+              width={isShrunk ? 160 : 224} 
+              height={isShrunk ? 80 : 112} 
+              className="transition-all duration-300 ease-in-out object-contain"
               priority
             />
           </Link>
