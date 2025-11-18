@@ -97,6 +97,38 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Prevent text cursor on non-interactive text elements */
+  h1, h2, h3, h4, h5, h6, p, span, div, label {
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Allow text selection in actual text content areas */
+  article, main p, .selectable {
+    cursor: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+  
+  /* Ensure inputs and textareas still work normally */
+  input, textarea, [contenteditable="true"] {
+    cursor: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+  
+  /* Buttons and links should have pointer cursor */
+  button, a {
+    cursor: pointer;
+  }
 }
 
 /* Glassmorphism Utilities */
