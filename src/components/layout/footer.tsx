@@ -19,7 +19,10 @@ export default function Footer() {
               />
             </div>
             <p className="text-sm text-slate-400">
-              Premium DTF transfers with cutting-edge AI nesting technology for Canadian businesses.
+              DTF Wholesale Canada - A 3Thirty3 Company
+            </p>
+            <p className="text-sm text-slate-400">
+              Premium DTF transfers with cutting-edge AI nesting technology.
             </p>
           </div>
 
@@ -52,7 +55,7 @@ export default function Footer() {
 
           {/* Support */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Support</h3>
+            <h3 className="text-white font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <a href="mailto:support@dtfwholesale.ca" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
@@ -61,14 +64,14 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="tel:+14165551234" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <a href="tel:+15874053005" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  (416) 555-1234
+                  587-405-3005
                 </a>
               </li>
               <li className="text-slate-400 flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>Ontario, Canada</span>
+                <span>201-5415 Calgary Trail NW<br/>Edmonton, AB T6H 4J9</span>
               </li>
             </ul>
           </div>
@@ -77,9 +80,8 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">Business Hours</h3>
             <ul className="space-y-2 text-sm text-slate-400">
-              <li>Monday - Friday: 9am - 6pm EST</li>
-              <li>Saturday: 10am - 4pm EST</li>
-              <li>Sunday: Closed</li>
+              <li>Mon - Fri: 9am - 5pm MST</li>
+              <li>Sat, Sun & Holidays: Closed</li>
             </ul>
           </div>
         </div>
