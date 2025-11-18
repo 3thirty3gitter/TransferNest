@@ -107,14 +107,10 @@ export default function Home() {
             </div>
 
             {/* Stats */}
-            <div className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+            <div className="mt-16 grid grid-cols-2 gap-8 max-w-xl mx-auto">
               <div className="glass rounded-2xl p-6">
                 <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">90%+</div>
                 <div className="text-sm text-slate-400 mt-2">Utilization Rate</div>
-              </div>
-              <div className="glass rounded-2xl p-6">
-                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">$0.45</div>
-                <div className="text-sm text-slate-400 mt-2">Per Linear Inch</div>
               </div>
               <div className="glass rounded-2xl p-6">
                 <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-400 to-red-400 bg-clip-text text-transparent">24hr</div>
