@@ -67,17 +67,21 @@ export default function Home() {
       {/* Spacer for fixed header */}
       <div className="h-40"></div>
       <main className="flex-1">
-        {/* Hero Section with Animated Gradient Background */}
+        {/* Hero Section with Background Image */}
         <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-          {/* Animated Background Orbs */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-20 -left-20 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
-            <div className="absolute top-40 -right-20 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float-delayed"></div>
-            <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
+          {/* Background Image */}
+          <div className="absolute inset-0">
+            <Image
+              src="/dtf-wholesale-candada-proudly-canadian.jpg"
+              alt="DTF Wholesale Canada - Proudly Canadian"
+              fill
+              priority
+              className="object-cover"
+              quality={95}
+            />
+            {/* Dark overlay for better text readability */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950/70 via-blue-950/60 to-slate-900/70"></div>
           </div>
-
-          {/* Grid Pattern Overlay */}
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJ2LTJoLTJ6bTAgNHYyaDJ2LTJoLTJ6bS0yIDJ2Mmgydi0yaC0yem0wLTRoMnYtMmgtMnYyem0tMiAwdjJoMnYtMmgtMnptMC00aDJ2LTJoLTJ2MnptLTIgNHYyaDJ2LTJoLTJ6bTItMnYtMmgtMnYyaDJ6bS0yLTJ2LTJoLTJ2Mmgyem0tMiAwdi0yaC0ydjJoMnptMCAyaDJ2LTJoLTJ2MnptMCAydjJoMnYtMmgtMnptLTIgMHYyaDJ2LTJoLTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
 
           <div className="container relative z-10 text-center px-4">
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6">
