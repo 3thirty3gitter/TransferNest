@@ -1,0 +1,421 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useRouter, useParams } from 'next/navigation';
+import { checkAdminAccess } from '@/middleware/adminAuth';
+import { ArrowLeft, Download, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import Link from 'next/link';
+
+type OrderItem = {
+  id: string;
+  images: any[];
+  sheetSize: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  utilization: number;
+  layout?: any;
+  placedItems?: any[];
+  sheetWidth?: number;
+  sheetLength?: number;
+  pricing?: any;
+};
+
+type Order = {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  createdAt: any;
+  status: string;
+  paymentStatus: string;
+  total: number;
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  printFiles: Array<{
+    filename: string;
+    url: string;
+    path: string;
+    size: number;
+    dimensions: { width: number; height: number; dpi: number };
+  }>;
+  items: OrderItem[];
+  customerInfo?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  };
+  shippingAddress?: any;
+  deliveryMethod?: string;
+};
+
+export default function JobDetailsPage() {
+  const params = useParams();
+  const orderId = params?.orderId as string;
+  const router = useRouter();
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<OrderItem | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        router.push('/admin/login');
+        return;
+      }
+      
+      const hasAccess = await checkAdminAccess();
+      if (!hasAccess) {
+        alert('Access denied. Admin privileges required.');
+        router.push('/admin/login');
+        return;
+      }
+      
+      setIsAdmin(true);
+      loadOrder();
+    });
+
+    return () => unsubscribe();
+  }, [orderId, router]);
+
+  async function loadOrder() {
+    if (!orderId) return;
+    
+    try {
+      // Use API endpoint for consistent data access
+      const response = await fetch(`/api/orders/${orderId}`);
+      if (!response.ok) throw new Error('Failed to fetch order');
+      
+      const data = await response.json();
+      
+      // Convert createdAt if it's a timestamp object or string
+      if (data.createdAt) {
+        if (typeof data.createdAt === 'string') {
+          data.createdAt = new Date(data.createdAt);
+        } else if (data.createdAt._seconds) {
+          data.createdAt = new Date(data.createdAt._seconds * 1000);
+        } else if (data.createdAt.toDate) {
+          data.createdAt = data.createdAt.toDate();
+        }
+      } else {
+        data.createdAt = new Date();
+      }
+      
+      setOrder(data as Order);
+      
+      // Auto-select first item if available
+      if (data.items && data.items.length > 0) {
+        setSelectedItem(data.items[0]);
+      }
+    } catch (error) {
+      console.error('Error loading order:', error);
+      alert('Failed to load order');
+      router.push('/admin');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const openInEditor = (item: OrderItem) => {
+    if (!item.placedItems || !item.images) {
+      alert('No layout data available for this item');
+      return;
+    }
+    
+    // Store the job data in sessionStorage for the editor to load
+    const editorData = {
+      images: item.images,
+      sheetWidth: item.sheetWidth,
+      sheetLength: item.sheetLength,
+      placedItems: item.placedItems,
+      layout: item.layout,
+      orderId: order?.id,
+      isReadOnly: false // Admin can edit
+    };
+    
+    sessionStorage.setItem('adminEditorJob', JSON.stringify(editorData));
+    
+    // Open editor in new tab
+    window.open('/admin/nesting-tool?job=' + order?.id, '_blank');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p>Loading job details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin || !order) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Link href="/admin" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Orders
+            </Link>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Job Details: {order.id.slice(0, 8)}
+            </h1>
+            <p className="text-slate-400 mt-1">
+              Order placed on {order.createdAt.toLocaleString()}
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
+            <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+              order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
+              order.status === 'printing' ? 'bg-blue-500/20 text-blue-300' :
+              'bg-yellow-500/20 text-yellow-300'
+            }`}>
+              {order.status}
+            </span>
+            <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+              order.paymentStatus === 'paid' ? 'bg-green-500/20 text-green-300' :
+              'bg-yellow-500/20 text-yellow-300'
+            }`}>
+              {order.paymentStatus}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6">
+          {/* Left Column - Order Summary & Customer Info */}
+          <div className="space-y-6">
+            {/* Order Summary */}
+            <div className="glass-strong rounded-lg border border-white/10 p-6">
+              <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Subtotal:</span>
+                  <span className="font-medium">${order.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Tax:</span>
+                  <span className="font-medium">${order.tax.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Shipping:</span>
+                  <span className="font-medium">${order.shipping.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between border-t border-white/10 pt-2 mt-2 text-lg">
+                  <span className="font-semibold">Total:</span>
+                  <span className="font-bold text-green-400">${order.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Info */}
+            {order.customerInfo && (
+              <div className="glass-strong rounded-lg border border-white/10 p-6">
+                <h2 className="text-xl font-semibold mb-4">Customer Info</h2>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-slate-400">Name:</span>
+                    <p className="font-medium">{order.customerInfo.firstName} {order.customerInfo.lastName}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Email:</span>
+                    <p className="font-medium">{order.customerInfo.email}</p>
+                  </div>
+                  {order.customerInfo.phone && (
+                    <div>
+                      <span className="text-slate-400">Phone:</span>
+                      <p className="font-medium">{order.customerInfo.phone}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Print Files */}
+            {order.printFiles && order.printFiles.length > 0 && (
+              <div className="glass-strong rounded-lg border border-white/10 p-6">
+                <h2 className="text-xl font-semibold mb-4">Print Files</h2>
+                <div className="space-y-3">
+                  {order.printFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 glass rounded border border-white/10">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{file.filename}</p>
+                        <p className="text-xs text-slate-400">
+                          {file.dimensions.width}x{file.dimensions.height}" @ {file.dimensions.dpi}dpi
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => window.open(file.url, '_blank')}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Middle Column - Order Items List */}
+          <div className="glass-strong rounded-lg border border-white/10 p-6">
+            <h2 className="text-xl font-semibold mb-4">Order Items ({order.items?.length || 0})</h2>
+            <div className="space-y-3">
+              {order.items?.map((item, idx) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedItem(item)}
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    selectedItem?.id === item.id
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-white/10 glass hover:border-white/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h3 className="font-semibold">{item.sheetSize}" Sheet</h3>
+                      <p className="text-sm text-slate-400">
+                        {item.images?.length || 0} images • {item.utilization?.toFixed(1) || 0}% utilization
+                      </p>
+                      {item.sheetLength && (
+                        <p className="text-xs text-slate-500">
+                          {item.sheetWidth}x{item.sheetLength.toFixed(2)}"
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-green-400">${item.totalPrice.toFixed(2)}</p>
+                      <p className="text-xs text-slate-400">Qty: {item.quantity}</p>
+                    </div>
+                  </div>
+                  
+                  {item.placedItems && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openInEditor(item);
+                      }}
+                      className="w-full mt-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Open in Editor
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column - Selected Item Details */}
+          <div className="glass-strong rounded-lg border border-white/10 p-6">
+            <h2 className="text-xl font-semibold mb-4">
+              {selectedItem ? 'Item Details' : 'Select an Item'}
+            </h2>
+            
+            {selectedItem ? (
+              <div className="space-y-4">
+                {/* Source Images */}
+                <div>
+                  <h3 className="font-medium mb-3 text-slate-300">Source Images ({selectedItem.images?.length || 0})</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedItem.images?.map((img, idx) => (
+                      <div key={idx} className="glass rounded border border-white/10 overflow-hidden">
+                        <img 
+                          src={img.url} 
+                          alt={`Image ${idx + 1}`}
+                          className="w-full h-32 object-contain bg-white/5"
+                        />
+                        <div className="p-2 text-xs">
+                          <p className="text-slate-400 truncate">{img.id || 'Unknown'}</p>
+                          <p className="text-slate-500">{img.width}x{img.height}" • {img.copies}x</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Layout Info */}
+                {selectedItem.layout && (
+                  <div className="p-4 glass rounded border border-white/10">
+                    <h3 className="font-medium mb-2 text-slate-300">Layout Details</h3>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Sheet Size:</span>
+                        <span>{selectedItem.sheetWidth}x{selectedItem.sheetLength?.toFixed(2)}"</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Utilization:</span>
+                        <span>{selectedItem.layout.utilization?.toFixed(1)}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Total Copies:</span>
+                        <span>{selectedItem.layout.totalCopies}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Positions:</span>
+                        <span>{selectedItem.layout.positions?.length || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pricing Breakdown */}
+                {selectedItem.pricing && (
+                  <div className="p-4 glass rounded border border-white/10">
+                    <h3 className="font-medium mb-2 text-slate-300">Pricing</h3>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Base Price:</span>
+                        <span>${selectedItem.pricing.basePrice?.toFixed(2)}</span>
+                      </div>
+                      {selectedItem.pricing.setupFee > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Setup Fee:</span>
+                          <span>${selectedItem.pricing.setupFee?.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-white/10 pt-1 mt-1 font-medium">
+                        <span>Total:</span>
+                        <span className="text-green-400">${selectedItem.pricing.total?.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  {selectedItem.placedItems && (
+                    <button
+                      onClick={() => openInEditor(selectedItem)}
+                      className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Edit in Nesting Tool
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                <ImageIcon className="h-16 w-16 mb-4 opacity-50" />
+                <p>Select an item to view details</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

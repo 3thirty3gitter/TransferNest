@@ -34,6 +34,9 @@ export default function AdminNestingTool() {
         setIsAdmin(hasAccess);
         if (!hasAccess) {
           router.push('/admin/login');
+        } else {
+          // Check for job data to load
+          loadJobFromSession();
         }
       } else {
         router.push('/admin/login');
@@ -43,6 +46,46 @@ export default function AdminNestingTool() {
 
     return () => unsubscribe();
   }, [router]);
+
+  const loadJobFromSession = () => {
+    try {
+      const jobData = sessionStorage.getItem('adminEditorJob');
+      if (jobData) {
+        const job = JSON.parse(jobData);
+        
+        // Load images
+        if (job.images && Array.isArray(job.images)) {
+          setImages(job.images);
+        }
+        
+        // Load sheet width
+        if (job.sheetWidth) {
+          setSheetWidth(job.sheetWidth as 13 | 17);
+        }
+        
+        // Load nesting result
+        if (job.placedItems && job.sheetLength) {
+          const result: NestingResult = {
+            placedItems: job.placedItems,
+            sheetLength: job.sheetLength,
+            areaUtilizationPct: job.layout?.utilization ? job.layout.utilization / 100 : 0,
+            totalCount: job.placedItems.length,
+            failedCount: 0,
+            sortStrategy: 'admin-loaded',
+            packingMethod: 'admin-loaded'
+          };
+          setNestingResult(result);
+        }
+        
+        // Clear the session storage
+        sessionStorage.removeItem('adminEditorJob');
+        
+        console.log('Loaded job from session:', job.orderId);
+      }
+    } catch (error) {
+      console.error('Error loading job from session:', error);
+    }
+  };
 
   const performNesting = async () => {
     if (images.length === 0) return;

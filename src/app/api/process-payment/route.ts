@@ -180,15 +180,21 @@ async function saveOrder(orderData: any) {
   try {
     const orderManager = new OrderManagerAdmin();
     
-    // Transform cart items to order items
+    // Transform cart items to order items - preserve ALL data for admin access
     const orderItems = orderData.cartItems.map((item: any) => ({
       id: randomUUID(),
-      images: item.images,
+      images: item.images || [],
       sheetSize: item.sheetSize,
       quantity: item.quantity || 1,
       unitPrice: item.unitPrice || 0,
       totalPrice: item.totalPrice || 0,
-      utilization: item.utilization || 0
+      utilization: item.utilization || 0,
+      // Preserve layout and nesting data for admin
+      layout: item.layout || null,
+      placedItems: item.placedItems || [],
+      sheetWidth: item.sheetWidth,
+      sheetLength: item.sheetLength,
+      pricing: item.pricing || null
     }));
 
     // Calculate subtotal from cart items

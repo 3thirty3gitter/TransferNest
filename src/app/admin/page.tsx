@@ -23,6 +23,21 @@ type PrintFile = {
   };
 };
 
+type OrderItem = {
+  id: string;
+  images: any[];
+  sheetSize: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  utilization: number;
+  layout?: any;
+  placedItems?: any[];
+  sheetWidth?: number;
+  sheetLength?: number;
+  pricing?: any;
+};
+
 type Order = {
   id: string;
   userId: string;
@@ -37,6 +52,7 @@ type Order = {
   tax?: number;
   shipping?: number;
   printFiles: PrintFile[];
+  items?: OrderItem[];
   sheetWidth: number;
   sheetLength: number;
   itemCount?: number;
@@ -471,22 +487,31 @@ export default function AdminPage() {
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => downloadPrintFile(order)}
-                      disabled={!order.printFiles || order.printFiles.length === 0}
-                      className={`px-3 py-1 rounded-lg transition-colors ${
-                        order.printFiles && order.printFiles.length > 0
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                          : 'glass border border-white/10 text-slate-500 cursor-not-allowed'
-                      }`}
-                      title={order.printFiles && order.printFiles.length > 0 
-                        ? `Download ${order.printFiles.length} file(s)` 
-                        : 'No files available'}
-                    >
-                      {order.printFiles && order.printFiles.length > 0 
-                        ? `Download (${order.printFiles.length})` 
-                        : 'No Files'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => router.push(`/admin/jobs/${order.id}`)}
+                        className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                        title="View job details"
+                      >
+                        View Job
+                      </button>
+                      <button
+                        onClick={() => downloadPrintFile(order)}
+                        disabled={!order.printFiles || order.printFiles.length === 0}
+                        className={`px-3 py-1 rounded-lg transition-colors ${
+                          order.printFiles && order.printFiles.length > 0
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                            : 'glass border border-white/10 text-slate-500 cursor-not-allowed'
+                        }`}
+                        title={order.printFiles && order.printFiles.length > 0 
+                          ? `Download ${order.printFiles.length} file(s)` 
+                          : 'No files available'}
+                      >
+                        {order.printFiles && order.printFiles.length > 0 
+                          ? `Files (${order.printFiles.length})` 
+                          : 'No Files'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
