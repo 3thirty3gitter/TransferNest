@@ -122,9 +122,9 @@ export async function POST(request: NextRequest) {
               let processedImage = sharp(buffer)
                 .resize(imageWidth, imageHeight, { fit: 'fill' });
               
-              // If rotated, apply 90 degree rotation
+              // If rotated, apply -90 degree rotation (counterclockwise to match preview)
               if (isRotated) {
-                processedImage = processedImage.rotate(90);
+                processedImage = processedImage.rotate(-90);
               }
               
               imageBuffer = await processedImage.png().toBuffer();
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
                 create: { width: imageWidth, height: imageHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
               });
               if (isRotated) {
-                placeholder = placeholder.rotate(90);
+                placeholder = placeholder.rotate(-90);
               }
               imageBuffer = await placeholder.png().toBuffer();
             }
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
               create: { width: imageWidth, height: imageHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
             });
             if (isRotated) {
-              placeholder = placeholder.rotate(90);
+              placeholder = placeholder.rotate(-90);
             }
             imageBuffer = await placeholder.png().toBuffer();
           }
