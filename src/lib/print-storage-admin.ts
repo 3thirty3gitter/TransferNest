@@ -52,6 +52,49 @@ export class PrintFileStorageAdmin {
     }
   }
 
+  async uploadCartFile(
+    buffer: Buffer,
+    filename: string,
+    cartItemId: string,
+    userId: string
+  ): Promise<UploadResult> {
+    try {
+      const storage = getStorage();
+      const bucket = storage.bucket();
+      const filePath = `cart/${userId}/${cartItemId}/${filename}`;
+      const file = bucket.file(filePath);
+
+      await file.save(buffer, {
+        contentType: 'image/png',
+        metadata: {
+          metadata: {
+            cartItemId,
+            userId,
+            dpi: '300',
+            generatedAt: new Date().toISOString()
+          }
+        }
+      });
+
+      // Make the file publicly accessible
+      await file.makePublic();
+
+      // Get the public URL
+      const downloadURL = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+
+      return {
+        filename,
+        url: downloadURL,
+        path: filePath,
+        size: buffer.length
+      };
+    } catch (error) {
+      console.error('Error uploading cart file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to upload cart file: ${errorMessage}`);
+    }
+  }
+
   async uploadPrintResult(
     printResult: PrintExportResult,
     orderId: string,

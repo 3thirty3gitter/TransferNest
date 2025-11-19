@@ -22,6 +22,9 @@ export interface CartItem {
   };
   quantity: number;
   dateAdded: Date;
+  pngUrl?: string;  // Gang sheet PNG URL from Firebase Storage
+  sheetWidth?: number;  // Numeric sheet width for print generation
+  sheetLength?: number;  // Numeric sheet length for print generation
 }
 
 interface CartState {
