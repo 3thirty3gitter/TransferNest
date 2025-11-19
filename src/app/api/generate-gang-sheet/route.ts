@@ -87,13 +87,24 @@ export async function POST(request: NextRequest) {
             return null;
           }
 
-          // Convert inches to pixels
+          // Handle rotation: when rotated=true, the item's width/height represent the original dimensions
+          // but on the sheet, it occupies a height×width space (swapped)
+          const isRotated = img.rotated === true;
+          
+          // Convert inches to pixels for the SHEET POSITION
+          // When rotated, the sheet space is height×width (swapped)
           const left = Math.round(img.x * dpi);
           const top = Math.round(img.y * dpi);
-          const width = Math.round(img.width * dpi);
-          const height = Math.round(img.height * dpi);
+          
+          // Image dimensions in its original orientation
+          const imageWidth = Math.round(img.width * dpi);
+          const imageHeight = Math.round(img.height * dpi);
+          
+          // Space it occupies on the sheet (swapped if rotated)
+          const containerWidth = isRotated ? imageHeight : imageWidth;
+          const containerHeight = isRotated ? imageWidth : imageHeight;
 
-          console.log(`[GANG_SHEET] Image ${img.id}: position ${left},${top} size ${width}x${height}px`);
+          console.log(`[GANG_SHEET] Image ${img.id}: position ${left},${top} size ${imageWidth}x${imageHeight}px${isRotated ? ' (rotated)' : ''}`);
 
           // Load actual image from URL
           let imageBuffer: Buffer;
@@ -107,26 +118,39 @@ export async function POST(request: NextRequest) {
               const arrayBuffer = await response.arrayBuffer();
               const buffer = Buffer.from(arrayBuffer);
               
-              // Resize to exact dimensions
-              imageBuffer = await sharp(buffer)
-                .resize(width, height, { fit: 'fill' })
-                .png()
-                .toBuffer();
+              // Resize to exact dimensions (original orientation)
+              let processedImage = sharp(buffer)
+                .resize(imageWidth, imageHeight, { fit: 'fill' });
+              
+              // If rotated, apply 90 degree rotation
+              if (isRotated) {
+                processedImage = processedImage.rotate(90);
+              }
+              
+              imageBuffer = await processedImage.png().toBuffer();
                 
-              console.log(`[GANG_SHEET] Loaded image from URL`);
+              console.log(`[GANG_SHEET] Loaded and ${isRotated ? 'rotated ' : ''}image from URL`);
             } catch (fetchError) {
               console.error(`[GANG_SHEET] Failed to fetch ${img.url}:`, fetchError);
               // Fallback to placeholder
-              imageBuffer = await sharp({
-                create: { width, height, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
-              }).png().toBuffer();
+              let placeholder = sharp({
+                create: { width: imageWidth, height: imageHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
+              });
+              if (isRotated) {
+                placeholder = placeholder.rotate(90);
+              }
+              imageBuffer = await placeholder.png().toBuffer();
             }
           } else {
             // No URL, use placeholder
             console.warn(`[GANG_SHEET] No URL for image ${img.id}`);
-            imageBuffer = await sharp({
-              create: { width, height, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
-            }).png().toBuffer();
+            let placeholder = sharp({
+              create: { width: imageWidth, height: imageHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
+            });
+            if (isRotated) {
+              placeholder = placeholder.rotate(90);
+            }
+            imageBuffer = await placeholder.png().toBuffer();
           }
 
           return { input: imageBuffer, left, top };
