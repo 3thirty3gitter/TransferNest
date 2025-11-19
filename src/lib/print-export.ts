@@ -94,24 +94,59 @@ export class PrintExportGenerator {
             return null;
           }
 
-          console.log(`[PRINT] Image ${img.id}: ${left},${top} ${width}x${height}px`);
+          console.log(`[PRINT] Image ${img.id}: ${left},${top} ${width}x${height}px from ${img.url || 'no url'}`);
 
-          // Load and resize the image
-          // Note: In production, you'd fetch from img.url
-          // For now, create a placeholder rectangle
-          const placeholder = await sharp({
-            create: {
-              width,
-              height,
-              channels: 4,
-              background: { r: 200, g: 200, b: 200, alpha: 0.5 }
+          // Load actual image from URL if available
+          let imageBuffer: Buffer;
+          
+          if (img.url && img.url.trim() !== '') {
+            try {
+              // Fetch the image
+              const response = await fetch(img.url);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.status}`);
+              }
+              const arrayBuffer = await response.arrayBuffer();
+              const buffer = Buffer.from(arrayBuffer);
+              
+              // Resize to exact dimensions
+              imageBuffer = await sharp(buffer)
+                .resize(width, height, { fit: 'fill' })
+                .png()
+                .toBuffer();
+                
+              console.log(`[PRINT] Loaded and resized image from ${img.url.substring(0, 50)}...`);
+            } catch (fetchError) {
+              console.error(`[PRINT] Failed to fetch image from ${img.url}:`, fetchError);
+              // Fallback to placeholder
+              imageBuffer = await sharp({
+                create: {
+                  width,
+                  height,
+                  channels: 4,
+                  background: { r: 200, g: 200, b: 200, alpha: 0.5 }
+                }
+              })
+                .png()
+                .toBuffer();
             }
-          })
-            .png()
-            .toBuffer();
+          } else {
+            // No URL provided, use placeholder
+            console.warn(`[PRINT] No URL for image ${img.id}, using placeholder`);
+            imageBuffer = await sharp({
+              create: {
+                width,
+                height,
+                channels: 4,
+                background: { r: 200, g: 200, b: 200, alpha: 0.5 }
+              }
+            })
+              .png()
+              .toBuffer();
+          }
 
           return {
-            input: placeholder,
+            input: imageBuffer,
             left,
             top
           };
