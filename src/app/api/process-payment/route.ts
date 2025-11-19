@@ -257,7 +257,8 @@ async function generatePrintFiles(cartItems: any[], userId: string, orderId: str
       // Get actual sheet dimensions from cart item
       const sheetWidth = item.sheetWidth || sheetSize;
       const sheetLength = item.sheetLength || 0;
-      const sheetDimensions = sheetLength > 0 ? `${sheetWidth}x${sheetLength.toFixed(1)}` : `${sheetSize}`;
+      // Replace decimal with underscore for filename safety
+      const sheetDimensions = sheetLength > 0 ? `${sheetWidth}x${sheetLength.toFixed(1).replace('.', '_')}` : `${sheetSize}`;
 
       console.log(`[PRINT] Generating print file for ${layout.positions.length} images on ${sheetDimensions}" sheet`);
 
