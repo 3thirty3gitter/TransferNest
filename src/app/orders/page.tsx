@@ -204,9 +204,9 @@ export default function OrdersPage() {
               </CardHeader>
               
               <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                   {/* Order Details */}
-                  <div className="lg:col-span-2">
+                  <div>
                     <h4 className="font-semibold mb-3">Order Details</h4>
                     <div className="space-y-2">
                       {order.items.map((item, index) => (
@@ -231,39 +231,6 @@ export default function OrdersPage() {
                           Tracking Number: {order.trackingNumber}
                         </p>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Print Files */}
-                  <div>
-                    <h4 className="font-semibold mb-3">Print Files</h4>
-                    {order.printFiles.length > 0 ? (
-                      <div className="space-y-2">
-                        {order.printFiles.map((file, index) => (
-                          <div key={index} className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium truncate">
-                                {file.filename}
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDownloadPrintFile(file)}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {file.dimensions.width} × {file.dimensions.height}px
-                              ({file.dimensions.dpi} DPI)
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Print files will be available once your order is processed.
-                      </p>
                     )}
                   </div>
                 </div>

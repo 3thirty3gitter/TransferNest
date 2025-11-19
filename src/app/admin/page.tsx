@@ -418,10 +418,10 @@ export default function AdminPage() {
                     {order.createdAt.toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                    {order.itemCount} items
+                    {order.itemCount || 0} items
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                    ${order.totalAmount.toFixed(2)}
+                    ${(order.totalAmount || order.total || 0).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
