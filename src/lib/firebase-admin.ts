@@ -52,5 +52,12 @@ export function getFirestore() {
   return admin.firestore(app);
 }
 
+export function getStorage() {
+  if (!app) {
+    throw new Error('Firebase Admin not initialized');
+  }
+  return admin.storage(app);
+}
+
 export default app;
 
