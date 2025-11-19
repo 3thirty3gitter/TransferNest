@@ -233,7 +233,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-white">Admin Dashboard</h1>
@@ -304,15 +304,15 @@ export default function AdminPage() {
 
         {/* Filter Tabs */}
         <div className="glass-strong rounded-lg border border-white/10 mb-6">
-          <div className="flex border-b">
+          <div className="flex border-b border-white/10">
             {(['all', 'pending', 'paid', 'printing', 'shipped', 'completed'] as const).map(status => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`px-6 py-3 font-medium ${
+                className={`px-6 py-3 font-medium transition-colors ${
                   filter === status
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'border-b-2 border-blue-400 text-blue-400'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -323,38 +323,38 @@ export default function AdminPage() {
 
         {/* Bulk Actions */}
         {selectedOrders.size > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-            <div className="font-medium text-blue-900">
+          <div className="glass-strong rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 mb-6 flex items-center justify-between">
+            <div className="font-medium text-blue-300">
               {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''} selected
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => bulkUpdateStatus('status', 'printing')}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
                 Mark as Printing
               </button>
               <button
                 onClick={() => bulkUpdateStatus('status', 'shipped')}
-                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
               >
                 Mark as Shipped
               </button>
               <button
                 onClick={() => bulkUpdateStatus('paymentStatus', 'paid')}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
                 Mark as Paid
               </button>
               <button
                 onClick={downloadAllPrintFiles}
-                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
               >
                 Download Files
               </button>
               <button
                 onClick={() => setSelectedOrders(new Set())}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                className="px-4 py-2 glass border border-white/20 text-slate-300 hover:text-white rounded-lg transition-colors"
               >
                 Clear
               </button>
@@ -364,62 +364,62 @@ export default function AdminPage() {
 
         {/* Orders Table */}
         <div className="glass-strong rounded-lg border border-white/10 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-white/10">
+            <thead className="bg-white/5">
               <tr>
                 <th className="px-6 py-3 text-left">
                   <input
                     type="checkbox"
                     checked={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
                     onChange={toggleSelectAll}
-                    className="rounded"
+                    className="rounded bg-white/10 border-white/20 text-blue-600"
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shipping</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Order ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Items</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Payment</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Shipping</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
               {filteredOrders.map(order => (
-                <tr key={order.id} className="hover:bg-gray-50">
+                <tr key={order.id} className="hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={selectedOrders.has(order.id)}
                       onChange={() => toggleOrderSelection(order.id)}
-                      className="rounded"
+                      className="rounded bg-white/10 border-white/20 text-blue-600"
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-300">
                     {order.id.slice(0, 8)}...
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                     {order.userEmail}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                     {order.createdAt.toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                     {order.itemCount} items
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                     ${order.totalAmount.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
                       value={order.paymentStatus}
                       onChange={(e) => updateOrderStatus(order.id, 'paymentStatus', e.target.value)}
-                      className={`text-sm rounded-full px-3 py-1 font-medium ${
-                        order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
-                        order.paymentStatus === 'refunded' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
+                      className={`text-sm rounded-full px-3 py-1 font-medium border-0 ${
+                        order.paymentStatus === 'paid' ? 'bg-green-500/20 text-green-300' :
+                        order.paymentStatus === 'refunded' ? 'bg-red-500/20 text-red-300' :
+                        'bg-yellow-500/20 text-yellow-300'
                       }`}
                     >
                       <option value="pending">Pending</option>
@@ -431,12 +431,12 @@ export default function AdminPage() {
                     <select
                       value={order.status}
                       onChange={(e) => updateOrderStatus(order.id, 'status', e.target.value)}
-                      className={`text-sm rounded-full px-3 py-1 font-medium ${
-                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
-                        order.status === 'printing' ? 'bg-blue-100 text-blue-800' :
-                        order.status === 'paid' ? 'bg-green-100 text-green-800' :
-                        'bg-yellow-100 text-yellow-800'
+                      className={`text-sm rounded-full px-3 py-1 font-medium border-0 ${
+                        order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
+                        order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
+                        order.status === 'printing' ? 'bg-blue-500/20 text-blue-300' :
+                        order.status === 'paid' ? 'bg-green-500/20 text-green-300' :
+                        'bg-yellow-500/20 text-yellow-300'
                       }`}
                     >
                       <option value="pending">Pending</option>
@@ -452,17 +452,17 @@ export default function AdminPage() {
                       placeholder="Tracking #"
                       value={order.trackingNumber || ''}
                       onChange={(e) => updateOrderStatus(order.id, 'trackingNumber', e.target.value)}
-                      className="border rounded px-2 py-1 text-sm w-32"
+                      className="glass border border-white/20 rounded px-2 py-1 text-sm w-32 text-white placeholder-slate-400"
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button
                       onClick={() => downloadPrintFile(order)}
                       disabled={!order.printFiles || order.printFiles.length === 0}
-                      className={`px-3 py-1 rounded ${
+                      className={`px-3 py-1 rounded-lg transition-colors ${
                         order.printFiles && order.printFiles.length > 0
-                          ? 'bg-blue-500 text-white hover:bg-blue-600'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : 'glass border border-white/10 text-slate-500 cursor-not-allowed'
                       }`}
                       title={order.printFiles && order.printFiles.length > 0 
                         ? `Download ${order.printFiles.length} file(s)` 
@@ -479,7 +479,7 @@ export default function AdminPage() {
           </table>
           
           {filteredOrders.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-slate-400">
               No orders found
             </div>
           )}
@@ -491,16 +491,18 @@ export default function AdminPage() {
 
 function StatCard({ title, count, color }: { title: string; count: number; color: string }) {
   const colorClasses = {
-    yellow: 'bg-yellow-100 text-yellow-800',
-    green: 'bg-green-100 text-green-800',
-    blue: 'bg-blue-100 text-blue-800',
-    purple: 'bg-purple-100 text-purple-800',
+    yellow: 'from-yellow-500/20 to-orange-500/20 text-yellow-300',
+    green: 'from-green-500/20 to-emerald-500/20 text-green-300',
+    blue: 'from-blue-500/20 to-cyan-500/20 text-blue-300',
+    purple: 'from-purple-500/20 to-pink-500/20 text-purple-300',
   }[color];
 
   return (
-    <div className="glass-strong rounded-lg border border-white/10 p-6">
-      <div className="text-sm font-medium text-slate-300 mb-2">{title}</div>
-      <div className={`text-3xl font-bold ${colorClasses}`}>{count}</div>
+    <div className="glass-strong rounded-lg border border-white/10 p-6 hover:scale-105 transition-transform">
+      <div className="text-sm font-medium text-slate-400 mb-2">{title}</div>
+      <div className={`text-4xl font-bold bg-gradient-to-r ${colorClasses} bg-clip-text text-transparent`}>
+        {count}
+      </div>
     </div>
   );
 }
