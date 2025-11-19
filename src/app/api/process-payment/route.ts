@@ -108,25 +108,24 @@ export async function POST(request: NextRequest) {
 
       console.log('[PAYMENT] Order created:', orderId);
 
-      // Now generate and upload print files with customer info for filename
-      console.log('[PAYMENT] Cart items for print generation:', JSON.stringify(cartItems.map((item: any) => ({
-        sheetSize: item.sheetSize,
-        hasLayout: !!item.layout,
-        positionCount: item.layout?.positions?.length || 0,
+      // Now link existing print files to the order
+      console.log('[PAYMENT] Cart items for print files:', JSON.stringify(cartItems.map((item: any) => ({
+        id: item.id,
+        hasPngUrl: !!item.pngUrl,
         sheetWidth: item.sheetWidth,
         sheetLength: item.sheetLength
       }))));
       
-      const printFiles = await generatePrintFiles(cartItems, userId, orderId, customerInfo);
+      const printFiles = await linkPrintFilesToOrder(cartItems, userId, orderId, customerInfo);
       
-      console.log('[PAYMENT] Generated print files:', printFiles.length);
+      console.log('[PAYMENT] Linked print files:', printFiles.length);
       
       // Update the order with print files
       if (printFiles.length > 0) {
         await updateOrderPrintFiles(orderId, printFiles);
         console.log('[PAYMENT] Updated order with', printFiles.length, 'print files');
       } else {
-        console.warn('[PAYMENT] No print files were generated!');
+        console.warn('[PAYMENT] No print files were linked!');
       }
 
       return NextResponse.json({
@@ -246,7 +245,69 @@ async function saveOrder(orderData: any) {
   }
 }
 
-// Helper function to generate print-ready files
+// Helper function to link existing cart print files to order
+async function linkPrintFilesToOrder(cartItems: any[], userId: string, orderId: string, customerInfo: any) {
+  console.log('[LINK_PRINT] Starting print file linking');
+  console.log('[LINK_PRINT] Cart items count:', cartItems.length);
+  
+  try {
+    const printResults = [];
+
+    // Format customer name (replace spaces and special chars with underscores)
+    const customerName = `${customerInfo.firstName}_${customerInfo.lastName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+    // Get last 8 characters of order ID for cleaner filename
+    const orderNumber = orderId.slice(-8);
+
+    for (const item of cartItems) {
+      console.log('[LINK_PRINT] Processing cart item:', {
+        id: item.id,
+        hasPngUrl: !!item.pngUrl,
+        sheetWidth: item.sheetWidth,
+        sheetLength: item.sheetLength
+      });
+      
+      if (!item.pngUrl) {
+        console.warn('[LINK_PRINT] Cart item has no pngUrl:', item.id);
+        continue;
+      }
+
+      // Get actual sheet dimensions from cart item
+      const sheetWidth = item.sheetWidth;
+      const sheetLength = item.sheetLength || 0;
+      const sheetDimensions = sheetLength > 0 ? `${sheetWidth}x${Math.round(sheetLength)}` : `${sheetWidth}`;
+
+      // Create custom filename: order#_customer_name_widthxlength.png
+      const customFilename = `${orderNumber}_${customerName}_${sheetDimensions}.png`;
+
+      console.log('[LINK_PRINT] Linking file:', {
+        originalUrl: item.pngUrl,
+        newFilename: customFilename
+      });
+
+      // Add the print file reference
+      printResults.push({
+        filename: customFilename,
+        url: item.pngUrl, // Use the existing cart PNG URL
+        path: `cart/${userId}/${item.id}`, // Original cart path
+        size: 0, // Unknown size
+        dimensions: {
+          width: sheetWidth,
+          height: sheetLength,
+          dpi: 300
+        }
+      });
+    }
+
+    console.log('[LINK_PRINT] Linked ${printResults.length} print files');
+    return printResults;
+
+  } catch (error) {
+    console.error('[LINK_PRINT] Error linking print files:', error);
+    return []; // Don't fail the order if print files can't be linked
+  }
+}
+
+// Helper function to generate print-ready files (legacy - keeping for reference)
 async function generatePrintFiles(cartItems: any[], userId: string, orderId: string, customerInfo: any) {
   console.log('[GENERATE_PRINT] Starting print file generation');
   console.log('[GENERATE_PRINT] Cart items count:', cartItems.length);
