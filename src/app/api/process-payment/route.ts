@@ -75,12 +75,28 @@ export async function POST(request: NextRequest) {
     const result = await client.payments.create(requestBody);
 
     if (result.payment) {
+      console.log('[PAYMENT] Square payment successful:', {
+        paymentId: result.payment.id,
+        amountCharged: result.payment.totalMoney,
+        status: result.payment.status
+      });
+
       // Payment successful - now save the order and generate print files
       const printFiles = await generatePrintFiles(cartItems, userId);
       
+      // Get the ACTUAL amount charged by Square (in cents)
+      const actualAmountCents = Number(result.payment.totalMoney?.amount || amount);
+      const actualAmountDollars = actualAmountCents / 100;
+      
+      console.log('[PAYMENT] Using actual amount from Square:', {
+        cents: actualAmountCents,
+        dollars: actualAmountDollars,
+        requestedAmount: amount
+      });
+      
       const orderId = await saveOrder({
         paymentId: result.payment.id,
-        amount: amount / 100, // Convert back to dollars
+        amount: actualAmountDollars, // Use ACTUAL amount charged by Square
         currency,
         customerInfo,
         cartItems,
@@ -135,6 +151,12 @@ export async function POST(request: NextRequest) {
 // Helper function to save order to database
 async function saveOrder(orderData: any) {
   console.log('[SAVE ORDER] Starting to save order for userId:', orderData.userId);
+  console.log('[SAVE ORDER] Input orderData:', JSON.stringify({
+    amount: orderData.amount,
+    taxAmount: orderData.taxAmount,
+    cartItemsCount: orderData.cartItems?.length
+  }, null, 2));
+  
   try {
     const orderManager = new OrderManagerAdmin();
     
@@ -161,7 +183,13 @@ async function saveOrder(orderData: any) {
     // Use the actual amount charged to the customer (should match subtotal + tax)
     const total = orderData.amount;
 
-    console.log('[SAVE ORDER] Order totals:', { subtotal, tax, shipping, total, actualAmount: orderData.amount });
+    console.log('[SAVE ORDER] Calculated values:', { 
+      subtotal: subtotal.toFixed(2), 
+      tax: tax.toFixed(2), 
+      shipping: shipping.toFixed(2), 
+      total: total.toFixed(2),
+      verification: (subtotal + tax + shipping).toFixed(2)
+    });
 
     const order = {
       userId: orderData.userId,
