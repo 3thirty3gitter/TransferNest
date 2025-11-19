@@ -14,7 +14,7 @@ const client = new SquareClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const { sourceId, amount, currency, customerInfo, cartItems, userId } = await request.json();
+    const { sourceId, amount, currency, customerInfo, cartItems, userId, taxAmount, shippingAddress, deliveryMethod } = await request.json();
 
     // Validate Square configuration
     if (!process.env.SQUARE_ACCESS_TOKEN) {
@@ -87,6 +87,9 @@ export async function POST(request: NextRequest) {
         userId,
         status: 'paid',
         printFiles,
+        taxAmount: taxAmount || 0, // Pass the actual tax charged
+        shippingAddress,
+        deliveryMethod
       });
 
       return NextResponse.json({
@@ -146,11 +149,19 @@ async function saveOrder(orderData: any) {
       utilization: item.utilization || 0
     }));
 
-    // Calculate totals
+    // Calculate subtotal from cart items
     const subtotal = orderItems.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
-    const tax = subtotal * 0.08; // 8% tax rate
-    const shipping = subtotal > 50 ? 0 : 9.99; // Free shipping over $50
-    const total = subtotal + tax + shipping;
+    
+    // Use the actual tax amount charged to the customer
+    const tax = orderData.taxAmount || 0;
+    
+    // Shipping is always free (as shown in checkout page)
+    const shipping = 0;
+    
+    // Use the actual amount charged to the customer (should match subtotal + tax)
+    const total = orderData.amount;
+
+    console.log('[SAVE ORDER] Order totals:', { subtotal, tax, shipping, total, actualAmount: orderData.amount });
 
     const order = {
       userId: orderData.userId,
@@ -163,7 +174,9 @@ async function saveOrder(orderData: any) {
       shipping,
       total,
       currency: orderData.currency || 'CAD',
-      printFiles: []
+      printFiles: [],
+      shippingAddress: orderData.shippingAddress,
+      deliveryMethod: orderData.deliveryMethod
     };
 
     console.log('[SAVE ORDER] Order object created, calling createOrder...');
