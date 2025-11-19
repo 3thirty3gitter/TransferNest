@@ -81,9 +81,6 @@ export async function POST(request: NextRequest) {
         status: result.payment.status
       });
 
-      // Payment successful - now save the order and generate print files
-      const printFiles = await generatePrintFiles(cartItems, userId);
-      
       // Get the ACTUAL amount charged by Square (in cents)
       const actualAmountCents = Number(result.payment.totalMoney?.amount || amount);
       const actualAmountDollars = actualAmountCents / 100;
@@ -94,6 +91,7 @@ export async function POST(request: NextRequest) {
         requestedAmount: amount
       });
       
+      // First, save the order without print files
       const orderId = await saveOrder({
         paymentId: result.payment.id,
         amount: actualAmountDollars, // Use ACTUAL amount charged by Square
@@ -102,18 +100,29 @@ export async function POST(request: NextRequest) {
         cartItems,
         userId,
         status: 'paid',
-        printFiles,
-        taxAmount: taxAmount || 0, // Pass the actual tax charged
+        printFiles: [], // Will be updated after generation
+        taxAmount: taxAmount || 0,
         shippingAddress,
         deliveryMethod
       });
+
+      console.log('[PAYMENT] Order created:', orderId);
+
+      // Now generate and upload print files
+      const printFiles = await generatePrintFiles(cartItems, userId, orderId);
+      
+      // Update the order with print files
+      if (printFiles.length > 0) {
+        await updateOrderPrintFiles(orderId, printFiles);
+        console.log('[PAYMENT] Updated order with', printFiles.length, 'print files');
+      }
 
       return NextResponse.json({
         success: true,
         paymentId: result.payment.id,
         orderId,
         message: 'Payment processed successfully',
-        printFiles: printFiles.map(pf => ({
+        printFiles: printFiles.map((pf: any) => ({
           filename: pf.filename,
           dimensions: pf.dimensions
         }))
@@ -202,10 +211,12 @@ async function saveOrder(orderData: any) {
       shipping,
       total,
       currency: orderData.currency || 'CAD',
-      printFiles: [],
+      printFiles: orderData.printFiles || [],
       shippingAddress: orderData.shippingAddress,
       deliveryMethod: orderData.deliveryMethod
     };
+
+    console.log('[SAVE ORDER] Print files count:', orderData.printFiles?.length || 0);
 
     console.log('[SAVE ORDER] Order object created, calling createOrder...');
     const orderId = await orderManager.createOrder(order);
@@ -224,7 +235,7 @@ async function saveOrder(orderData: any) {
 }
 
 // Helper function to generate print-ready files
-async function generatePrintFiles(cartItems: any[], userId: string) {
+async function generatePrintFiles(cartItems: any[], userId: string, orderId: string) {
   try {
     const printGenerator = new PrintExportGenerator();
     const printStorage = new PrintFileStorage();
@@ -243,12 +254,12 @@ async function generatePrintFiles(cartItems: any[], userId: string) {
       // Convert layout positions to NestedImage format
       const nestedImages = layout.positions.map((pos: any) => ({
         id: pos.imageId || 'unknown',
-        url: '', // Placeholder - would fetch from storage in production
+        url: pos.url || pos.imageUrl || '', // Get the actual image URL
         x: pos.x,
         y: pos.y,
         width: pos.width,
         height: pos.height,
-        rotated: false
+        rotated: pos.rotated || false
       }));
 
       // Generate high-quality print file
@@ -262,14 +273,43 @@ async function generatePrintFiles(cartItems: any[], userId: string) {
         }
       );
 
-      printResults.push(printResult);
+      // Upload to Firebase Storage
+      console.log(`[PRINT] Uploading ${printResult.filename} to storage...`);
+      const uploadedFile = await printStorage.uploadPrintFile(
+        printResult.buffer,
+        printResult.filename,
+        orderId,
+        userId
+      );
+      
+      console.log(`[PRINT] Uploaded successfully:`, uploadedFile.url);
+
+      printResults.push({
+        filename: uploadedFile.filename,
+        url: uploadedFile.url,
+        path: uploadedFile.path,
+        size: uploadedFile.size,
+        dimensions: printResult.dimensions
+      });
     }
 
-    console.log(`Generated ${printResults.length} print files`);
+    console.log(`[PRINT] Generated and uploaded ${printResults.length} print files`);
     return printResults;
 
   } catch (error) {
     console.error('Error generating print files:', error);
     throw error;
+  }
+}
+
+// Helper function to update order with print files
+async function updateOrderPrintFiles(orderId: string, printFiles: any[]) {
+  try {
+    const orderManager = new OrderManagerAdmin();
+    await orderManager.addPrintFiles(orderId, printFiles);
+    console.log('[UPDATE] Order print files updated successfully');
+  } catch (error) {
+    console.error('[UPDATE] Error updating order print files:', error);
+    // Don't throw - order was already saved, print files are a bonus
   }
 }
