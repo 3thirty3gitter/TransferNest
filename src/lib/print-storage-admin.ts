@@ -100,7 +100,7 @@ export class PrintFileStorageAdmin {
 
       const [files] = await bucket.getFiles({ prefix });
 
-      const deletePromises = files.map(file => file.delete());
+      const deletePromises = files.map((file: any) => file.delete());
       await Promise.all(deletePromises);
 
       console.log(`Deleted ${files.length} print files for order ${orderId}`);
