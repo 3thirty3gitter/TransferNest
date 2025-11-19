@@ -109,12 +109,24 @@ export async function POST(request: NextRequest) {
       console.log('[PAYMENT] Order created:', orderId);
 
       // Now generate and upload print files with customer info for filename
+      console.log('[PAYMENT] Cart items for print generation:', JSON.stringify(cartItems.map((item: any) => ({
+        sheetSize: item.sheetSize,
+        hasLayout: !!item.layout,
+        positionCount: item.layout?.positions?.length || 0,
+        sheetWidth: item.sheetWidth,
+        sheetLength: item.sheetLength
+      }))));
+      
       const printFiles = await generatePrintFiles(cartItems, userId, orderId, customerInfo);
+      
+      console.log('[PAYMENT] Generated print files:', printFiles.length);
       
       // Update the order with print files
       if (printFiles.length > 0) {
         await updateOrderPrintFiles(orderId, printFiles);
         console.log('[PAYMENT] Updated order with', printFiles.length, 'print files');
+      } else {
+        console.warn('[PAYMENT] No print files were generated!');
       }
 
       return NextResponse.json({
@@ -236,6 +248,9 @@ async function saveOrder(orderData: any) {
 
 // Helper function to generate print-ready files
 async function generatePrintFiles(cartItems: any[], userId: string, orderId: string, customerInfo: any) {
+  console.log('[GENERATE_PRINT] Starting print file generation');
+  console.log('[GENERATE_PRINT] Cart items count:', cartItems.length);
+  
   try {
     const printGenerator = new PrintExportGenerator();
     const printStorage = new PrintFileStorageAdmin();
@@ -247,10 +262,16 @@ async function generatePrintFiles(cartItems: any[], userId: string, orderId: str
     const orderNumber = orderId.slice(-8);
 
     for (const item of cartItems) {
+      console.log('[GENERATE_PRINT] Processing cart item:', {
+        hasLayout: !!item.layout,
+        sheetSize: item.sheetSize,
+        positionCount: item.layout?.positions?.length || 0
+      });
+      
       const { layout, sheetSize } = item;
       
       if (!layout || !layout.positions || !Array.isArray(layout.positions) || layout.positions.length === 0) {
-        console.warn(`[PRINT] No layout positions found for cart item:`, item);
+        console.warn(`[GENERATE_PRINT] No layout positions found for cart item:`, JSON.stringify(item));
         continue;
       }
 
