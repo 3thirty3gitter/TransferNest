@@ -254,7 +254,12 @@ async function generatePrintFiles(cartItems: any[], userId: string, orderId: str
         continue;
       }
 
-      console.log(`[PRINT] Generating print file for ${layout.positions.length} images on ${sheetSize}" sheet`);
+      // Get actual sheet dimensions from cart item
+      const sheetWidth = item.sheetWidth || sheetSize;
+      const sheetLength = item.sheetLength || 0;
+      const sheetDimensions = sheetLength > 0 ? `${sheetWidth}x${sheetLength.toFixed(1)}` : `${sheetSize}`;
+
+      console.log(`[PRINT] Generating print file for ${layout.positions.length} images on ${sheetDimensions}" sheet`);
 
       // Convert layout positions to NestedImage format
       const nestedImages = layout.positions.map((pos: any) => ({
@@ -278,8 +283,8 @@ async function generatePrintFiles(cartItems: any[], userId: string, orderId: str
         }
       );
 
-      // Create custom filename: order#_customer_name_fullsheetsize.png
-      const customFilename = `${orderNumber}_${customerName}_${sheetSize}x19.png`;
+      // Create custom filename: order#_customer_name_widthxlength.png
+      const customFilename = `${orderNumber}_${customerName}_${sheetDimensions}.png`;
 
       // Upload to Firebase Storage
       console.log(`[PRINT] Uploading ${customFilename} to storage...`);
