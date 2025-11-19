@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SquareClient, SquareEnvironment } from 'square';
 import { randomUUID } from 'crypto';
 import { PrintExportGenerator } from '@/lib/print-export';
-import { PrintFileStorage } from '@/lib/print-storage';
+import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
 
 const client = new SquareClient({
@@ -238,7 +238,7 @@ async function saveOrder(orderData: any) {
 async function generatePrintFiles(cartItems: any[], userId: string, orderId: string, customerInfo: any) {
   try {
     const printGenerator = new PrintExportGenerator();
-    const printStorage = new PrintFileStorage();
+    const printStorage = new PrintFileStorageAdmin();
     const printResults = [];
 
     // Format customer name (replace spaces and special chars with underscores)
