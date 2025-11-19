@@ -31,11 +31,15 @@ type Order = {
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   shippingStatus: ShippingStatus;
-  totalAmount: number;
+  totalAmount?: number; // Legacy field
+  total?: number; // Current field
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
   printFiles: PrintFile[];
   sheetWidth: number;
   sheetLength: number;
-  itemCount: number;
+  itemCount?: number;
   trackingNumber?: string;
   shippingAddress?: {
     name: string;
