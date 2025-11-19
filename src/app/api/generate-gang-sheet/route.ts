@@ -92,17 +92,12 @@ export async function POST(request: NextRequest) {
           const isRotated = img.rotated === true;
           
           // Convert inches to pixels for the SHEET POSITION
-          // When rotated, the sheet space is height×width (swapped)
           const left = Math.round(img.x * dpi);
           const top = Math.round(img.y * dpi);
           
           // Image dimensions in its original orientation
           const imageWidth = Math.round(img.width * dpi);
           const imageHeight = Math.round(img.height * dpi);
-          
-          // Space it occupies on the sheet (swapped if rotated)
-          const containerWidth = isRotated ? imageHeight : imageWidth;
-          const containerHeight = isRotated ? imageWidth : imageHeight;
 
           console.log(`[GANG_SHEET] Image ${img.id}: position ${left},${top} size ${imageWidth}x${imageHeight}px${isRotated ? ' (rotated)' : ''}`);
 
@@ -118,13 +113,21 @@ export async function POST(request: NextRequest) {
               const arrayBuffer = await response.arrayBuffer();
               const buffer = Buffer.from(arrayBuffer);
               
-              // Resize to exact dimensions (original orientation)
-              let processedImage = sharp(buffer)
-                .resize(imageWidth, imageHeight, { fit: 'fill' });
+              // Resize to exact dimensions first
+              let processedImage = sharp(buffer).resize(imageWidth, imageHeight, { fit: 'fill' });
               
-              // If rotated, apply -90 degree rotation (counterclockwise to match preview)
+              // If rotated, rotate and then extract the exact dimensions we need
               if (isRotated) {
+                // Rotate -90 degrees (counterclockwise)
                 processedImage = processedImage.rotate(-90);
+                // After rotation, sharp expands canvas. Extract just the rotated dimensions.
+                // A rotated W×H image becomes H×W, so extract that exact size
+                processedImage = processedImage.extract({
+                  left: 0,
+                  top: 0,
+                  width: imageHeight,  // After rotation, original height becomes width
+                  height: imageWidth   // After rotation, original width becomes height
+                });
               }
               
               imageBuffer = await processedImage.png().toBuffer();
@@ -133,24 +136,20 @@ export async function POST(request: NextRequest) {
             } catch (fetchError) {
               console.error(`[GANG_SHEET] Failed to fetch ${img.url}:`, fetchError);
               // Fallback to placeholder
-              let placeholder = sharp({
-                create: { width: imageWidth, height: imageHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
-              });
-              if (isRotated) {
-                placeholder = placeholder.rotate(-90);
-              }
-              imageBuffer = await placeholder.png().toBuffer();
+              let placeholderWidth = isRotated ? imageHeight : imageWidth;
+              let placeholderHeight = isRotated ? imageWidth : imageHeight;
+              imageBuffer = await sharp({
+                create: { width: placeholderWidth, height: placeholderHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
+              }).png().toBuffer();
             }
           } else {
             // No URL, use placeholder
             console.warn(`[GANG_SHEET] No URL for image ${img.id}`);
-            let placeholder = sharp({
-              create: { width: imageWidth, height: imageHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
-            });
-            if (isRotated) {
-              placeholder = placeholder.rotate(-90);
-            }
-            imageBuffer = await placeholder.png().toBuffer();
+            let placeholderWidth = isRotated ? imageHeight : imageWidth;
+            let placeholderHeight = isRotated ? imageWidth : imageHeight;
+            imageBuffer = await sharp({
+              create: { width: placeholderWidth, height: placeholderHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
+            }).png().toBuffer();
           }
 
           return { input: imageBuffer, left, top };
