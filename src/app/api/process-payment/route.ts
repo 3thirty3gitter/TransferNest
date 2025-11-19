@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
 
       console.log('[PAYMENT] Order created:', orderId);
 
-      // Now generate and upload print files
-      const printFiles = await generatePrintFiles(cartItems, userId, orderId);
+      // Now generate and upload print files with customer info for filename
+      const printFiles = await generatePrintFiles(cartItems, userId, orderId, customerInfo);
       
       // Update the order with print files
       if (printFiles.length > 0) {
@@ -235,11 +235,16 @@ async function saveOrder(orderData: any) {
 }
 
 // Helper function to generate print-ready files
-async function generatePrintFiles(cartItems: any[], userId: string, orderId: string) {
+async function generatePrintFiles(cartItems: any[], userId: string, orderId: string, customerInfo: any) {
   try {
     const printGenerator = new PrintExportGenerator();
     const printStorage = new PrintFileStorage();
     const printResults = [];
+
+    // Format customer name (replace spaces and special chars with underscores)
+    const customerName = `${customerInfo.firstName}_${customerInfo.lastName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+    // Get last 8 characters of order ID for cleaner filename
+    const orderNumber = orderId.slice(-8);
 
     for (const item of cartItems) {
       const { layout, sheetSize } = item;
@@ -273,11 +278,14 @@ async function generatePrintFiles(cartItems: any[], userId: string, orderId: str
         }
       );
 
+      // Create custom filename: order#_customer_name_fullsheetsize.png
+      const customFilename = `${orderNumber}_${customerName}_${sheetSize}x19.png`;
+
       // Upload to Firebase Storage
-      console.log(`[PRINT] Uploading ${printResult.filename} to storage...`);
+      console.log(`[PRINT] Uploading ${customFilename} to storage...`);
       const uploadedFile = await printStorage.uploadPrintFile(
         printResult.buffer,
-        printResult.filename,
+        customFilename,
         orderId,
         userId
       );
@@ -285,7 +293,7 @@ async function generatePrintFiles(cartItems: any[], userId: string, orderId: str
       console.log(`[PRINT] Uploaded successfully:`, uploadedFile.url);
 
       printResults.push({
-        filename: uploadedFile.filename,
+        filename: customFilename,
         url: uploadedFile.url,
         path: uploadedFile.path,
         size: uploadedFile.size,
