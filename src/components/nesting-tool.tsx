@@ -147,7 +147,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
     return { basePrice, setupFee, total };
   };
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = () => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -166,74 +166,41 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
       return;
     }
 
-    // Show loading toast
-    const loadingToast = toast({
-      title: "Preparing Cart Item",
-      description: "Generating your gang sheet...",
+    const pricing = calculatePricing();
+    const sheetSizeStr = sheetWidth === 17 ? '17' : '13';
+    
+    const cartItem = {
+      name: `Custom DTF Sheet ${sheetSizeStr}"`,
+      sheetSize: sheetSizeStr as '13' | '17',
+      images,
+      layout: {
+        positions: nestingResult.placedItems.map((item: any) => ({
+          x: item.x,
+          y: item.y,
+          width: item.width,
+          height: item.height,
+          imageId: item.id || item.image?.id || 'unknown',
+          copyIndex: item.copyIndex || 0,
+          rotated: item.rotated || false,
+        })),
+        utilization: nestingResult.areaUtilizationPct * 100,
+        totalCopies: nestingResult.placedItems.length,
+        sheetWidth: sheetWidth,
+        sheetHeight: nestingResult.sheetLength,
+      },
+      pricing,
+      quantity: 1,
+      sheetWidth,  // For print file generation after payment
+      sheetLength: nestingResult.sheetLength,  // For print file generation after payment
+      placedItems: nestingResult.placedItems,  // Store placed items for print generation
+    };
+
+    addItem(cartItem);
+    
+    toast({
+      title: "Added to Cart!",
+      description: `Your ${sheetSizeStr}" DTF sheet layout has been added to cart.`,
     });
-
-    try {
-      // Generate gang sheet PNG and upload to storage
-      const response = await fetch('/api/generate-gang-sheet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          placedItems: nestingResult.placedItems,
-          sheetWidth,
-          sheetLength: nestingResult.sheetLength,
-          userId: user.uid
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate gang sheet');
-      }
-
-      const { pngUrl, cartItemId } = await response.json();
-
-      const pricing = calculatePricing();
-      const sheetSizeStr = sheetWidth === 17 ? '17' : '13';
-      
-      const cartItem = {
-        name: `Custom DTF Sheet ${sheetSizeStr}"`,
-        sheetSize: sheetSizeStr as '13' | '17',
-        images,
-        layout: {
-          positions: nestingResult.placedItems.map((item: any) => ({
-            x: item.x,
-            y: item.y,
-            width: item.width,
-            height: item.height,
-            imageId: item.id || item.image?.id || 'unknown',
-            copyIndex: item.copyIndex || 0,
-            rotated: item.rotated || false,
-          })),
-          utilization: nestingResult.areaUtilizationPct * 100,
-          totalCopies: nestingResult.placedItems.length,
-          sheetWidth: sheetWidth,
-          sheetHeight: nestingResult.sheetLength,
-        },
-        pricing,
-        quantity: 1,
-        pngUrl,  // Add the generated PNG URL
-        sheetWidth,  // Add for print file generation
-        sheetLength: nestingResult.sheetLength,  // Add for print file generation
-      };
-
-      addItem(cartItem);
-      
-      toast({
-        title: "Added to Cart!",
-        description: `Your ${sheetSizeStr}" DTF sheet layout has been added to cart.`,
-      });
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast({
-        title: "Failed to Add to Cart",
-        description: "There was an error preparing your cart item. Please try again.",
-        variant: "destructive",
-      });
-    }
   };
 
   return (

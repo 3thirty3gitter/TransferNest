@@ -9,7 +9,7 @@ import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { placedItems, sheetWidth, sheetLength, userId } = body;
+    const { placedItems, sheetWidth, sheetLength, userId, orderId, customerInfo } = body;
 
     // Validate required fields
     if (!placedItems || !Array.isArray(placedItems)) {
@@ -149,20 +149,40 @@ export async function POST(request: NextRequest) {
 
     console.log('[GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
 
-    // Upload to Firebase Storage in cart folder
+    // Upload to Firebase Storage
     const storage = new PrintFileStorageAdmin();
-    const cartItemId = `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const filename = `gangsheet_${sheetWidth}x${Math.round(sheetLength)}.png`;
-
-    console.log('[GANG_SHEET] Uploading to storage:', { userId, cartItemId, filename });
-
-    // Upload the PNG buffer to cart folder
-    const uploadResult = await storage.uploadCartFile(
-      pngBuffer,
-      filename,
-      cartItemId,
-      userId
-    );
+    
+    // If orderId is provided, save to orders folder, otherwise to cart folder
+    let uploadResult;
+    if (orderId && customerInfo) {
+      // Format customer name and filename for order
+      const customerName = `${customerInfo.firstName}_${customerInfo.lastName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+      const orderNumber = orderId.slice(-8);
+      const sheetDimensions = `${sheetWidth}x${Math.round(sheetLength)}`;
+      const filename = `${orderNumber}_${customerName}_${sheetDimensions}.png`;
+      
+      console.log('[GANG_SHEET] Uploading to orders folder:', { userId, orderId, filename });
+      
+      uploadResult = await storage.uploadPrintFile(
+        pngBuffer,
+        filename,
+        orderId,
+        userId
+      );
+    } else {
+      // Save to cart folder (legacy support if needed)
+      const cartItemId = `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const filename = `gangsheet_${sheetWidth}x${Math.round(sheetLength)}.png`;
+      
+      console.log('[GANG_SHEET] Uploading to cart folder:', { userId, cartItemId, filename });
+      
+      uploadResult = await storage.uploadCartFile(
+        pngBuffer,
+        filename,
+        cartItemId,
+        userId
+      );
+    }
 
     console.log('[GANG_SHEET] Upload successful:', uploadResult.url);
 
@@ -170,7 +190,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       pngUrl: uploadResult.url,
-      cartItemId,
       dimensions: {
         width: sheetWidth,
         height: sheetLength,

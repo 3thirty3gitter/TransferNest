@@ -245,10 +245,10 @@ async function saveOrder(orderData: any) {
   }
 }
 
-// Helper function to link existing cart print files to order
+// Helper function to generate print files after payment
 async function linkPrintFilesToOrder(cartItems: any[], userId: string, orderId: string, customerInfo: any) {
-  console.log('[LINK_PRINT] Starting print file linking');
-  console.log('[LINK_PRINT] Cart items count:', cartItems.length);
+  console.log('[GENERATE_PRINT] Starting print file generation');
+  console.log('[GENERATE_PRINT] Cart items count:', cartItems.length);
   
   try {
     const printResults = [];
@@ -259,51 +259,79 @@ async function linkPrintFilesToOrder(cartItems: any[], userId: string, orderId: 
     const orderNumber = orderId.slice(-8);
 
     for (const item of cartItems) {
-      console.log('[LINK_PRINT] Processing cart item:', {
+      console.log('[GENERATE_PRINT] Processing cart item:', {
         id: item.id,
-        hasPngUrl: !!item.pngUrl,
+        hasPlacedItems: !!item.placedItems,
         sheetWidth: item.sheetWidth,
-        sheetLength: item.sheetLength
+        sheetLength: item.sheetLength,
+        placedItemsCount: item.placedItems?.length || 0
       });
       
-      if (!item.pngUrl) {
-        console.warn('[LINK_PRINT] Cart item has no pngUrl:', item.id);
+      if (!item.placedItems || !item.sheetWidth || !item.sheetLength) {
+        console.warn('[GENERATE_PRINT] Cart item missing required data:', item.id);
         continue;
       }
 
-      // Get actual sheet dimensions from cart item
-      const sheetWidth = item.sheetWidth;
-      const sheetLength = item.sheetLength || 0;
-      const sheetDimensions = sheetLength > 0 ? `${sheetWidth}x${Math.round(sheetLength)}` : `${sheetWidth}`;
+      // Generate gang sheet PNG in background
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/generate-gang-sheet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            placedItems: item.placedItems,
+            sheetWidth: item.sheetWidth,
+            sheetLength: item.sheetLength,
+            userId,
+            orderId,
+            customerInfo
+          })
+        });
 
-      // Create custom filename: order#_customer_name_widthxlength.png
-      const customFilename = `${orderNumber}_${customerName}_${sheetDimensions}.png`;
-
-      console.log('[LINK_PRINT] Linking file:', {
-        originalUrl: item.pngUrl,
-        newFilename: customFilename
-      });
-
-      // Add the print file reference
-      printResults.push({
-        filename: customFilename,
-        url: item.pngUrl, // Use the existing cart PNG URL
-        path: `cart/${userId}/${item.id}`, // Original cart path
-        size: 0, // Unknown size
-        dimensions: {
-          width: sheetWidth,
-          height: sheetLength,
-          dpi: 300
+        if (!response.ok) {
+          console.error('[GENERATE_PRINT] Failed to generate gang sheet:', response.status);
+          continue;
         }
-      });
+
+        const { pngUrl, dimensions, size } = await response.json();
+
+        // Get actual sheet dimensions from cart item
+        const sheetWidth = item.sheetWidth;
+        const sheetLength = item.sheetLength || 0;
+        const sheetDimensions = sheetLength > 0 ? `${sheetWidth}x${Math.round(sheetLength)}` : `${sheetWidth}`;
+
+        // Create custom filename: order#_customer_name_widthxlength.png
+        const customFilename = `${orderNumber}_${customerName}_${sheetDimensions}.png`;
+
+        console.log('[GENERATE_PRINT] Generated print file:', {
+          filename: customFilename,
+          url: pngUrl,
+          size
+        });
+
+        // Add the print file reference
+        printResults.push({
+          filename: customFilename,
+          url: pngUrl,
+          path: `orders/${userId}/${orderId}/${customFilename}`,
+          size: size || 0,
+          dimensions: {
+            width: sheetWidth,
+            height: sheetLength,
+            dpi: 300
+          }
+        });
+      } catch (generateError) {
+        console.error('[GENERATE_PRINT] Error generating print file:', generateError);
+        // Continue with other items even if one fails
+      }
     }
 
-    console.log('[LINK_PRINT] Linked ${printResults.length} print files');
+    console.log(`[GENERATE_PRINT] Generated ${printResults.length} print files`);
     return printResults;
 
   } catch (error) {
-    console.error('[LINK_PRINT] Error linking print files:', error);
-    return []; // Don't fail the order if print files can't be linked
+    console.error('[GENERATE_PRINT] Error generating print files:', error);
+    return []; // Don't fail the order if print files can't be generated
   }
 }
 
