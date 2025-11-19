@@ -239,6 +239,17 @@ export default function AdminPage() {
           <h1 className="text-4xl font-bold text-white">Admin Dashboard</h1>
           <div className="flex gap-3">
             <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-semibold rounded-lg transition-all hover:scale-105 shadow-lg flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              View Storefront
+            </a>
+            <a
               href="/admin/customers"
               className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all hover:scale-105 shadow-lg flex items-center gap-2"
             >
