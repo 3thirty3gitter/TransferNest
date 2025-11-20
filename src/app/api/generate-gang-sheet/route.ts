@@ -116,27 +116,36 @@ export async function POST(request: NextRequest) {
               // Resize to exact dimensions first
               let processedImage = sharp(buffer).resize(imageWidth, imageHeight, { fit: 'fill' });
               
-              // If rotated, rotate and then ensure exact final dimensions
+              // If rotated, rotate WITHOUT expand, keeping exact dimensions
               if (isRotated) {
-                // Rotate -90 degrees (counterclockwise)
+                // Rotate -90 degrees with background:transparent
                 processedImage = processedImage.rotate(-90, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
-                
-                // Force exact dimensions after rotation using trim + resize
-                // This ensures the buffer is EXACTLY imageHeight × imageWidth with no expansion
-                const rotatedBuffer = await processedImage.png().toBuffer();
-                processedImage = sharp(rotatedBuffer)
-                  .trim() // Remove any transparent padding Sharp added
-                  .resize(imageHeight, imageWidth, { 
-                    fit: 'contain',  // Maintain aspect ratio within bounds
-                    background: { r: 0, g: 0, b: 0, alpha: 0 }
-                  });
               }
               
-              // Get metadata to verify dimensions
-              const metadata = await processedImage.metadata();
-              console.log(`[GANG_SHEET] Final buffer dimensions: ${metadata.width}x${metadata.height}px`);
+              // Convert to buffer to check actual dimensions
+              const tempBuffer = await processedImage.png().toBuffer();
+              const tempMeta = await sharp(tempBuffer).metadata();
               
-              imageBuffer = await processedImage.png().toBuffer();
+              console.log(`[GANG_SHEET] After rotation - actual: ${tempMeta.width}x${tempMeta.height}px, expected: ${isRotated ? imageHeight : imageWidth}x${isRotated ? imageWidth : imageHeight}px`);
+              
+              // If dimensions don't match exactly (due to Sharp expansion), extract the exact region
+              const expectedWidth = isRotated ? imageHeight : imageWidth;
+              const expectedHeight = isRotated ? imageWidth : imageHeight;
+              
+              if (tempMeta.width !== expectedWidth || tempMeta.height !== expectedHeight) {
+                console.log(`[GANG_SHEET] Extracting exact dimensions from ${tempMeta.width}x${tempMeta.height} to ${expectedWidth}x${expectedHeight}`);
+                imageBuffer = await sharp(tempBuffer)
+                  .extract({
+                    left: 0,
+                    top: 0,
+                    width: Math.min(expectedWidth, tempMeta.width || expectedWidth),
+                    height: Math.min(expectedHeight, tempMeta.height || expectedHeight)
+                  })
+                  .png()
+                  .toBuffer();
+              } else {
+                imageBuffer = tempBuffer;
+              }
                 
               console.log(`[GANG_SHEET] Loaded and ${isRotated ? 'rotated ' : ''}image from URL`);
             } catch (fetchError) {
