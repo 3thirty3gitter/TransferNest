@@ -169,11 +169,15 @@ export async function POST(request: NextRequest) {
 
     console.log('[GANG_SHEET] Compositing', validComposites.length, 'images');
 
-    // Generate final image with explicit blend mode to prevent resizing
+    // Generate final image with explicit composite options to prevent stretching
     const pngBuffer = validComposites.length > 0
       ? await canvas.composite(validComposites.map(op => ({
-          ...op,
-          blend: 'over'  // Ensure no resizing, just overlay
+          input: op.input,
+          left: op.left,
+          top: op.top,
+          blend: 'over',        // Don't blend/resize, just overlay
+          gravity: 'northwest', // Top-left positioning, no centering
+          premultiplied: false  // Don't pre-multiply alpha
         }))).png({ quality: 100 }).toBuffer()
       : await canvas.png({ quality: 100 }).toBuffer();
 
