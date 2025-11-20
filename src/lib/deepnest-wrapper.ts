@@ -93,6 +93,8 @@ export async function deepnestNesting(
           y: item.y,
           width: source.width,
           height: source.height,
+          originalWidth: source.width,
+          originalHeight: source.height,
           rotated: item.rotation !== 0
         });
 

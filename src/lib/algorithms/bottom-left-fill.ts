@@ -176,6 +176,8 @@ export class BottomLeftFillPacker {
       y,
       width: rotated ? image.height : image.width,
       height: rotated ? image.width : image.height,
+      originalWidth: image.width,
+      originalHeight: image.height,
       rotated
     };
   }

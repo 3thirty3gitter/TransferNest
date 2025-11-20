@@ -112,26 +112,50 @@ export class PrintExportGenerator {
               const arrayBuffer = await response.arrayBuffer();
               const buffer = Buffer.from(arrayBuffer);
               
-              // Key insight: If rotated, the frame on sheet is width×height, 
-              // but we need to prepare an image that's height×width, then rotate it
-              let targetWidth = width;
-              let targetHeight = height;
+              // Use original dimensions if available, otherwise calculate from nested size
+              const origWidth = (img as any).originalWidth;
+              const origHeight = (img as any).originalHeight;
               
-              if (isRotated) {
-                // Swap dimensions for pre-rotation sizing
-                targetWidth = height;
-                targetHeight = width;
-              }
+              let sharpImage;
               
-              // Resize image to target dimensions, preserving aspect ratio
-              let sharpImage = sharp(buffer).resize(targetWidth, targetHeight, { 
-                fit: 'contain',
-                background: { r: 255, g: 255, b: 255, alpha: 0 }
-              });
-              
-              // Apply rotation AFTER sizing
-              if (isRotated) {
-                sharpImage = sharpImage.rotate(90);
+              if (origWidth && origHeight) {
+                // We have original dimensions - use them directly
+                console.log(`[PRINT] Using original dimensions: ${origWidth}x${origHeight}px`);
+                
+                if (isRotated) {
+                  // Rotate first, then the rotated image will match the frame
+                  sharpImage = sharp(buffer)
+                    .rotate(90)
+                    .resize(width, height, { 
+                      fit: 'contain',
+                      background: { r: 255, g: 255, b: 255, alpha: 0 }
+                    });
+                } else {
+                  // No rotation needed, just resize to frame
+                  sharpImage = sharp(buffer)
+                    .resize(width, height, { 
+                      fit: 'contain',
+                      background: { r: 255, g: 255, b: 255, alpha: 0 }
+                    });
+                }
+              } else {
+                // Fallback to old logic if original dimensions not available
+                let targetWidth = width;
+                let targetHeight = height;
+                
+                if (isRotated) {
+                  targetWidth = height;
+                  targetHeight = width;
+                }
+                
+                sharpImage = sharp(buffer).resize(targetWidth, targetHeight, { 
+                  fit: 'contain',
+                  background: { r: 255, g: 255, b: 255, alpha: 0 }
+                });
+                
+                if (isRotated) {
+                  sharpImage = sharpImage.rotate(90);
+                }
               }
               
               imageBuffer = await sharpImage.png().toBuffer();

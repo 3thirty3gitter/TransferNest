@@ -28,8 +28,10 @@ export type NestedImage = {
   url: string;
   x: number;
   y: number;
-  width: number;
-  height: number;
+  width: number;  // nested size in inches
+  height: number; // nested size in inches
+  originalWidth: number;  // original image width in pixels
+  originalHeight: number; // original image height in pixels
   rotated: boolean;
 };
 
@@ -501,6 +503,8 @@ function shelfPackBestFit13(
         y: shelf.y + segment.usedHeight,
         width: img.width,
         height: img.height,
+        originalWidth: img.width,
+        originalHeight: img.height,
         rotated: orientation.rotated
       });
 
@@ -546,6 +550,8 @@ function shelfPackBestFit13(
           y: currentY,
           width: img.width,
           height: img.height,
+          originalWidth: img.width,
+          originalHeight: img.height,
           rotated: t.rotated
         });
 
@@ -667,6 +673,8 @@ function shelfPackBestFit(
         y: shelf.y + segment.usedHeight,
         width: img.width,
         height: img.height,
+        originalWidth: img.width,
+        originalHeight: img.height,
         rotated: orientation.rotated
       });
 
@@ -715,6 +723,8 @@ function shelfPackBestFit(
           y: currentY,
           width: img.width,
           height: img.height,
+          originalWidth: img.width,
+          originalHeight: img.height,
           rotated: t.rotated
         });
 
