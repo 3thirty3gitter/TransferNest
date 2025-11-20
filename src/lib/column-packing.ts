@@ -19,6 +19,8 @@ export type NestedImage = {
   y: number;
   width: number;
   height: number;
+  originalWidth: number;
+  originalHeight: number;
   rotated: boolean;
 };
 
