@@ -85,6 +85,9 @@ export class PrintExportGenerator {
           // Convert inches to pixels
           const left = Math.round(img.x * opts.dpi);
           const top = Math.round(img.y * opts.dpi);
+          
+          // Handle rotation: when rotated, the displayed dimensions are swapped
+          const isRotated = (img as any).rotated === true;
           const width = Math.round(img.width * opts.dpi);
           const height = Math.round(img.height * opts.dpi);
 
@@ -94,7 +97,7 @@ export class PrintExportGenerator {
             return null;
           }
 
-          console.log(`[PRINT] Image ${img.id}: ${left},${top} ${width}x${height}px from ${img.url || 'no url'}`);
+          console.log(`[PRINT] Image ${img.id}: ${left},${top} ${width}x${height}px${isRotated ? ' (ROTATED)' : ''} from ${img.url || 'no url'}`);
 
           // Load actual image from URL if available
           let imageBuffer: Buffer;
@@ -109,11 +112,18 @@ export class PrintExportGenerator {
               const arrayBuffer = await response.arrayBuffer();
               const buffer = Buffer.from(arrayBuffer);
               
-              // Resize to exact dimensions
-              imageBuffer = await sharp(buffer)
-                .resize(width, height, { fit: 'fill' })
-                .png()
-                .toBuffer();
+              // Process image: resize to original dimensions first, then rotate if needed
+              let sharpImage = sharp(buffer).resize(width, height, { 
+                fit: 'contain',  // Changed from 'fill' to 'contain' to preserve aspect ratio
+                background: { r: 255, g: 255, b: 255, alpha: 0 }
+              });
+              
+              // Apply rotation if needed (matching the preview's rotation)
+              if (isRotated) {
+                sharpImage = sharpImage.rotate(90);
+              }
+              
+              imageBuffer = await sharpImage.png().toBuffer();
                 
               console.log(`[PRINT] Loaded and resized image from ${img.url.substring(0, 50)}...`);
             } catch (fetchError) {
