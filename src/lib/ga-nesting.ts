@@ -124,13 +124,9 @@ export function geneticAlgorithmNesting(
     adaptive = true
   } = options;
 
-  // Expand copies
-  const expanded: ManagedImage[] = [];
-  images.forEach(img => {
-    for (let i = 0; i < Math.max(1, img.copies); i++) {
-      expanded.push({ ...img, id: `${img.id}-${i}`, copies: 1 });
-    }
-  });
+  // FIXED: Don't expand copies here - they're already expanded by the caller
+  // The double expansion was causing 4 copies to become 16 (4 × 4)
+  const expanded = images;
 
   // Analyze batch and determine parameters
   const analysis = analyzeBatchDiversity(images);
