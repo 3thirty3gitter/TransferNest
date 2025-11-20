@@ -112,13 +112,24 @@ export class PrintExportGenerator {
               const arrayBuffer = await response.arrayBuffer();
               const buffer = Buffer.from(arrayBuffer);
               
-              // Process image: resize to original dimensions first, then rotate if needed
-              let sharpImage = sharp(buffer).resize(width, height, { 
-                fit: 'contain',  // Changed from 'fill' to 'contain' to preserve aspect ratio
+              // Key insight: If rotated, the frame on sheet is width×height, 
+              // but we need to prepare an image that's height×width, then rotate it
+              let targetWidth = width;
+              let targetHeight = height;
+              
+              if (isRotated) {
+                // Swap dimensions for pre-rotation sizing
+                targetWidth = height;
+                targetHeight = width;
+              }
+              
+              // Resize image to target dimensions, preserving aspect ratio
+              let sharpImage = sharp(buffer).resize(targetWidth, targetHeight, { 
+                fit: 'contain',
                 background: { r: 255, g: 255, b: 255, alpha: 0 }
               });
               
-              // Apply rotation if needed (matching the preview's rotation)
+              // Apply rotation AFTER sizing
               if (isRotated) {
                 sharpImage = sharpImage.rotate(90);
               }
