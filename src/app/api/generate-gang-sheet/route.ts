@@ -114,19 +114,21 @@ export async function POST(request: NextRequest) {
               const buffer = Buffer.from(arrayBuffer);
               
               // Resize to exact dimensions first
-              let processedImage = sharp(buffer).resize(imageWidth, imageHeight, { fit: 'fill' });
+              let processedImage = sharp(buffer).resize(imageWidth, imageHeight, { 
+                fit: 'fill',
+                withoutEnlargement: false 
+              });
               
-              // If rotated, rotate and then extract the exact dimensions we need
+              // If rotated, rotate and then resize again to exact final dimensions
               if (isRotated) {
                 // Rotate -90 degrees (counterclockwise)
-                processedImage = processedImage.rotate(-90);
-                // After rotation, sharp expands canvas. Extract just the rotated dimensions.
-                // A rotated W×H image becomes H×W, so extract that exact size
-                processedImage = processedImage.extract({
-                  left: 0,
-                  top: 0,
-                  width: imageHeight,  // After rotation, original height becomes width
-                  height: imageWidth   // After rotation, original width becomes height
+                processedImage = processedImage.rotate(-90, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
+                // After rotation, resize to EXACT final dimensions to ensure no overlap
+                // The rotated image should be H×W (swapped from original W×H)
+                processedImage = processedImage.resize(imageHeight, imageWidth, { 
+                  fit: 'fill',
+                  kernel: 'nearest',
+                  withoutEnlargement: false
                 });
               }
               
