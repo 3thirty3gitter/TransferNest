@@ -78,6 +78,8 @@ export function columnPackNarrow(
             y: col.currentY,
             width: img.width,
             height: img.height,
+            originalWidth: img.width,
+            originalHeight: img.height,
             rotated: orientation.rotated
           });
 
@@ -115,6 +117,8 @@ export function columnPackNarrow(
           y: padding,
           width: img.width,
           height: img.height,
+          originalWidth: img.width,
+          originalHeight: img.height,
           rotated: orientation.rotated
         });
 

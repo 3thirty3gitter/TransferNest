@@ -124,6 +124,8 @@ export function gangsheetPack(
       y,
       width: img.width,
       height: img.height,
+      originalWidth: img.width,
+      originalHeight: img.height,
       rotated
     });
 
