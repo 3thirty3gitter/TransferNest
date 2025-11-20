@@ -130,6 +130,10 @@ export async function POST(request: NextRequest) {
                 });
               }
               
+              // Get metadata to verify dimensions
+              const metadata = await processedImage.metadata();
+              console.log(`[GANG_SHEET] Final buffer dimensions: ${metadata.width}x${metadata.height}px`);
+              
               imageBuffer = await processedImage.png().toBuffer();
                 
               console.log(`[GANG_SHEET] Loaded and ${isRotated ? 'rotated ' : ''}image from URL`);
@@ -165,9 +169,12 @@ export async function POST(request: NextRequest) {
 
     console.log('[GANG_SHEET] Compositing', validComposites.length, 'images');
 
-    // Generate final image
+    // Generate final image with explicit blend mode to prevent resizing
     const pngBuffer = validComposites.length > 0
-      ? await canvas.composite(validComposites).png({ quality: 100 }).toBuffer()
+      ? await canvas.composite(validComposites.map(op => ({
+          ...op,
+          blend: 'over'  // Ensure no resizing, just overlay
+        }))).png({ quality: 100 }).toBuffer()
       : await canvas.png({ quality: 100 }).toBuffer();
 
     console.log('[GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
