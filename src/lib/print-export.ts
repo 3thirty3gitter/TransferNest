@@ -1,4 +1,6 @@
 ﻿import { NestedImage } from '@/lib/nesting-algorithm';
+import { createCanvas, loadImage } from 'canvas';
+import axios from 'axios';
 import sharp from 'sharp';
 
 export interface PrintExportOptions {
@@ -54,166 +56,82 @@ export class PrintExportGenerator {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `dtf-print-${sheetSize}x-${opts.dpi}dpi-${timestamp}.png`;
 
-    console.log(`Generating print file: ${filename}`, {
+    console.log(`[PRINT] Generating print file: ${filename}`, {
       imageCount: images.length,
       dimensions: `${pixelWidth}x${pixelHeight}px`,
-      utilization: `${utilization}%`
+      utilization: `${utilization}%`,
+      method: 'node-canvas'
     });
 
-    // Create a blank white canvas
-    const canvas = sharp({
-      create: {
-        width: pixelWidth,
-        height: pixelHeight,
-        channels: 4,
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
-      }
-    });
+    // Create canvas at exact print resolution
+    const canvas = createCanvas(pixelWidth, pixelHeight);
+    const ctx = canvas.getContext('2d');
 
-    // Composite all images onto the sheet
-    const compositeOps = await Promise.all(
-      images.map(async (img) => {
-        try {
-          // Validate image coordinates
-          if (typeof img.x !== 'number' || typeof img.y !== 'number' || 
-              typeof img.width !== 'number' || typeof img.height !== 'number' ||
-              isNaN(img.x) || isNaN(img.y) || isNaN(img.width) || isNaN(img.height)) {
-            console.error('[PRINT] Invalid image coordinates:', img);
-            return null;
-          }
+    // White background for print
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, pixelWidth, pixelHeight);
 
-          // Convert inches to pixels
-          const left = Math.round(img.x * opts.dpi);
-          const top = Math.round(img.y * opts.dpi);
-          
-          // Handle rotation: when rotated, the displayed dimensions are swapped
-          const isRotated = (img as any).rotated === true;
-          const width = Math.round(img.width * opts.dpi);
-          const height = Math.round(img.height * opts.dpi);
-
-          // Validate pixel values
-          if (isNaN(left) || isNaN(top) || isNaN(width) || isNaN(height)) {
-            console.error('[PRINT] Invalid pixel calculations:', { left, top, width, height, img });
-            return null;
-          }
-
-          console.log(`[PRINT] Image ${img.id}: ${left},${top} ${width}x${height}px${isRotated ? ' (ROTATED)' : ''} from ${img.url || 'no url'}`);
-
-          // Load actual image from URL if available
-          let imageBuffer: Buffer;
-          
-          if (img.url && img.url.trim() !== '') {
-            try {
-              // Fetch the image
-              const response = await fetch(img.url);
-              if (!response.ok) {
-                throw new Error(`Failed to fetch image: ${response.status}`);
-              }
-              const arrayBuffer = await response.arrayBuffer();
-              const buffer = Buffer.from(arrayBuffer);
-              
-              // Use original dimensions if available, otherwise calculate from nested size
-              const origWidth = (img as any).originalWidth;
-              const origHeight = (img as any).originalHeight;
-              
-              let sharpImage;
-              
-              if (origWidth && origHeight) {
-                // We have original dimensions - use them directly
-                console.log(`[PRINT] Using original dimensions: ${origWidth}x${origHeight}px`);
-                
-                if (isRotated) {
-                  // Rotate first, then the rotated image will match the frame
-                  sharpImage = sharp(buffer)
-                    .rotate(90)
-                    .resize(width, height, { 
-                      fit: 'contain',
-                      background: { r: 255, g: 255, b: 255, alpha: 0 }
-                    });
-                } else {
-                  // No rotation needed, just resize to frame
-                  sharpImage = sharp(buffer)
-                    .resize(width, height, { 
-                      fit: 'contain',
-                      background: { r: 255, g: 255, b: 255, alpha: 0 }
-                    });
-                }
-              } else {
-                // Fallback to old logic if original dimensions not available
-                let targetWidth = width;
-                let targetHeight = height;
-                
-                if (isRotated) {
-                  targetWidth = height;
-                  targetHeight = width;
-                }
-                
-                sharpImage = sharp(buffer).resize(targetWidth, targetHeight, { 
-                  fit: 'contain',
-                  background: { r: 255, g: 255, b: 255, alpha: 0 }
-                });
-                
-                if (isRotated) {
-                  sharpImage = sharpImage.rotate(90);
-                }
-              }
-              
-              imageBuffer = await sharpImage.png().toBuffer();
-                
-              console.log(`[PRINT] Loaded and resized image from ${img.url.substring(0, 50)}...`);
-            } catch (fetchError) {
-              console.error(`[PRINT] Failed to fetch image from ${img.url}:`, fetchError);
-              // Fallback to placeholder
-              imageBuffer = await sharp({
-                create: {
-                  width,
-                  height,
-                  channels: 4,
-                  background: { r: 200, g: 200, b: 200, alpha: 0.5 }
-                }
-              })
-                .png()
-                .toBuffer();
-            }
-          } else {
-            // No URL provided, use placeholder
-            console.warn(`[PRINT] No URL for image ${img.id}, using placeholder`);
-            imageBuffer = await sharp({
-              create: {
-                width,
-                height,
-                channels: 4,
-                background: { r: 200, g: 200, b: 200, alpha: 0.5 }
-              }
-            })
-              .png()
-              .toBuffer();
-          }
-
-          return {
-            input: imageBuffer,
-            left,
-            top
-          };
-        } catch (error) {
-          console.error(`Failed to process image ${img.id}:`, error);
-          return null;
+    // Fetch and draw each image
+    for (const imgData of images) {
+      try {
+        if (!imgData.url || imgData.url.trim() === '') {
+          console.warn(`[PRINT] Skipping image ${imgData.id} - no URL`);
+          continue;
         }
-      })
-    );
 
-    // Filter out failed composites
-    const validComposites = compositeOps.filter((op): op is NonNullable<typeof op> => op !== null);
+        // Download image from Firebase URL
+        console.log(`[PRINT] Fetching ${imgData.id} from ${imgData.url.substring(0, 60)}...`);
+        const response = await axios.get(imgData.url, { 
+          responseType: 'arraybuffer',
+          timeout: 10000
+        });
+        const imgBuffer = Buffer.from(response.data);
 
-    // Generate the final image
-    const buffer = validComposites.length > 0
-      ? await canvas.composite(validComposites).png({ quality: opts.quality }).toBuffer()
-      : await canvas.png({ quality: opts.quality }).toBuffer();
+        // Load as image (node-canvas handles PNG/JPG)
+        const image = await loadImage(imgBuffer);
 
-    console.log(`✅ Generated print file: ${filename} (${(buffer.length / 1024).toFixed(2)} KB)`);
+        // Calculate pixel positions and frame size at target DPI
+        const posX = imgData.x * opts.dpi;
+        const posY = imgData.y * opts.dpi;
+        const frameW = imgData.width * opts.dpi;
+        const frameH = imgData.height * opts.dpi;
+
+        console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
+
+        if (imgData.rotated) {
+          // Replicate CSS rotate(90deg) transform around center of frame
+          ctx.save();
+          ctx.translate(posX + frameW / 2, posY + frameH / 2);
+          ctx.rotate(Math.PI / 2); // 90 degrees
+          // Draw centered in rotated space
+          ctx.drawImage(image, -frameW / 2, -frameH / 2, frameW, frameH);
+          ctx.restore();
+        } else {
+          // Non-rotated: draw directly at position
+          ctx.drawImage(image, posX, posY, frameW, frameH);
+        }
+
+      } catch (error) {
+        console.error(`[PRINT] Failed to process image ${imgData.id}:`, error);
+        // Draw placeholder for failed images
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(imgData.x * opts.dpi, imgData.y * opts.dpi, imgData.width * opts.dpi, imgData.height * opts.dpi);
+      }
+    }
+
+    // Export to PNG buffer
+    let pngBuffer = canvas.toBuffer('image/png');
+
+    // Embed 300 DPI metadata using Sharp (for print software compatibility)
+    pngBuffer = await sharp(pngBuffer)
+      .withMetadata({ density: opts.dpi })
+      .png()
+      .toBuffer();
+
+    console.log(`✅ [PRINT] Generated print file: ${filename} (${(pngBuffer.length / 1024).toFixed(2)} KB)`);
 
     return {
-      buffer,
+      buffer: pngBuffer,
       filename,
       dimensions: {
         width: pixelWidth,

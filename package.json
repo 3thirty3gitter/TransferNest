@@ -46,6 +46,8 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "any-nest": "^1.0.3",
+    "axios": "^1.13.2",
+    "canvas": "^3.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
