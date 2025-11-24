@@ -76,25 +76,19 @@ function executeNesting13Advanced(
 ): NestingResult {
   // Rotation function for 13" sheets
   function canRotate(img: ManagedImage): boolean {
-    if (img.dataAiHint) {
-      const hint = img.dataAiHint.toLowerCase();
-      if (hint.includes('car') || hint.includes('vehicle')) return false;
-      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall') || hint.includes('horizontal')) return true;
-    }
     const aspectRatio = img.width / img.height;
     return aspectRatio < 0.95 || aspectRatio > 1.05;
   }
 
-  // ULTRA EXTREME PARAMETERS FOR 90%+ UTILIZATION
-  // 250 population, 250 generations, 0.10" spacing
+  // OPTIMIZED PARAMETERS: 250 population, 125 generations
   const strategies = [
     { 
       name: 'GA_ULTRA_EXTREME_1', 
       fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, {
         adaptive: false,
         rotationSteps: 4,
-        populationSize: 250,  // ULTRA EXTREME
-        generations: 250,     // ULTRA EXTREME
+        populationSize: 250,
+        generations: 125,  // Reduced from 250 for speed
         mutationRate: 0.38
       }) 
     },
@@ -104,8 +98,8 @@ function executeNesting13Advanced(
         adaptive: false,
         rotationSteps: 4,
         populationSize: 250,
-        generations: 250,
-        mutationRate: 0.42    // MAXIMUM
+        generations: 125,  // Reduced from 250 for speed
+        mutationRate: 0.42
       }) 
     },
     { 
@@ -114,7 +108,7 @@ function executeNesting13Advanced(
         adaptive: false,
         rotationSteps: 4,
         populationSize: 250,
-        generations: 250,
+        generations: 125,  // Reduced from 250 for speed
         mutationRate: 0.40
       }) 
     }
@@ -149,20 +143,13 @@ function executeNesting17Advanced(
   padding: number = 0.05,
   targetUtilization: number = 0.9
 ): NestingResult {
-  // Rotation function for 17" sheets - more aggressive for wider sheets
+  // Rotation function for 17" sheets
   function canRotate(img: ManagedImage): boolean {
-    if (img.dataAiHint) {
-      const hint = img.dataAiHint.toLowerCase();
-      if (hint.includes('car') || hint.includes('vehicle')) return false;
-      if (hint.includes('text') || hint.includes('vertical') || hint.includes('tall') || hint.includes('horizontal')) return true;
-    }
     const aspectRatio = img.width / img.height;
-    // Wider sheets benefit from more rotation flexibility
     return aspectRatio < 0.95 || aspectRatio > 1.05;
   }
 
-  // ULTRA EXTREME PARAMETERS FOR 17" SHEETS
-  // 250 population, 250 generations, 0.10" spacing
+  // OPTIMIZED PARAMETERS: 250 population, 125 generations
   const strategies = [
     { 
       name: 'GA_ULTRA_EXTREME_1', 
@@ -170,7 +157,7 @@ function executeNesting17Advanced(
         adaptive: false,
         rotationSteps: 4,
         populationSize: 250,
-        generations: 250,
+        generations: 125,  // Reduced from 250 for speed
         mutationRate: 0.38
       })
     },
@@ -180,7 +167,7 @@ function executeNesting17Advanced(
         adaptive: false,
         rotationSteps: 4,
         populationSize: 250,
-        generations: 250,
+        generations: 125,  // Reduced from 250 for speed
         mutationRate: 0.42
       })
     },
@@ -190,7 +177,7 @@ function executeNesting17Advanced(
         adaptive: false,
         rotationSteps: 4,
         populationSize: 250,
-        generations: 250,
+        generations: 125,  // Reduced from 250 for speed
         mutationRate: 0.40
       })
     }
