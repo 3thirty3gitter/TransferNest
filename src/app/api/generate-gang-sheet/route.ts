@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
+import { createCanvas, loadImage } from 'canvas';
+import axios from 'axios';
+import sharp from 'sharp';
 
 /**
  * API endpoint to generate a gang sheet PNG and upload it to Firebase Storage
- * Used when adding items to cart - generates the print-ready PNG
+ * Uses Canvas-based rendering for pixel-perfect export matching preview
  */
 export async function POST(request: NextRequest) {
   try {
@@ -47,12 +50,7 @@ export async function POST(request: NextRequest) {
       } : null
     });
 
-    // Generate the gang sheet PNG using print-export
-    // The PrintExportGenerator expects the exact sheet dimensions to create the canvas
-    const generator = new PrintExportGenerator();
-    
-    // CRITICAL: We need to generate with EXACT dimensions, not fixed 13x19 or 17x22
-    // Create a custom canvas based on actual nested dimensions
+    // Generate gang sheet using Canvas-based rendering (matches preview exactly)
     const dpi = 300;
     const pixelWidth = Math.round(sheetWidth * dpi);
     const pixelHeight = Math.round(sheetLength * dpi);
@@ -63,136 +61,72 @@ export async function POST(request: NextRequest) {
       dpi
     });
 
-    // We'll use sharp directly to create the exact canvas we need
-    const sharp = require('sharp');
-    
-    // Create blank white canvas
-    const canvas = sharp({
-      create: {
-        width: pixelWidth,
-        height: pixelHeight,
-        channels: 4,
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
-      }
-    });
+    // Create canvas at exact print resolution
+    const canvas = createCanvas(pixelWidth, pixelHeight);
+    const ctx = canvas.getContext('2d');
 
-    // Composite all images onto the sheet
-    const compositeOps = await Promise.all(
-      placedItems.map(async (img: any) => {
-        try {
-          // Validate coordinates
-          if (typeof img.x !== 'number' || typeof img.y !== 'number' || 
-              typeof img.width !== 'number' || typeof img.height !== 'number') {
-            console.error('[GANG_SHEET] Invalid image coordinates:', img);
-            return null;
-          }
+    // White background for print
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, pixelWidth, pixelHeight);
 
-          // Handle rotation: when rotated=true, the item's width/height represent the original dimensions
-          // but on the sheet, it occupies a height×width space (swapped)
-          const isRotated = img.rotated === true;
-          
-          // Convert inches to pixels for the SHEET POSITION
-          const left = Math.round(img.x * dpi);
-          const top = Math.round(img.y * dpi);
-          
-          // Image dimensions in its original orientation
-          const imageWidth = Math.round(img.width * dpi);
-          const imageHeight = Math.round(img.height * dpi);
-
-          console.log(`[GANG_SHEET] Image ${img.id}: position ${left},${top} size ${imageWidth}x${imageHeight}px${isRotated ? ' (rotated)' : ''}`);
-
-          // Load actual image from URL
-          let imageBuffer: Buffer;
-          
-          if (img.url && img.url.trim() !== '') {
-            try {
-              const response = await fetch(img.url);
-              if (!response.ok) {
-                throw new Error(`Failed to fetch: ${response.status}`);
-              }
-              const arrayBuffer = await response.arrayBuffer();
-              const buffer = Buffer.from(arrayBuffer);
-              
-              // Resize to exact dimensions first
-              let processedImage = sharp(buffer).resize(imageWidth, imageHeight, { fit: 'fill' });
-              
-              // If rotated, rotate WITHOUT expand, keeping exact dimensions
-              if (isRotated) {
-                // Rotate -90 degrees with background:transparent
-                processedImage = processedImage.rotate(-90, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
-              }
-              
-              // Convert to buffer to check actual dimensions
-              const tempBuffer = await processedImage.png().toBuffer();
-              const tempMeta = await sharp(tempBuffer).metadata();
-              
-              console.log(`[GANG_SHEET] After rotation - actual: ${tempMeta.width}x${tempMeta.height}px, expected: ${isRotated ? imageHeight : imageWidth}x${isRotated ? imageWidth : imageHeight}px`);
-              
-              // If dimensions don't match exactly (due to Sharp expansion), extract the exact region
-              const expectedWidth = isRotated ? imageHeight : imageWidth;
-              const expectedHeight = isRotated ? imageWidth : imageHeight;
-              
-              if (tempMeta.width !== expectedWidth || tempMeta.height !== expectedHeight) {
-                console.log(`[GANG_SHEET] Extracting exact dimensions from ${tempMeta.width}x${tempMeta.height} to ${expectedWidth}x${expectedHeight}`);
-                imageBuffer = await sharp(tempBuffer)
-                  .extract({
-                    left: 0,
-                    top: 0,
-                    width: Math.min(expectedWidth, tempMeta.width || expectedWidth),
-                    height: Math.min(expectedHeight, tempMeta.height || expectedHeight)
-                  })
-                  .png()
-                  .toBuffer();
-              } else {
-                imageBuffer = tempBuffer;
-              }
-                
-              console.log(`[GANG_SHEET] Loaded and ${isRotated ? 'rotated ' : ''}image from URL`);
-            } catch (fetchError) {
-              console.error(`[GANG_SHEET] Failed to fetch ${img.url}:`, fetchError);
-              // Fallback to placeholder
-              let placeholderWidth = isRotated ? imageHeight : imageWidth;
-              let placeholderHeight = isRotated ? imageWidth : imageHeight;
-              imageBuffer = await sharp({
-                create: { width: placeholderWidth, height: placeholderHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
-              }).png().toBuffer();
-            }
-          } else {
-            // No URL, use placeholder
-            console.warn(`[GANG_SHEET] No URL for image ${img.id}`);
-            let placeholderWidth = isRotated ? imageHeight : imageWidth;
-            let placeholderHeight = isRotated ? imageWidth : imageHeight;
-            imageBuffer = await sharp({
-              create: { width: placeholderWidth, height: placeholderHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
-            }).png().toBuffer();
-          }
-
-          return { input: imageBuffer, left, top };
-        } catch (error) {
-          console.error(`[GANG_SHEET] Failed to process image ${img.id}:`, error);
-          return null;
+    // Fetch and draw each image using Canvas (replicates preview logic exactly)
+    for (const imgData of placedItems) {
+      try {
+        if (!imgData.url || imgData.url.trim() === '') {
+          console.warn(`[GANG_SHEET] Skipping image ${imgData.id} - no URL`);
+          continue;
         }
-      })
-    );
 
-    // Filter out failed operations
-    const validComposites = compositeOps.filter((op): op is NonNullable<typeof op> => op !== null);
+        // Download image from Firebase URL
+        console.log(`[GANG_SHEET] Fetching ${imgData.id} from ${imgData.url.substring(0, 60)}...`);
+        const response = await axios.get(imgData.url, { 
+          responseType: 'arraybuffer',
+          timeout: 10000
+        });
+        const imgBuffer = Buffer.from(response.data);
 
-    console.log('[GANG_SHEET] Compositing', validComposites.length, 'images');
+        // Load as image (node-canvas handles PNG/JPG)
+        const image = await loadImage(imgBuffer);
 
-    // Generate final image with explicit composite options to prevent stretching
-    const pngBuffer = validComposites.length > 0
-      ? await canvas.composite(validComposites.map(op => ({
-          input: op.input,
-          left: op.left,
-          top: op.top,
-          blend: 'over',        // Don't blend/resize, just overlay
-          gravity: 'northwest', // Top-left positioning, no centering
-          premultiplied: false  // Don't pre-multiply alpha
-        }))).png({ quality: 100 }).toBuffer()
-      : await canvas.png({ quality: 100 }).toBuffer();
+        // Calculate pixel positions and frame size at target DPI
+        const posX = imgData.x * dpi;
+        const posY = imgData.y * dpi;
+        const frameW = imgData.width * dpi;
+        const frameH = imgData.height * dpi;
 
-    console.log('[GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
+        console.log(`[GANG_SHEET] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
+
+        if (imgData.rotated) {
+          // Replicate CSS rotate(90deg) transform around center of frame
+          ctx.save();
+          ctx.translate(posX + frameW / 2, posY + frameH / 2);
+          ctx.rotate(Math.PI / 2); // 90 degrees
+          // Draw centered in rotated space
+          ctx.drawImage(image, -frameW / 2, -frameH / 2, frameW, frameH);
+          ctx.restore();
+        } else {
+          // Non-rotated: draw directly at position
+          ctx.drawImage(image, posX, posY, frameW, frameH);
+        }
+
+      } catch (error) {
+        console.error(`[GANG_SHEET] Failed to process image ${imgData.id}:`, error);
+        // Draw placeholder for failed images
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(imgData.x * dpi, imgData.y * dpi, imgData.width * dpi, imgData.height * dpi);
+      }
+    }
+
+    // Export to PNG buffer
+    let pngBuffer = canvas.toBuffer('image/png');
+
+    // Embed 300 DPI metadata using Sharp (for print software compatibility)
+    pngBuffer = await sharp(pngBuffer)
+      .withMetadata({ density: dpi })
+      .png()
+      .toBuffer();
+
+    console.log('✅ [GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
 
     // Upload to Firebase Storage
     const storage = new PrintFileStorageAdmin();
