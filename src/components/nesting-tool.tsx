@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ManagedImage, NestingResult } from '@/lib/nesting-algorithm';
+import { executeEnhancedNesting, ManagedImage, NestingResult } from '@/lib/nesting-algorithm';
 import SheetPreview from './sheet-preview';
 import ImageManager from './image-manager';
 import NestingProgressModal from './nesting-progress-modal';
@@ -88,18 +88,8 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
         });
       }, 100); // Update every 100ms for smooth progress
 
-      // Call server-side API to avoid freezing browser
-      const response = await fetch('/api/nesting', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images, sheetWidth })
-      });
-
-      if (!response.ok) {
-        throw new Error('Nesting API failed');
-      }
-
-      const result = await response.json();
+      // Run client-side for better performance
+      const result = executeEnhancedNesting(images, sheetWidth);
       
       clearInterval(progressInterval);
       
