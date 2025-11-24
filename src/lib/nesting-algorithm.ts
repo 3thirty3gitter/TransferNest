@@ -1,6 +1,7 @@
 // nesting-algorithm.ts
 
-import { MaxRectsPacker } from 'maxrects-packer';
+import { nfpNesting } from './nfp-nesting';
+import { geneticAlgorithmNesting } from './ga-nesting';
 
 // Development-only logging - disabled in production to keep console clean
 const debugLog = (...args: any[]) => {
@@ -53,11 +54,16 @@ export const VIRTUAL_SHEET_HEIGHT = 10000; // Virtual height for calculations
 export function executeNesting(
   images: ManagedImage[],
   sheetWidth: number,
-  padding: number = 0.125,
-  targetUtilization: number = 0.95
+  padding: number = 0.125,  // REDUCED: Test with tighter spacing for 90%+ target
+  targetUtilization: number = 0.95  // INCREASED: Push algorithm harder
 ): NestingResult {
-  // Use fast maxrects-packer library for optimal performance (30-40ms vs 10+ seconds)
-  return executeMaxRectsPacking(images, sheetWidth, padding);
+  // Route to size-specific algorithm
+  // Both 13" and 17" sheets now use adaptive genetic algorithm for consistency
+  if (sheetWidth === 13) {
+    return executeNesting13Advanced(images, sheetWidth, padding, targetUtilization);
+  }
+  // Use adaptive GA for 17" sheets too (instead of shelf-packing)
+  return executeNesting17Advanced(images, sheetWidth, padding, targetUtilization);
 }
 
 // ADVANCED algorithm for 13" sheets using NFP approach (Deepnest-inspired)
@@ -750,93 +756,6 @@ function shelfPackBestFit(
   const sheetArea = sheetWidth * sheetLength;
   const areaUtilizationPct = sheetArea === 0 ? 0 : usedArea / sheetArea;
   return { placedItems, sheetLength, areaUtilizationPct };
-}
-
-// Fast MaxRects-Packer implementation (30-40ms for 100+ images)
-// See MAXRECTS_PACKER_UPGRADE.md for details
-function executeMaxRectsPacking(
-  images: ManagedImage[],
-  sheetWidth: number,
-  padding: number = 0.125
-): NestingResult {
-  // Expand copies
-  const expanded: ManagedImage[] = [];
-  images.forEach(img => {
-    for (let i = 0; i < Math.max(1, img.copies); i++) {
-      expanded.push({ ...img, id: `${img.id}-${i}`, copies: 1 });
-    }
-  });
-
-  const placedItems: NestedImage[] = [];
-  let usedArea = 0;
-
-  // Create packer with rotation enabled for optimal packing
-  const packer = new MaxRectsPacker(
-    sheetWidth,
-    VIRTUAL_SHEET_HEIGHT,
-    padding,
-    {
-      smart: true,        // Use heuristics for better placement
-      pot: false,         // Don't require power-of-two dimensions
-      square: false,      // Allow rectangular sheets
-      allowRotation: true, // Enable 90° rotation for better utilization
-      tag: false,
-      border: 0
-    }
-  );
-
-  // Add all images to packer
-  expanded.forEach(img => {
-    packer.add(img.width, img.height, img);
-  });
-
-  // Extract results from first bin
-  if (packer.bins.length > 0) {
-    const bin = packer.bins[0];
-    
-    bin.rects.forEach((rect: any) => {
-      const img = rect.data as ManagedImage;
-      
-      // Detect rotation by comparing dimensions
-      const rotated = (rect.width === img.height && rect.height === img.width);
-      
-      placedItems.push({
-        id: img.id,
-        url: img.url,
-        x: rect.x,
-        y: rect.y,
-        width: img.width,
-        height: img.height,
-        originalWidth: img.width,
-        originalHeight: img.height,
-        rotated
-      });
-
-      usedArea += img.width * img.height;
-    });
-  }
-
-  // Calculate sheet dimensions
-  const maxY = placedItems.length > 0 
-    ? Math.max(...placedItems.map(item => {
-        const h = item.rotated ? item.width : item.height;
-        return item.y + h + padding;
-      }))
-    : padding;
-
-  const sheetLength = maxY;
-  const sheetArea = sheetWidth * sheetLength;
-  const areaUtilizationPct = sheetArea === 0 ? 0 : usedArea / sheetArea;
-
-  return {
-    placedItems,
-    sheetLength,
-    areaUtilizationPct,
-    totalCount: expanded.length,
-    failedCount: expanded.length - placedItems.length,
-    sortStrategy: 'MaxRects',
-    packingMethod: 'maxrects-packer'
-  };
 }
 
 // Re-export for compatibility
