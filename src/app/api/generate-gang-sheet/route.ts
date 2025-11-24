@@ -91,21 +91,29 @@ export async function POST(request: NextRequest) {
         // Calculate pixel positions and frame size at target DPI
         const posX = imgData.x * dpi;
         const posY = imgData.y * dpi;
+        
+        // CRITICAL: When rotated, the image occupies height×width space on sheet
+        // but imgData.width/height are ORIGINAL dimensions (not swapped)
         const frameW = imgData.width * dpi;
         const frameH = imgData.height * dpi;
+        
+        // For rotated images, we need to swap dimensions when drawing
+        const drawW = imgData.rotated ? frameH : frameW;  // Swap for rotation
+        const drawH = imgData.rotated ? frameW : frameH;  // Swap for rotation
 
-        console.log(`[GANG_SHEET] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
+        console.log(`[GANG_SHEET] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) frame ${Math.round(frameW)}x${Math.round(frameH)}px, draw ${Math.round(drawW)}x${Math.round(drawH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
 
         if (imgData.rotated) {
-          // Replicate CSS rotate(90deg) transform around center of frame
+          // Replicate CSS rotate(90deg) transform
+          // The space on sheet is height×width (swapped), so translate to that center
           ctx.save();
-          ctx.translate(posX + frameW / 2, posY + frameH / 2);
+          ctx.translate(posX + drawW / 2, posY + drawH / 2);
           ctx.rotate(Math.PI / 2); // 90 degrees
-          // Draw centered in rotated space
+          // Draw with ORIGINAL dimensions (frameW × frameH)
           ctx.drawImage(image, -frameW / 2, -frameH / 2, frameW, frameH);
           ctx.restore();
         } else {
-          // Non-rotated: draw directly at position
+          // Non-rotated: draw directly at position with original dimensions
           ctx.drawImage(image, posX, posY, frameW, frameH);
         }
 
