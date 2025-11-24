@@ -80,59 +80,18 @@ function executeNesting13Advanced(
     return aspectRatio < 0.95 || aspectRatio > 1.05;
   }
 
-  // OPTIMIZED PARAMETERS: 250 population, 125 generations
-  const strategies = [
-    { 
-      name: 'GA_ULTRA_EXTREME_1', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, {
-        adaptive: false,
-        rotationSteps: 4,
-        populationSize: 250,
-        generations: 125,  // Reduced from 250 for speed
-        mutationRate: 0.38
-      }) 
-    },
-    { 
-      name: 'GA_ULTRA_EXTREME_2', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, {
-        adaptive: false,
-        rotationSteps: 4,
-        populationSize: 250,
-        generations: 125,  // Reduced from 250 for speed
-        mutationRate: 0.42
-      }) 
-    },
-    { 
-      name: 'GA_ULTRA_EXTREME_3', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.08, canRotate, {
-        adaptive: false,
-        rotationSteps: 4,
-        populationSize: 250,
-        generations: 125,  // Reduced from 250 for speed
-        mutationRate: 0.40
-      }) 
-    }
-  ];
-
-  let bestResult: NestingResult | null = null;
-
-  for (const strategy of strategies) {
-    console.log(`[13" TRYING] ${strategy.name}...`);
-    const result = strategy.fn();
-    
-    if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
-      bestResult = result;
-    }
-
-    // ONLY stop early if we hit 90%+ (not 85% or lower)
-    if (result.areaUtilizationPct >= 0.90) {
-      console.log(`[13" SUCCESS] ${strategy.name} achieved ${(result.areaUtilizationPct * 100).toFixed(1)}%`);
-      return result;
-    }
-  }
-
-  console.log(`[13" BEST] Best: ${(bestResult!.areaUtilizationPct * 100).toFixed(1)}% using ${bestResult!.sortStrategy}`);
-  return bestResult!;
+  // OPTIMIZED: Single strategy with 100 population × 100 generations (~90% faster)
+  console.log(`[13" NESTING] Starting optimized genetic algorithm...`);
+  const result = geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, {
+    adaptive: false,
+    rotationSteps: 4,
+    populationSize: 100,
+    generations: 100,
+    mutationRate: 0.38
+  });
+  
+  console.log(`[13" COMPLETE] ${(result.areaUtilizationPct * 100).toFixed(1)}% utilization`);
+  return result;
 }
 
 // ADVANCED algorithm for 17" sheets using adaptive genetic algorithm
@@ -149,59 +108,18 @@ function executeNesting17Advanced(
     return aspectRatio < 0.95 || aspectRatio > 1.05;
   }
 
-  // OPTIMIZED PARAMETERS: 250 population, 125 generations
-  const strategies = [
-    { 
-      name: 'GA_ULTRA_EXTREME_1', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, { 
-        adaptive: false,
-        rotationSteps: 4,
-        populationSize: 250,
-        generations: 125,  // Reduced from 250 for speed
-        mutationRate: 0.38
-      })
-    },
-    { 
-      name: 'GA_ULTRA_EXTREME_2', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, { 
-        adaptive: false,
-        rotationSteps: 4,
-        populationSize: 250,
-        generations: 125,  // Reduced from 250 for speed
-        mutationRate: 0.42
-      })
-    },
-    { 
-      name: 'GA_ULTRA_EXTREME_3', 
-      fn: () => geneticAlgorithmNesting(images, sheetWidth, 0.08, canRotate, { 
-        adaptive: false,
-        rotationSteps: 4,
-        populationSize: 250,
-        generations: 125,  // Reduced from 250 for speed
-        mutationRate: 0.40
-      })
-    }
-  ];
-
-  let bestResult: NestingResult | null = null;
-
-  for (const strategy of strategies) {
-    console.log(`[17" TRYING] ${strategy.name}...`);
-    const result = strategy.fn();
-    
-    if (!bestResult || result.areaUtilizationPct > bestResult.areaUtilizationPct) {
-      bestResult = result;
-    }
-    
-    // ONLY stop early if we hit 90%+
-    if (result.areaUtilizationPct >= 0.90) {
-      console.log(`[17" SUCCESS] ${strategy.name} achieved ${(result.areaUtilizationPct * 100).toFixed(1)}%`);
-      return result;
-    }
-  }
-
-  console.log(`[17" BEST] Best: ${(bestResult!.areaUtilizationPct * 100).toFixed(1)}% using ${bestResult!.sortStrategy}`);
-  return bestResult!;
+  // OPTIMIZED: Single strategy with 100 population × 100 generations (~90% faster)
+  console.log(`[17" NESTING] Starting optimized genetic algorithm...`);
+  const result = geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, {
+    adaptive: false,
+    rotationSteps: 4,
+    populationSize: 100,
+    generations: 100,
+    mutationRate: 0.38
+  });
+  
+  console.log(`[17" COMPLETE] ${(result.areaUtilizationPct * 100).toFixed(1)}% utilization`);
+  return result;
 }
 
 // Legacy shelf-packing algorithm for 17" sheets (kept for reference)
