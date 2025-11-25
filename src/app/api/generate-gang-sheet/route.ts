@@ -110,15 +110,15 @@ export async function POST(request: NextRequest) {
           // Rotate 90 degrees
           ctx.rotate(Math.PI / 2);
           
-          // After rotation, draw at ORIGINAL dimensions
-          // The image itself is not rotated, only the canvas coordinate system
-          // Centering is based on original dimensions in the rotated space
+          // CRITICAL: After rotation, coordinate system is rotated
+          // Must SWAP width and height in the drawing call
+          // The rotated frame is now height × width
           ctx.drawImage(
             image,
-            -frameWidthPx / 2,   // Original width for centering
-            -frameHeightPx / 2,  // Original height for centering
-            frameWidthPx,        // Draw at original width
-            frameHeightPx        // Draw at original height
+            -frameHeightPx / 2,  // SWAP: use height as x offset
+            -frameWidthPx / 2,   // SWAP: use width as y offset
+            frameHeightPx,       // SWAP: use height as width
+            frameWidthPx         // SWAP: use width as height
           );
         } else {
           // Non-rotated: draw with original dimensions
