@@ -67,9 +67,19 @@ async function testSharpRotation() {
     // Expect: 50x100
 
     // 3. Draw directly into slot
-    // No ctx.rotate, No ctx.translate (other than position)
-    // We use the slot dimensions (which match the rotated image dimensions)
-    ctx.drawImage(image, x, y, slotWidth, slotHeight);
+    // CRITICAL FIX: Swap dimensions for rotated images
+    // The slot is 50x100 (WxH).
+    // The rotated image is 50x100.
+    // But imgData.width/height (from nesting) might be 100x50 (Original).
+
+    // If we used original dimensions (100x50) in a 50x100 slot, it would squash.
+    // So we must explicitly use the SLOT dimensions (which are swapped original dimensions).
+
+    const destW = slotWidth;  // 50
+    const destH = slotHeight; // 100
+
+    console.log(`Drawing at ${x},${y} with size ${destW}x${destH}`);
+    ctx.drawImage(image, x, y, destW, destH);
 
     const outPath = path.join(process.cwd(), 'test_sharp_rotation.png');
     fs.writeFileSync(outPath, canvas.toBuffer('image/png'));

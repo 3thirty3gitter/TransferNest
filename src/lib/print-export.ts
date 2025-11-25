@@ -88,130 +88,79 @@ export class PrintExportGenerator {
         }
 
         const arrayBuffer = await response.arrayBuffer();
-        const imgBuffer = Buffer.from(arrayBuffer);
-
-        // Load as image (node-canvas handles PNG/JPG)
-        const image = await loadImage(imgBuffer);
-
-        // Calculate pixel positions and frame size at target DPI
-        const posX = imgData.x * opts.dpi;
-        const posY = imgData.y * opts.dpi;
-        const frameW = imgData.width * opts.dpi;
-        const frameH = imgData.height * opts.dpi;
-
-        console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
-
-        if (imgData.rotated) {
-          // ROBUST FIX: Pre-rotate the image buffer using Sharp
-          try {
-            const rotatedBuffer = await sharp(imgBuffer)
-              .rotate(90)
-              .toBuffer();
-
-            const rotatedImage = await loadImage(rotatedBuffer);
-
-            // Draw directly into the slot
-            ctx.drawImage(rotatedImage, posX, posY, frameW, frameH);
-
-          } catch (rotateError) {
-            console.error(`[PRINT] Failed to rotate image ${imgData.id}:`, rotateError);
-            ctx.drawImage(image, posX, posY, frameW, frameH);
-          }
-        } else {
-          // Non-rotated: simple draw at position
-          ctx.drawImage(image, posX, posY, frameW, frameH);
+        try {
+          pngBuffer = await sharp(pngBuffer)
+            .withMetadata({ density: opts.dpi })
+            .png()
+            .toBuffer();
+        } catch (sharpError) {
+          console.warn('[PRINT] Sharp metadata embedding failed, returning raw canvas buffer:', sharpError);
+          // Continue with raw buffer if sharp fails
         }
 
-      } catch (error) {
-        console.error(`[PRINT] Failed to process image ${imgData.id}:`, error);
-        // Draw placeholder for failed images
-        ctx.fillStyle = '#cccccc';
-        ctx.fillRect(imgData.x * opts.dpi, imgData.y * opts.dpi, imgData.width * opts.dpi, imgData.height * opts.dpi);
+        console.log(`✅ [PRINT] Generated print file: ${filename} (${(pngBuffer.length / 1024).toFixed(2)} KB)`);
 
-        // Add error text to placeholder
-        ctx.fillStyle = '#ff0000';
-        ctx.font = `${20 * (opts.dpi / 72)}px sans-serif`;
-        ctx.fillText('Image Failed', imgData.x * opts.dpi + 10, imgData.y * opts.dpi + 50);
+        return {
+          buffer: pngBuffer,
+          filename,
+          dimensions: {
+            width: pixelWidth,
+            height: pixelHeight,
+            dpi: opts.dpi
+          },
+          metadata: {
+            imageCount: images.length,
+            totalArea: Math.round(totalArea * 100) / 100,
+            utilization
+          }
+        };
       }
-    }
-
-    // Export to PNG buffer
-    let pngBuffer = canvas.toBuffer('image/png');
-
-    // Embed 300 DPI metadata using Sharp (for print software compatibility)
-    try {
-      pngBuffer = await sharp(pngBuffer)
-        .withMetadata({ density: opts.dpi })
-        .png()
-        .toBuffer();
-    } catch (sharpError) {
-      console.warn('[PRINT] Sharp metadata embedding failed, returning raw canvas buffer:', sharpError);
-      // Continue with raw buffer if sharp fails
-    }
-
-    console.log(`✅ [PRINT] Generated print file: ${filename} (${(pngBuffer.length / 1024).toFixed(2)} KB)`);
-
-    return {
-      buffer: pngBuffer,
-      filename,
-      dimensions: {
-        width: pixelWidth,
-        height: pixelHeight,
-        dpi: opts.dpi
-      },
-      metadata: {
-        imageCount: images.length,
-        totalArea: Math.round(totalArea * 100) / 100,
-        utilization
-      }
-    };
-  }
 
   async generatePreview(
-    images: NestedImage[],
-    sheetSize: '13' | '17',
-    previewWidth: number = 800
-  ): Promise<{ width: number; height: number; metadata: any }> {
-    const sheet = SHEET_DIMENSIONS[sheetSize];
-    const aspectRatio = sheet.height / sheet.width;
-    const previewHeight = Math.round(previewWidth * aspectRatio);
+        images: NestedImage[],
+        sheetSize: '13' | '17',
+        previewWidth: number = 800
+      ): Promise < { width: number; height: number; metadata: any } > {
+        const sheet = SHEET_DIMENSIONS[sheetSize];
+        const aspectRatio = sheet.height / sheet.width;
+        const previewHeight = Math.round(previewWidth * aspectRatio);
 
-    return {
-      width: previewWidth,
-      height: previewHeight,
-      metadata: {
-        imageCount: images.length,
-        sheetSize,
-        format: 'preview'
+        return {
+          width: previewWidth,
+          height: previewHeight,
+          metadata: {
+            imageCount: images.length,
+            sheetSize,
+            format: 'preview'
+          }
+        };
       }
-    };
-  }
 
-  calculatePrintPricing(images: NestedImage[], sheetSize: '13' | '17') {
-    const sheet = SHEET_DIMENSIONS[sheetSize];
-    const totalSheetArea = sheet.width * sheet.height;
+      calculatePrintPricing(images: NestedImage[], sheetSize: '13' | '17') {
+        const sheet = SHEET_DIMENSIONS[sheetSize];
+        const totalSheetArea = sheet.width * sheet.height;
 
-    const usedArea = images.reduce((total, img) => {
-      return total + (img.width * img.height);
-    }, 0);
+        const usedArea = images.reduce((total, img) => {
+          return total + (img.width * img.height);
+        }, 0);
 
-    const utilization = usedArea / totalSheetArea;
+        const utilization = usedArea / totalSheetArea;
 
-    const basePricing = {
-      '13': { base: 15.00, perSqIn: 0.75 },
-      '17': { base: 25.00, perSqIn: 0.65 }
-    };
+        const basePricing = {
+          '13': { base: 15.00, perSqIn: 0.75 },
+          '17': { base: 25.00, perSqIn: 0.65 }
+        };
 
-    const pricing = basePricing[sheetSize];
-    const imageArea = usedArea;
-    const materialCost = pricing.base + (imageArea * pricing.perSqIn);
+        const pricing = basePricing[sheetSize];
+        const imageArea = usedArea;
+        const materialCost = pricing.base + (imageArea * pricing.perSqIn);
 
-    return {
-      materialCost: Math.round(materialCost * 100) / 100,
-      utilization: Math.round(utilization * 100),
-      totalArea: Math.round(usedArea * 100) / 100,
-      sheetArea: totalSheetArea,
-      imageCount: images.length
-    };
-  }
-}
+        return {
+          materialCost: Math.round(materialCost * 100) / 100,
+          utilization: Math.round(utilization * 100),
+          totalArea: Math.round(usedArea * 100) / 100,
+          sheetArea: totalSheetArea,
+          imageCount: images.length
+        };
+      }
+    }

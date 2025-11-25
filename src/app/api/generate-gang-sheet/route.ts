@@ -108,8 +108,10 @@ export async function POST(request: NextRequest) {
 
             const rotatedImage = await loadImage(rotatedBuffer);
 
-            // Draw directly into the slot
-            ctx.drawImage(rotatedImage, xPx, yPx, frameWidthPx, frameHeightPx);
+            // CRITICAL FIX: Swap dimensions for drawing
+            // frameWidthPx/frameHeightPx are based on ORIGINAL dimensions
+            // For rotated image, Destination Width = Original Height
+            ctx.drawImage(rotatedImage, xPx, yPx, frameHeightPx, frameWidthPx);
 
           } catch (rotateError) {
             console.error(`[GANG_SHEET] Failed to rotate image ${imgData.id}:`, rotateError);
