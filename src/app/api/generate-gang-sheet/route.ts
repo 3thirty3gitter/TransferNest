@@ -103,14 +103,30 @@ export async function POST(request: NextRequest) {
         // This is the key to correct rotation - it replicates CSS transform exactly
         ctx.translate(xPx + frameWidthPx / 2, yPx + frameHeightPx / 2);
 
-        // Apply rotation if needed (90 degrees)
         if (imgData.rotated) {
-          ctx.rotate(90 * Math.PI / 180);
+          // Rotate 90 degrees
+          ctx.rotate(Math.PI / 2);
+          
+          // CRITICAL: After rotation, coordinate system is rotated
+          // Must SWAP width and height in the drawing call
+          // The rotated frame is now height × width
+          ctx.drawImage(
+            image,
+            -frameHeightPx / 2,  // SWAP: use height as x offset
+            -frameWidthPx / 2,   // SWAP: use width as y offset
+            frameHeightPx,       // SWAP: use height as width
+            frameWidthPx         // SWAP: use width as height
+          );
+        } else {
+          // Non-rotated: draw with original dimensions
+          ctx.drawImage(
+            image,
+            -frameWidthPx / 2,
+            -frameHeightPx / 2,
+            frameWidthPx,
+            frameHeightPx
+          );
         }
-
-        // Draw the image centered on the new, rotated origin
-        // This replicates CSS transform behavior perfectly
-        ctx.drawImage(image, -frameWidthPx / 2, -frameHeightPx / 2, frameWidthPx, frameHeightPx);
 
         // Restore canvas state for next image
         ctx.restore();
