@@ -99,36 +99,26 @@ export async function POST(request: NextRequest) {
         const yPx = imgData.y * dpi;
 
         console.log(`[GANG_SHEET] Drawing ${imgData.id} at (${Math.round(xPx)}, ${Math.round(yPx)}) frame ${Math.round(frameWidthPx)}x${Math.round(frameHeightPx)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
-
-        // Save canvas state
-        ctx.save();
-
         if (imgData.rotated) {
-          // MATCH PREVIEW: CSS uses 'rotate(90deg) translateY(-100%)' with 'transform-origin: top-left'
-          // This means: rotate around top-left, then shift down by 100% of HEIGHT
+          // ROBUST FIX: Pre-rotate the image buffer using Sharp
+          try {
+            const rotatedBuffer = await sharp(imgBuffer)
+              .rotate(90)
+              .toBuffer();
 
-          // Move to the top-left of the CONTAINER (which is height×width when rotated)
-          const containerWidth = frameHeightPx;  // Swapped for rotated
-          const containerHeight = frameWidthPx;   // Swapped for rotated
+            const rotatedImage = await loadImage(rotatedBuffer);
 
-          ctx.translate(xPx, yPx);  // Move to container top-left
-          ctx.rotate(Math.PI / 2);  // Rotate 90 degrees around this point
+            // Draw directly into the slot
+            ctx.drawImage(rotatedImage, xPx, yPx, frameWidthPx, frameHeightPx);
 
-          // 3. Translate by SLOT WIDTH (which is the image's HEIGHT)
-          // Y axis points Left. -frameHeightPx moves Right.
-          ctx.translate(0, -frameHeightPx);
-
-          // 4. Draw Image with ORIGINAL dimensions
-          // We draw the image (W x H) into the rotated context.
-          ctx.drawImage(image, 0, 0, frameWidthPx, frameHeightPx);
+          } catch (rotateError) {
+            console.error(`[GANG_SHEET] Failed to rotate image ${imgData.id}:`, rotateError);
+            ctx.drawImage(image, xPx, yPx, frameWidthPx, frameHeightPx);
+          }
         } else {
           // Non-rotated: simple draw at position
-          ctx.translate(xPx, yPx);
-          ctx.drawImage(image, 0, 0, frameWidthPx, frameHeightPx);
+          ctx.drawImage(image, xPx, yPx, frameWidthPx, frameHeightPx);
         }
-
-        // Restore canvas state for next image
-        ctx.restore();
 
       } catch (error) {
         console.error(`[GANG_SHEET] Failed to process image ${imgData.id}:`, error);

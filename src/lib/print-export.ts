@@ -102,26 +102,23 @@ export class PrintExportGenerator {
         console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
 
         if (imgData.rotated) {
-          // Replicate CSS rotate(90deg) transform around center of frame
-          ctx.save();
+          // ROBUST FIX: Pre-rotate the image buffer using Sharp
+          try {
+            const rotatedBuffer = await sharp(imgBuffer)
+              .rotate(90)
+              .toBuffer();
 
-          // ROBUST FIX:
-          // 1. Translate to top-left of slot
-          ctx.translate(posX, posY);
+            const rotatedImage = await loadImage(rotatedBuffer);
 
-          // 2. Rotate 90 degrees
-          ctx.rotate(Math.PI / 2);
+            // Draw directly into the slot
+            ctx.drawImage(rotatedImage, posX, posY, frameW, frameH);
 
-          // 3. Translate by SLOT WIDTH (which is the image's HEIGHT)
-          // Y axis points Left. -frameH moves Right.
-          ctx.translate(0, -frameH);
-
-          // 4. Draw Image with ORIGINAL dimensions
-          ctx.drawImage(image, 0, 0, frameW, frameH);
-
-          ctx.restore();
+          } catch (rotateError) {
+            console.error(`[PRINT] Failed to rotate image ${imgData.id}:`, rotateError);
+            ctx.drawImage(image, posX, posY, frameW, frameH);
+          }
         } else {
-          // Non-rotated: draw directly at position
+          // Non-rotated: simple draw at position
           ctx.drawImage(image, posX, posY, frameW, frameH);
         }
 
