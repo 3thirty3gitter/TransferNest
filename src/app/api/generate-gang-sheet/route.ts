@@ -99,24 +99,22 @@ export async function POST(request: NextRequest) {
         const yPx = imgData.y * dpi;
 
         console.log(`[GANG_SHEET] Drawing ${imgData.id} at (${Math.round(xPx)}, ${Math.round(yPx)}) frame ${Math.round(frameWidthPx)}x${Math.round(frameHeightPx)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
+
         if (imgData.rotated) {
-          // ROBUST FIX: Pre-rotate the image buffer using Sharp
-          try {
-            const rotatedBuffer = await sharp(imgBuffer)
-              .rotate(90)
-              .toBuffer();
+          // ROBUST FIX: Use Canvas rotation instead of Sharp
+          // This relies on frameWidthPx/frameHeightPx being Original Dimensions (which they are)
+          // We translate to the center of the SLOT, rotate, and draw centered
 
-            const rotatedImage = await loadImage(rotatedBuffer);
+          // Slot Width = frameHeightPx (Original Height)
+          // Slot Height = frameWidthPx (Original Width)
+          // Center X = xPx + SlotWidth / 2 = xPx + frameHeightPx / 2
+          // Center Y = yPx + SlotHeight / 2 = yPx + frameWidthPx / 2
 
-            // CRITICAL FIX: Swap dimensions for drawing
-            // frameWidthPx/frameHeightPx are based on ORIGINAL dimensions
-            // For rotated image, Destination Width = Original Height
-            ctx.drawImage(rotatedImage, xPx, yPx, frameHeightPx, frameWidthPx);
-
-          } catch (rotateError) {
-            console.error(`[GANG_SHEET] Failed to rotate image ${imgData.id}:`, rotateError);
-            ctx.drawImage(image, xPx, yPx, frameWidthPx, frameHeightPx);
-          }
+          ctx.save();
+          ctx.translate(xPx + frameHeightPx / 2, yPx + frameWidthPx / 2);
+          ctx.rotate(90 * Math.PI / 180);
+          ctx.drawImage(image, -frameWidthPx / 2, -frameHeightPx / 2, frameWidthPx, frameHeightPx);
+          ctx.restore();
         } else {
           // Non-rotated: simple draw at position
           ctx.drawImage(image, xPx, yPx, frameWidthPx, frameHeightPx);

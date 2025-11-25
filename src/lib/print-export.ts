@@ -102,25 +102,20 @@ export class PrintExportGenerator {
                 console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
 
                 if (imgData.rotated) {
-                    // ROBUST FIX: Pre-rotate the image buffer using Sharp
-                    try {
-                        const rotatedBuffer = await sharp(imgBuffer)
-                            .rotate(90)
-                            .toBuffer();
+                    // ROBUST FIX: Use Canvas rotation instead of Sharp
+                    // This relies on frameW/frameH being Original Dimensions (which they are)
+                    // We translate to the center of the SLOT, rotate, and draw centered
 
-                        const rotatedImage = await loadImage(rotatedBuffer);
+                    // Slot Width = frameH (Original Height)
+                    // Slot Height = frameW (Original Width)
+                    // Center X = posX + SlotWidth / 2 = posX + frameH / 2
+                    // Center Y = posY + SlotHeight / 2 = posY + frameW / 2
 
-                        // CRITICAL FIX: Swap dimensions for drawing
-                        // frameW/frameH are currently based on imgData.width/height which are ORIGINAL dimensions
-                        // For a rotated image, we want to draw it into the ROTATED slot
-                        // So Destination Width = Original Height (frameH)
-                        //    Destination Height = Original Width (frameW)
-                        ctx.drawImage(rotatedImage, posX, posY, frameH, frameW);
-
-                    } catch (rotateError) {
-                        console.error(`[PRINT] Failed to rotate image ${imgData.id}:`, rotateError);
-                        ctx.drawImage(image, posX, posY, frameW, frameH);
-                    }
+                    ctx.save();
+                    ctx.translate(posX + frameH / 2, posY + frameW / 2);
+                    ctx.rotate(90 * Math.PI / 180);
+                    ctx.drawImage(image, -frameW / 2, -frameH / 2, frameW, frameH);
+                    ctx.restore();
                 } else {
                     // Non-rotated: simple draw at position
                     ctx.drawImage(image, posX, posY, frameW, frameH);
