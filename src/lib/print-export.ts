@@ -110,40 +110,6 @@ export class PrintExportGenerator {
           ctx.translate(posX, posY);
 
           // 2. Rotate 90 degrees
-          ctx.rotate(Math.PI / 2);
-
-          // 3. Translate by SLOT WIDTH (frameW)
-          // Because Y axis is Left, -frameW moves Right by Slot Width.
-          ctx.translate(0, -frameW);
-
-          // 4. Draw Image with SWAPPED dimensions (Original Height x Original Width)
-          // frameH is the Slot Height (Original Width)
-          // frameW is the Slot Width (Original Height)
-          // So we draw frameH x frameW
-          ctx.drawImage(image, 0, 0, frameHeightPx, frameWidthPx); // Wait, variable names changed. frameH, frameW
-          // frameH is height in pixels (from imgData.height).
-          // frameW is width in pixels (from imgData.width).
-          // If rotated, imgData.width/height are the SLOT dimensions?
-          // Let's check nesting algorithm.
-          // NestedImage: width/height are "nested size in inches".
-          // If rotated, width/height are swapped?
-          // In nesting-algorithm.ts, if rotated, we push { w: img.height, h: img.width }.
-          // So NestedImage.width IS the slot width (which was image height).
-          // So frameW IS the slot width.
-          // frameH IS the slot height.
-
-          // So if we draw frameH x frameW, we are drawing (Slot Height) x (Slot Width).
-          // Slot Height = Original Width.
-          // Slot Width = Original Height.
-          // So we are drawing Original Width x Original Height.
-          // This is correct.
-
-          ctx.drawImage(image, 0, 0, frameH, frameW);
-
-          ctx.restore();
-        } else {
-          // Non-rotated: draw directly at position
-          ctx.drawImage(image, posX, posY, frameW, frameH);
         }
 
       } catch (error) {
