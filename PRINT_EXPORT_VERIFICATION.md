@@ -32,25 +32,6 @@ The print file export functionality has been comprehensively tested and verified
 ### ✅ Requirement 3: Correct DPI Settings
 - **Status:** PASS
 - **Default DPI:** 300
-- **Configurable:** Yes (tested 150, 300, 600 DPI)
-- **Test Results:**
-  - 150 DPI: 1950 × 2850 px ✅
-  - 300 DPI: 3900 × 5700 px ✅
-  - 600 DPI: 7800 × 11400 px ✅
-
-### ✅ Requirement 4: Full Nested Sheet Layout
-- **Status:** PASS
-- **Details:** All nested images included with correct positioning
-- **Test Results:**
-  - Small batch (6 images): ✅
-  - Large batch (50 images): ✅
-  - Rotated images: ✅
-  - Edge cases: ✅
-
----
-
-## Test Results Summary
-
 ### Test Suite Performance
 
 | Test | Images | Result | Time | File Size |

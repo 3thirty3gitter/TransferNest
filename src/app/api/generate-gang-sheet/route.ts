@@ -113,10 +113,11 @@ export async function POST(request: NextRequest) {
 
           ctx.translate(xPx, yPx);  // Move to container top-left
           ctx.rotate(Math.PI / 2);  // Rotate 90 degrees around this point
-          ctx.translate(0, -frameHeightPx);  // translateY(-100%) in rotated space (shift by HEIGHT)
+          ctx.translate(0, -frameWidthPx);  // translateY(-100%) in rotated space (shift by WIDTH)
 
-          // Draw the image at (0, 0) with original dimensions
-          ctx.drawImage(image, 0, 0, frameWidthPx, frameHeightPx);
+          // Draw the image at (0, 0) with SWAPPED dimensions (to maintain aspect ratio)
+          // The slot is WxH, but the image is HxW (relative to slot)
+          ctx.drawImage(image, 0, 0, frameHeightPx, frameWidthPx);
         } else {
           // Non-rotated: simple draw at position
           ctx.translate(xPx, yPx);
