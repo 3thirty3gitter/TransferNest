@@ -99,36 +99,24 @@ export async function POST(request: NextRequest) {
         // Save canvas state
         ctx.save();
 
-        // CRITICAL: For rotated items, the placement position is based on rotated dimensions
-        // So we need to translate to center based on the ROTATED frame size
-        const placementWidth = imgData.rotated ? frameHeightPx : frameWidthPx;
-        const placementHeight = imgData.rotated ? frameWidthPx : frameHeightPx;
-        
-        ctx.translate(xPx + placementWidth / 2, yPx + placementHeight / 2);
-
         if (imgData.rotated) {
-          // Rotate 90 degrees
-          ctx.rotate(Math.PI / 2);
+          // MATCH PREVIEW: CSS uses 'rotate(90deg) translateY(-100%)' with 'transform-origin: top-left'
+          // This means: rotate around top-left, then shift down by 100% of HEIGHT
           
-          // CRITICAL: After rotation, coordinate system is rotated
-          // Must SWAP width and height in the drawing call
-          // The rotated frame is now height × width
-          ctx.drawImage(
-            image,
-            -frameHeightPx / 2,  // SWAP: use height as x offset
-            -frameWidthPx / 2,   // SWAP: use width as y offset
-            frameHeightPx,       // SWAP: use height as width
-            frameWidthPx         // SWAP: use width as height
-          );
+          // Move to the top-left of the CONTAINER (which is height×width when rotated)
+          const containerWidth = frameHeightPx;  // Swapped for rotated
+          const containerHeight = frameWidthPx;   // Swapped for rotated
+          
+          ctx.translate(xPx, yPx);  // Move to container top-left
+          ctx.rotate(Math.PI / 2);  // Rotate 90 degrees around this point
+          ctx.translate(0, -frameWidthPx);  // translateY(-100%) in rotated space
+          
+          // Draw the image at (0, 0) with original dimensions
+          ctx.drawImage(image, 0, 0, frameWidthPx, frameHeightPx);
         } else {
-          // Non-rotated: draw with original dimensions
-          ctx.drawImage(
-            image,
-            -frameWidthPx / 2,
-            -frameHeightPx / 2,
-            frameWidthPx,
-            frameHeightPx
-          );
+          // Non-rotated: simple draw at position
+          ctx.translate(xPx, yPx);
+          ctx.drawImage(image, 0, 0, frameWidthPx, frameHeightPx);
         }
 
         // Restore canvas state for next image
