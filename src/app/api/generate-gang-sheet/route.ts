@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
           ctx.translate(xPx, yPx);  // Move to container top-left
           ctx.rotate(Math.PI / 2);  // Rotate 90 degrees around this point
-          ctx.translate(0, -frameWidthPx);  // translateY(-100%) in rotated space
+          ctx.translate(0, -frameHeightPx);  // translateY(-100%) in rotated space (shift by HEIGHT)
 
           // Draw the image at (0, 0) with original dimensions
           ctx.drawImage(image, 0, 0, frameWidthPx, frameHeightPx);

@@ -96,24 +96,6 @@ export class PrintExportGenerator {
         // Calculate pixel positions and frame size at target DPI
         const posX = imgData.x * opts.dpi;
         const posY = imgData.y * opts.dpi;
-        const frameW = imgData.width * opts.dpi;
-        const frameH = imgData.height * opts.dpi;
-
-        console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
-
-        if (imgData.rotated) {
-          // Replicate CSS rotate(90deg) transform around center of frame
-          ctx.save();
-          ctx.translate(posX + frameW / 2, posY + frameH / 2);
-          ctx.rotate(Math.PI / 2); // 90 degrees
-          // Draw centered in rotated space
-          ctx.drawImage(image, -frameW / 2, -frameH / 2, frameW, frameH);
-          ctx.restore();
-        } else {
-          // Non-rotated: draw directly at position
-          ctx.drawImage(image, posX, posY, frameW, frameH);
-        }
-
       } catch (error) {
         console.error(`[PRINT] Failed to process image ${imgData.id}:`, error);
         // Draw placeholder for failed images

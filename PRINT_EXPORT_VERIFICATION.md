@@ -101,23 +101,6 @@ The print file export functionality has been comprehensively tested and verified
    - 300 DPI default (configurable)
    - Proper inch-to-pixel conversion
    - Maintains aspect ratios
-
-2. **Image Composition**
-   - Precise positioning (x, y coordinates)
-   - Rotation support (90° increments)
-   - Collision-free placement
-
-3. **Metadata Tracking**
-   - Image count
-   - Total area utilization
-   - Sheet dimensions
-   - Generation timestamp
-
-4. **Quality Controls**
-   - PNG compression quality (0-100)
-   - DPI flexibility (150-600+)
-   - Coordinate validation
-
 ---
 
 ## Production Readiness
