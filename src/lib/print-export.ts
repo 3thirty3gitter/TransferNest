@@ -45,8 +45,12 @@ export class PrintExportGenerator {
         const opts = { ...this.defaultOptions, sheetSize, ...options };
         const sheet = SHEET_DIMENSIONS[sheetSize];
 
-        const pixelWidth = Math.round(sheet.width * opts.dpi);
-        const pixelHeight = Math.round(sheet.height * opts.dpi);
+        // CRITICAL: Assume source images are 300 DPI (standard for uploaded graphics)
+        const SOURCE_DPI = 300;
+        const EXPORT_DPI = opts.dpi;
+
+        const pixelWidth = Math.round(sheet.width * EXPORT_DPI);
+        const pixelHeight = Math.round(sheet.height * EXPORT_DPI);
 
         const totalArea = images.reduce((sum, img) => sum + (img.width * img.height), 0);
         const sheetArea = sheet.width * sheet.height;
@@ -93,38 +97,54 @@ export class PrintExportGenerator {
                 // Load as image (node-canvas handles PNG/JPG)
                 const image = await loadImage(imgBuffer);
 
-                // Calculate pixel positions and frame size at target DPI
-                const posX = imgData.x * opts.dpi;
-                const posY = imgData.y * opts.dpi;
-                const frameW = imgData.width * opts.dpi;
-                const frameH = imgData.height * opts.dpi;
+                // CRITICAL FIX #1: Convert PIXEL dimensions to INCHES
+                // Algorithm stores raw pixels in width/height fields, but they're documented as inches
+                const widthInches = imgData.width / SOURCE_DPI;   // Convert pixels to inches
+                const heightInches = imgData.height / SOURCE_DPI; // Convert pixels to inches
 
-                console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
+                // x, y ARE in inches (algorithm converts positions correctly), so:
+                const xPx = imgData.x * EXPORT_DPI;  // Position in export pixels
+                const yPx = imgData.y * EXPORT_DPI;
 
-                // USER FIX: Correct rotation logic by swapping dimensions in drawImage
+                // Frame dimensions in export pixels (inches * EXPORT_DPI)
+                const frameWidthPx = widthInches * EXPORT_DPI;   // Should equal imgData.width (pixels)
+                const frameHeightPx = heightInches * EXPORT_DPI; // Should equal imgData.height (pixels)
+
+                console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(xPx)}, ${Math.round(yPx)}) size ${Math.round(frameWidthPx)}x${Math.round(frameHeightPx)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
+
                 ctx.save();
 
-                // Move to the center of the image's frame
-                ctx.translate(posX + frameW / 2, posY + frameH / 2);
-
                 if (imgData.rotated) {
-                    ctx.rotate(Math.PI / 2);
-                    // SWAP width and height for drawing area and offset:
-                    // The rotated frame is now height × width
+                    // CRITICAL FIX #2: Match preview's CSS transform order and origin
+                    // Preview: Container at (x*40, y*40), swapped dimensions
+                    // Inner div: original size, rotate(90deg) translateY(-100%), origin top-left
+
+                    // Step 1: Position to top-left of rotated container
+                    const containerLeft = xPx;
+                    const containerTop = yPx;
+
+                    // Step 2: Apply transforms matching CSS order
+                    ctx.translate(containerLeft, containerTop);                    // Container position
+                    ctx.rotate(Math.PI / 2);                                       // rotate(90deg)
+                    ctx.translate(0, -frameWidthPx);                               // translateY(-100%) of original width
+
+                    // Step 3: Draw image centered within original frame
                     ctx.drawImage(
                         image,
-                        -frameH / 2, // swap
-                        -frameW / 2,  // swap
-                        frameH,      // swap
-                        frameW        // swap
+                        -frameWidthPx / 2,   // Center in original frame
+                        -frameHeightPx / 2,
+                        frameWidthPx,        // Original dimensions
+                        frameHeightPx
                     );
+
                 } else {
+                    // Non-rotated: Simple positioning
                     ctx.drawImage(
                         image,
-                        -frameW / 2,
-                        -frameH / 2,
-                        frameW,
-                        frameH
+                        xPx,
+                        yPx,
+                        frameWidthPx,
+                        frameHeightPx
                     );
                 }
 
@@ -134,22 +154,24 @@ export class PrintExportGenerator {
                 console.error(`[PRINT] Failed to process image ${imgData.id}:`, error);
                 // Draw placeholder for failed images
                 ctx.fillStyle = '#cccccc';
-                ctx.fillRect(imgData.x * opts.dpi, imgData.y * opts.dpi, imgData.width * opts.dpi, imgData.height * opts.dpi);
+                ctx.fillRect(imgData.x * EXPORT_DPI, imgData.y * EXPORT_DPI,
+                    (imgData.width / SOURCE_DPI) * EXPORT_DPI,
+                    (imgData.height / SOURCE_DPI) * EXPORT_DPI);
 
                 // Add error text to placeholder
                 ctx.fillStyle = '#ff0000';
-                ctx.font = `${20 * (opts.dpi / 72)}px sans-serif`;
-                ctx.fillText('Image Failed', imgData.x * opts.dpi + 10, imgData.y * opts.dpi + 50);
+                ctx.font = `${20 * (EXPORT_DPI / 72)}px sans-serif`;
+                ctx.fillText('Image Failed', imgData.x * EXPORT_DPI + 10, imgData.y * EXPORT_DPI + 50);
             }
         }
 
         // Export to PNG buffer
         let pngBuffer = canvas.toBuffer('image/png');
 
-        // Embed 300 DPI metadata using Sharp (for print software compatibility)
+        // Embed DPI metadata using Sharp
         try {
             pngBuffer = await sharp(pngBuffer)
-                .withMetadata({ density: opts.dpi })
+                .withMetadata({ density: EXPORT_DPI })
                 .png()
                 .toBuffer();
         } catch (sharpError) {
