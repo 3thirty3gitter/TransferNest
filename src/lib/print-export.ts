@@ -1,6 +1,5 @@
 ﻿import { NestedImage } from '@/lib/nesting-algorithm';
 import { createCanvas, loadImage } from 'canvas';
-import axios from 'axios';
 import sharp from 'sharp';
 
 export interface PrintExportOptions {
@@ -79,13 +78,17 @@ export class PrintExportGenerator {
           continue;
         }
 
-        // Download image from Firebase URL
+        // Download image from Firebase URL using native fetch
         console.log(`[PRINT] Fetching ${imgData.id} from ${imgData.url.substring(0, 60)}...`);
-        const response = await axios.get(imgData.url, { 
-          responseType: 'arraybuffer',
-          timeout: 10000
-        });
-        const imgBuffer = Buffer.from(response.data);
+
+        const response = await fetch(imgData.url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const imgBuffer = Buffer.from(arrayBuffer);
 
         // Load as image (node-canvas handles PNG/JPG)
         const image = await loadImage(imgBuffer);
@@ -116,6 +119,11 @@ export class PrintExportGenerator {
         // Draw placeholder for failed images
         ctx.fillStyle = '#cccccc';
         ctx.fillRect(imgData.x * opts.dpi, imgData.y * opts.dpi, imgData.width * opts.dpi, imgData.height * opts.dpi);
+
+        // Add error text to placeholder
+        ctx.fillStyle = '#ff0000';
+        ctx.font = `${20 * (opts.dpi / 72)}px sans-serif`;
+        ctx.fillText('Image Failed', imgData.x * opts.dpi + 10, imgData.y * opts.dpi + 50);
       }
     }
 
@@ -123,10 +131,15 @@ export class PrintExportGenerator {
     let pngBuffer = canvas.toBuffer('image/png');
 
     // Embed 300 DPI metadata using Sharp (for print software compatibility)
-    pngBuffer = await sharp(pngBuffer)
-      .withMetadata({ density: opts.dpi })
-      .png()
-      .toBuffer();
+    try {
+      pngBuffer = await sharp(pngBuffer)
+        .withMetadata({ density: opts.dpi })
+        .png()
+        .toBuffer();
+    } catch (sharpError) {
+      console.warn('[PRINT] Sharp metadata embedding failed, returning raw canvas buffer:', sharpError);
+      // Continue with raw buffer if sharp fails
+    }
 
     console.log(`✅ [PRINT] Generated print file: ${filename} (${(pngBuffer.length / 1024).toFixed(2)} KB)`);
 

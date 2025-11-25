@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { createCanvas, loadImage } from 'canvas';
-import axios from 'axios';
+// import axios from 'axios'; // Removed in favor of fetch
 import sharp from 'sharp';
 
 /**
@@ -77,13 +77,17 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Download image from Firebase URL
+        // Download image from Firebase URL using native fetch
         console.log(`[GANG_SHEET] Fetching ${imgData.id} from ${imgData.url.substring(0, 60)}...`);
-        const response = await axios.get(imgData.url, { 
-          responseType: 'arraybuffer',
-          timeout: 10000
-        });
-        const imgBuffer = Buffer.from(response.data);
+
+        const response = await fetch(imgData.url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const imgBuffer = Buffer.from(arrayBuffer);
 
         // Load as image (node-canvas handles PNG/JPG)
         const image = await loadImage(imgBuffer);
@@ -102,15 +106,15 @@ export async function POST(request: NextRequest) {
         if (imgData.rotated) {
           // MATCH PREVIEW: CSS uses 'rotate(90deg) translateY(-100%)' with 'transform-origin: top-left'
           // This means: rotate around top-left, then shift down by 100% of HEIGHT
-          
+
           // Move to the top-left of the CONTAINER (which is height×width when rotated)
           const containerWidth = frameHeightPx;  // Swapped for rotated
           const containerHeight = frameWidthPx;   // Swapped for rotated
-          
+
           ctx.translate(xPx, yPx);  // Move to container top-left
           ctx.rotate(Math.PI / 2);  // Rotate 90 degrees around this point
           ctx.translate(0, -frameWidthPx);  // translateY(-100%) in rotated space
-          
+
           // Draw the image at (0, 0) with original dimensions
           ctx.drawImage(image, 0, 0, frameWidthPx, frameHeightPx);
         } else {
@@ -127,6 +131,11 @@ export async function POST(request: NextRequest) {
         // Draw placeholder for failed images
         ctx.fillStyle = '#cccccc';
         ctx.fillRect(imgData.x * dpi, imgData.y * dpi, imgData.width * dpi, imgData.height * dpi);
+
+        // Add error text to placeholder
+        ctx.fillStyle = '#ff0000';
+        ctx.font = `${20 * (dpi / 72)}px sans-serif`;
+        ctx.fillText('Image Failed', imgData.x * dpi + 10, imgData.y * dpi + 50);
       }
     }
 
@@ -143,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     // Upload to Firebase Storage
     const storage = new PrintFileStorageAdmin();
-    
+
     // If orderId is provided, save to orders folder, otherwise to cart folder
     let uploadResult;
     if (orderId && customerInfo) {
@@ -152,9 +161,9 @@ export async function POST(request: NextRequest) {
       const orderNumber = orderId.slice(-8);
       const sheetDimensions = `${sheetWidth}x${Math.round(sheetLength)}`;
       const filename = `${orderNumber}_${customerName}_${sheetDimensions}.png`;
-      
+
       console.log('[GANG_SHEET] Uploading to orders folder:', { userId, orderId, filename });
-      
+
       uploadResult = await storage.uploadPrintFile(
         pngBuffer,
         filename,
@@ -165,9 +174,9 @@ export async function POST(request: NextRequest) {
       // Save to cart folder (legacy support if needed)
       const cartItemId = `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const filename = `gangsheet_${sheetWidth}x${Math.round(sheetLength)}.png`;
-      
+
       console.log('[GANG_SHEET] Uploading to cart folder:', { userId, cartItemId, filename });
-      
+
       uploadResult = await storage.uploadCartFile(
         pngBuffer,
         filename,
@@ -193,8 +202,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[GANG_SHEET] Error generating gang sheet:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to generate gang sheet', 
+      {
+        error: 'Failed to generate gang sheet',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
