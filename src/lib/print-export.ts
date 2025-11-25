@@ -99,28 +99,6 @@ export class PrintExportGenerator {
         const frameW = imgData.width * opts.dpi;
         const frameH = imgData.height * opts.dpi;
 
-        console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
-
-        if (imgData.rotated) {
-          // Replicate CSS rotate(90deg) transform around center of frame
-          ctx.save();
-
-          // ROBUST FIX:
-          // 1. Translate to top-left of slot
-          ctx.translate(posX, posY);
-
-          // 2. Rotate 90 degrees
-        }
-
-      } catch (error) {
-        console.error(`[PRINT] Failed to process image ${imgData.id}:`, error);
-        // Draw placeholder for failed images
-        ctx.fillStyle = '#cccccc';
-        ctx.fillRect(imgData.x * opts.dpi, imgData.y * opts.dpi, imgData.width * opts.dpi, imgData.height * opts.dpi);
-
-        // Add error text to placeholder
-        ctx.fillStyle = '#ff0000';
-        ctx.font = `${20 * (opts.dpi / 72)}px sans-serif`;
         ctx.fillText('Image Failed', imgData.x * opts.dpi + 10, imgData.y * opts.dpi + 50);
       }
     }
