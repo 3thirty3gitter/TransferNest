@@ -99,9 +99,12 @@ export async function POST(request: NextRequest) {
         // Save canvas state
         ctx.save();
 
-        // CRITICAL: Translate to the CENTER of the image's frame
-        // This is the key to correct rotation - it replicates CSS transform exactly
-        ctx.translate(xPx + frameWidthPx / 2, yPx + frameHeightPx / 2);
+        // CRITICAL: For rotated items, the placement position is based on rotated dimensions
+        // So we need to translate to center based on the ROTATED frame size
+        const placementWidth = imgData.rotated ? frameHeightPx : frameWidthPx;
+        const placementHeight = imgData.rotated ? frameWidthPx : frameHeightPx;
+        
+        ctx.translate(xPx + placementWidth / 2, yPx + placementHeight / 2);
 
         if (imgData.rotated) {
           // Rotate 90 degrees
