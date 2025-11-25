@@ -88,34 +88,32 @@ export async function POST(request: NextRequest) {
         // Load as image (node-canvas handles PNG/JPG)
         const image = await loadImage(imgBuffer);
 
-        // Calculate pixel positions and frame size at target DPI
-        const posX = imgData.x * dpi;
-        const posY = imgData.y * dpi;
-        
-        // CRITICAL: When rotated, the image occupies height×width space on sheet
-        // but imgData.width/height are ORIGINAL dimensions (not swapped)
-        const frameW = imgData.width * dpi;
-        const frameH = imgData.height * dpi;
-        
-        // For rotated images, we need to swap dimensions when drawing
-        const drawW = imgData.rotated ? frameH : frameW;  // Swap for rotation
-        const drawH = imgData.rotated ? frameW : frameH;  // Swap for rotation
+        // Convert inch measurements to pixels at 300 DPI
+        const frameWidthPx = imgData.width * dpi;
+        const frameHeightPx = imgData.height * dpi;
+        const xPx = imgData.x * dpi;
+        const yPx = imgData.y * dpi;
 
-        console.log(`[GANG_SHEET] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) frame ${Math.round(frameW)}x${Math.round(frameH)}px, draw ${Math.round(drawW)}x${Math.round(drawH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
+        console.log(`[GANG_SHEET] Drawing ${imgData.id} at (${Math.round(xPx)}, ${Math.round(yPx)}) frame ${Math.round(frameWidthPx)}x${Math.round(frameHeightPx)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
 
+        // Save canvas state
+        ctx.save();
+
+        // CRITICAL: Translate to the CENTER of the image's frame
+        // This is the key to correct rotation - it replicates CSS transform exactly
+        ctx.translate(xPx + frameWidthPx / 2, yPx + frameHeightPx / 2);
+
+        // Apply rotation if needed (90 degrees)
         if (imgData.rotated) {
-          // Replicate CSS rotate(90deg) transform
-          // The space on sheet is height×width (swapped), so translate to that center
-          ctx.save();
-          ctx.translate(posX + drawW / 2, posY + drawH / 2);
-          ctx.rotate(Math.PI / 2); // 90 degrees
-          // Draw with ORIGINAL dimensions (frameW × frameH)
-          ctx.drawImage(image, -frameW / 2, -frameH / 2, frameW, frameH);
-          ctx.restore();
-        } else {
-          // Non-rotated: draw directly at position with original dimensions
-          ctx.drawImage(image, posX, posY, frameW, frameH);
+          ctx.rotate(90 * Math.PI / 180);
         }
+
+        // Draw the image centered on the new, rotated origin
+        // This replicates CSS transform behavior perfectly
+        ctx.drawImage(image, -frameWidthPx / 2, -frameHeightPx / 2, frameWidthPx, frameHeightPx);
+
+        // Restore canvas state for next image
+        ctx.restore();
 
       } catch (error) {
         console.error(`[GANG_SHEET] Failed to process image ${imgData.id}:`, error);
