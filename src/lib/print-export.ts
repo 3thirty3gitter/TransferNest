@@ -101,25 +101,34 @@ export class PrintExportGenerator {
 
                 console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(posX)}, ${Math.round(posY)}) size ${Math.round(frameW)}x${Math.round(frameH)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
 
+                // USER FIX: Correct rotation logic by swapping dimensions in drawImage
+                ctx.save();
+
+                // Move to the center of the image's frame
+                ctx.translate(posX + frameW / 2, posY + frameH / 2);
+
                 if (imgData.rotated) {
-                    // ROBUST FIX: Use Canvas rotation instead of Sharp
-                    // This relies on frameW/frameH being Original Dimensions (which they are)
-                    // We translate to the center of the SLOT, rotate, and draw centered
-
-                    // Slot Width = frameH (Original Height)
-                    // Slot Height = frameW (Original Width)
-                    // Center X = posX + SlotWidth / 2 = posX + frameH / 2
-                    // Center Y = posY + SlotHeight / 2 = posY + frameW / 2
-
-                    ctx.save();
-                    ctx.translate(posX + frameH / 2, posY + frameW / 2);
-                    ctx.rotate(90 * Math.PI / 180);
-                    ctx.drawImage(image, -frameW / 2, -frameH / 2, frameW, frameH);
-                    ctx.restore();
+                    ctx.rotate(Math.PI / 2);
+                    // SWAP width and height for drawing area and offset:
+                    // The rotated frame is now height × width
+                    ctx.drawImage(
+                        image,
+                        -frameH / 2, // swap
+                        -frameW / 2,  // swap
+                        frameH,      // swap
+                        frameW        // swap
+                    );
                 } else {
-                    // Non-rotated: simple draw at position
-                    ctx.drawImage(image, posX, posY, frameW, frameH);
+                    ctx.drawImage(
+                        image,
+                        -frameW / 2,
+                        -frameH / 2,
+                        frameW,
+                        frameH
+                    );
                 }
+
+                ctx.restore();
 
             } catch (error) {
                 console.error(`[PRINT] Failed to process image ${imgData.id}:`, error);

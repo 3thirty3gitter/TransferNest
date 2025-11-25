@@ -100,25 +100,34 @@ export async function POST(request: NextRequest) {
 
         console.log(`[GANG_SHEET] Drawing ${imgData.id} at (${Math.round(xPx)}, ${Math.round(yPx)}) frame ${Math.round(frameWidthPx)}x${Math.round(frameHeightPx)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
 
+        // USER FIX: Correct rotation logic by swapping dimensions in drawImage
+        ctx.save();
+
+        // Move to the center of the image's frame
+        ctx.translate(xPx + frameWidthPx / 2, yPx + frameHeightPx / 2);
+
         if (imgData.rotated) {
-          // ROBUST FIX: Use Canvas rotation instead of Sharp
-          // This relies on frameWidthPx/frameHeightPx being Original Dimensions (which they are)
-          // We translate to the center of the SLOT, rotate, and draw centered
-
-          // Slot Width = frameHeightPx (Original Height)
-          // Slot Height = frameWidthPx (Original Width)
-          // Center X = xPx + SlotWidth / 2 = xPx + frameHeightPx / 2
-          // Center Y = yPx + SlotHeight / 2 = yPx + frameWidthPx / 2
-
-          ctx.save();
-          ctx.translate(xPx + frameHeightPx / 2, yPx + frameWidthPx / 2);
-          ctx.rotate(90 * Math.PI / 180);
-          ctx.drawImage(image, -frameWidthPx / 2, -frameHeightPx / 2, frameWidthPx, frameHeightPx);
-          ctx.restore();
+          ctx.rotate(Math.PI / 2);
+          // SWAP width and height for drawing area and offset:
+          // The rotated frame is now height × width
+          ctx.drawImage(
+            image,
+            -frameHeightPx / 2, // swap
+            -frameWidthPx / 2,  // swap
+            frameHeightPx,      // swap
+            frameWidthPx        // swap
+          );
         } else {
-          // Non-rotated: simple draw at position
-          ctx.drawImage(image, xPx, yPx, frameWidthPx, frameHeightPx);
+          ctx.drawImage(
+            image,
+            -frameWidthPx / 2,
+            -frameHeightPx / 2,
+            frameWidthPx,
+            frameHeightPx
+          );
         }
+
+        ctx.restore();
 
       } catch (error) {
         console.error(`[GANG_SHEET] Failed to process image ${imgData.id}:`, error);
