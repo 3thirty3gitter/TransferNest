@@ -4,8 +4,8 @@ import { createCanvas, loadImage } from 'canvas';
 import sharp from 'sharp';
 
 /**
- * Gang Sheet Export - FIXED Nov 25, 2025
- * Corrects pixel-to-inch conversion and rotation transform order
+ * Gang Sheet Export - DEFINITIVE FIX FOR ROTATION
+ * Matches preview's exact CSS transform sequence and coordinate system
  */
 export async function POST(request: NextRequest) {
   try {
