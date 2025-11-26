@@ -92,7 +92,7 @@ export class PrintExportGenerator {
                 }
 
                 const arrayBuffer = await response.arrayBuffer();
-                const imgBuffer = Buffer.from(arrayBuffer);
+                const imgBuffer = Buffer.from(arrayBuffer) as Buffer;
 
                 // CRITICAL FIX #1: Convert PIXEL dimensions to INCHES
                 // Algorithm stores raw pixels in width/height fields, but they're documented as inches
