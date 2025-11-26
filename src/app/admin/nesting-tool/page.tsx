@@ -20,7 +20,7 @@ export default function AdminNestingTool() {
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sheetWidth, setSheetWidth] = useState<13 | 17>(13);
-  
+
   // Progress modal state
   const [modalStage, setModalStage] = useState<'preparing' | 'genetic-algorithm' | 'optimizing' | 'complete'>('preparing');
   const [modalProgress, setModalProgress] = useState(0);
@@ -52,17 +52,17 @@ export default function AdminNestingTool() {
       const jobData = sessionStorage.getItem('adminEditorJob');
       if (jobData) {
         const job = JSON.parse(jobData);
-        
+
         // Load images
         if (job.images && Array.isArray(job.images)) {
           setImages(job.images);
         }
-        
+
         // Load sheet width
         if (job.sheetWidth) {
           setSheetWidth(job.sheetWidth as 13 | 17);
         }
-        
+
         // Load nesting result
         if (job.placedItems && job.sheetLength) {
           const result: NestingResult = {
@@ -76,10 +76,10 @@ export default function AdminNestingTool() {
           };
           setNestingResult(result);
         }
-        
+
         // Clear the session storage
         sessionStorage.removeItem('adminEditorJob');
-        
+
         console.log('Loaded job from session:', job.orderId);
       }
     } catch (error) {
@@ -101,9 +101,9 @@ export default function AdminNestingTool() {
     try {
       setModalStage('genetic-algorithm');
       setModalProgress(20);
-      
+
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       const progressInterval = setInterval(() => {
         setCurrentGeneration(prev => {
           const next = prev + 1;
@@ -117,20 +117,20 @@ export default function AdminNestingTool() {
       }, 100);
 
       const result = await executeNesting(images, sheetWidth);
-      
+
       clearInterval(progressInterval);
-      
+
       setModalStage('optimizing');
       setModalProgress(95);
-      
+
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       setModalProgress(100);
       setModalStage('complete');
       setBestUtilization(result.areaUtilizationPct * 100);
-      
+
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       setNestingResult(result);
     } catch (error) {
       console.error('Nesting failed:', error);
@@ -141,9 +141,9 @@ export default function AdminNestingTool() {
 
   const calculatePricing = () => {
     if (!nestingResult) return { basePrice: 0, total: 0 };
-    
+
     const basePrice = nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59);
-    
+
     return { basePrice, total: basePrice };
   };
 
@@ -155,10 +155,10 @@ export default function AdminNestingTool() {
       const canvas = document.createElement('canvas');
       const dpi = 300; // High resolution for printing
       const pixelsPerInch = dpi;
-      
+
       canvas.width = sheetWidth * pixelsPerInch;
       canvas.height = nestingResult.sheetLength * pixelsPerInch;
-      
+
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
@@ -170,27 +170,27 @@ export default function AdminNestingTool() {
       const imagePromises = nestingResult.placedItems.map(item => {
         return new Promise<void>((resolve, reject) => {
           const img = new Image();
-          
+
           // Try to load with CORS first
           img.crossOrigin = 'anonymous';
-          
+
           img.onload = () => {
             try {
               ctx.save();
-              
+
               if (item.rotated) {
-                // For rotated images, item.width and item.height are already swapped
-                // So item.width = original height, item.height = original width
-                // We need to unswap them for drawing
+                // item.width and item.height are original dimensions (not swapped)
                 const x = item.x * pixelsPerInch;
                 const y = item.y * pixelsPerInch;
-                const drawWidth = item.height * pixelsPerInch;  // Use height as width (unswap)
-                const drawHeight = item.width * pixelsPerInch;  // Use width as height (unswap)
-                
-                // Position for rotation: rotate around top-left of rotated space
+                const drawWidth = item.width * pixelsPerInch;
+                const drawHeight = item.height * pixelsPerInch;
+
+                // Position for rotation: rotate 90 degrees clockwise
+                // Visual top-left of rotated image corresponds to original bottom-left (0, height)
+                // So we translate to (x + height, y)
                 ctx.translate(x + drawHeight, y);
                 ctx.rotate(Math.PI / 2);
-                
+
                 // Draw the image in its original orientation
                 ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
               } else {
@@ -205,7 +205,7 @@ export default function AdminNestingTool() {
                   displayHeight
                 );
               }
-              
+
               ctx.restore();
               resolve();
             } catch (error) {
@@ -213,12 +213,12 @@ export default function AdminNestingTool() {
               resolve(); // Continue even if one image fails
             }
           };
-          
+
           img.onerror = (error) => {
             console.error('Error loading image:', item.url, error);
             resolve(); // Continue even if one image fails to load
           };
-          
+
           img.src = item.url;
         });
       });
@@ -301,21 +301,19 @@ export default function AdminNestingTool() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setSheetWidth(13)}
-                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${
-                      sheetWidth === 13 
-                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg scale-105' 
-                        : 'bg-white/10 text-slate-300 hover:bg-white/20 border border-white/20'
-                    }`}
+                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${sheetWidth === 13
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg scale-105'
+                      : 'bg-white/10 text-slate-300 hover:bg-white/20 border border-white/20'
+                      }`}
                   >
                     13"
                   </button>
                   <button
                     onClick={() => setSheetWidth(17)}
-                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${
-                      sheetWidth === 17 
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg scale-105' 
-                        : 'bg-white/10 text-slate-300 hover:bg-white/20 border border-white/20'
-                    }`}
+                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${sheetWidth === 17
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg scale-105'
+                      : 'bg-white/10 text-slate-300 hover:bg-white/20 border border-white/20'
+                      }`}
                   >
                     17"
                   </button>
@@ -334,12 +332,12 @@ export default function AdminNestingTool() {
                       <span className="text-sm">Sheet Length:</span>
                       <span className="font-bold text-white">{nestingResult.sheetLength.toFixed(2)}"</span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center py-2 border-b border-white/10">
                       <span className="text-sm">Utilization:</span>
                       <span className="font-bold text-white">{(nestingResult.areaUtilizationPct * 100).toFixed(1)}%</span>
                     </div>
-                    
+
                     {/* Pricing */}
                     <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
                       <div className="text-sm font-semibold mb-3 text-white">Production Cost</div>
@@ -376,7 +374,7 @@ export default function AdminNestingTool() {
             </div>
 
             {/* Image Management */}
-            <ImageManager 
+            <ImageManager
               images={images}
               onImagesChange={setImages}
             />

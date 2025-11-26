@@ -4,7 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 // Get admin emails from environment variable or use defaults
 const ADMIN_EMAILS = process.env.NEXT_PUBLIC_ADMIN_EMAILS
   ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',').map(email => email.trim())
-  : ['admin@dtfwholesale.ca'];
+  : ['admin@dtfwholesale.ca', 'trent@3thirty3.ca'];
 
 export async function checkAdminAccess(): Promise<boolean> {
   return new Promise((resolve) => {

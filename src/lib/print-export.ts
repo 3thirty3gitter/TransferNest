@@ -1,4 +1,4 @@
-import { NestedImage } from '@/lib/nesting-algorithm';
+import { NestedImage } from './nesting-algorithm';
 import { createCanvas, loadImage } from 'canvas';
 import sharp from 'sharp';
 
@@ -94,9 +94,6 @@ export class PrintExportGenerator {
                 const arrayBuffer = await response.arrayBuffer();
                 const imgBuffer = Buffer.from(arrayBuffer);
 
-                // Load as image (node-canvas handles PNG/JPG)
-                const image = await loadImage(imgBuffer);
-
                 // CRITICAL FIX #1: Convert PIXEL dimensions to INCHES
                 // Algorithm stores raw pixels in width/height fields, but they're documented as inches
                 const widthInches = imgData.width / SOURCE_DPI;   // Convert pixels to inches
@@ -107,48 +104,40 @@ export class PrintExportGenerator {
                 const yPx = imgData.y * EXPORT_DPI;
 
                 // Frame dimensions in export pixels (inches * EXPORT_DPI)
-                const frameWidthPx = widthInches * EXPORT_DPI;   // Should equal imgData.width (pixels)
-                const frameHeightPx = heightInches * EXPORT_DPI; // Should equal imgData.height (pixels)
+                let frameWidthPx = widthInches * EXPORT_DPI;   // Should equal imgData.width (pixels)
+                let frameHeightPx = heightInches * EXPORT_DPI; // Should equal imgData.height (pixels)
+
+                let finalBuffer = imgBuffer;
+
+                if (imgData.rotated) {
+                    // CRITICAL FIX #2: Use Sharp for rotation instead of Canvas
+                    // This ensures better quality and simpler positioning logic
+                    console.log(`[PRINT] Rotating image ${imgData.id} 90 degrees with Sharp...`);
+
+                    finalBuffer = await sharp(imgBuffer)
+                        .rotate(90)
+                        .toBuffer();
+
+                    // Swap dimensions for the destination frame
+                    // The image is now physically rotated, so we must draw it with swapped W/H
+                    const temp = frameWidthPx;
+                    frameWidthPx = frameHeightPx;
+                    frameHeightPx = temp;
+                }
+
+                // Load as image (node-canvas handles PNG/JPG)
+                const image = await loadImage(finalBuffer);
 
                 console.log(`[PRINT] Drawing ${imgData.id} at (${Math.round(xPx)}, ${Math.round(yPx)}) size ${Math.round(frameWidthPx)}x${Math.round(frameHeightPx)}px${imgData.rotated ? ' [ROTATED]' : ''}`);
 
-                ctx.save();
-
-                if (imgData.rotated) {
-                    // CRITICAL FIX #2: Match preview's CSS transform order and origin
-                    // Preview: Container at (x*40, y*40), swapped dimensions
-                    // Inner div: original size, rotate(90deg) translateY(-100%), origin top-left
-
-                    // Step 1: Position to top-left of rotated container
-                    const containerLeft = xPx;
-                    const containerTop = yPx;
-
-                    // Step 2: Apply transforms matching CSS order
-                    ctx.translate(containerLeft, containerTop);                    // Container position
-                    ctx.rotate(Math.PI / 2);                                       // rotate(90deg)
-                    ctx.translate(0, -frameWidthPx);                               // translateY(-100%) of original width
-
-                    // Step 3: Draw image centered within original frame
-                    ctx.drawImage(
-                        image,
-                        -frameWidthPx / 2,   // Center in original frame
-                        -frameHeightPx / 2,
-                        frameWidthPx,        // Original dimensions
-                        frameHeightPx
-                    );
-
-                } else {
-                    // Non-rotated: Simple positioning
-                    ctx.drawImage(
-                        image,
-                        xPx,
-                        yPx,
-                        frameWidthPx,
-                        frameHeightPx
-                    );
-                }
-
-                ctx.restore();
+                // Draw directly - no context rotation needed
+                ctx.drawImage(
+                    image,
+                    xPx,
+                    yPx,
+                    frameWidthPx,
+                    frameHeightPx
+                );
 
             } catch (error) {
                 console.error(`[PRINT] Failed to process image ${imgData.id}:`, error);
