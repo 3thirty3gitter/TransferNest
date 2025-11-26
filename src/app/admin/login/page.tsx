@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
       }
 
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
+
       // Double-check admin status after login
       if (!isAdminEmail(userCredential.user.email)) {
         await auth.signOut();
@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
       router.push('/admin');
     } catch (err: any) {
       console.error('Login error:', err);
-      
+
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
         setError('Invalid email or password');
       } else if (err.code === 'auth/user-not-found') {
@@ -50,7 +50,7 @@ export default function AdminLoginPage() {
       } else {
         setError('Login failed. Please try again.');
       }
-      
+
       setLoading(false);
     }
   }
@@ -88,7 +88,7 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 placeholder="admin@dtfwholesale.ca"
               />
             </div>
@@ -103,7 +103,7 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                 placeholder="••••••••"
               />
             </div>
@@ -111,11 +111,10 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
-                loading
+              className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${loading
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+                }`}
             >
               {loading ? (
                 <span className="flex items-center justify-center">
