@@ -50,7 +50,7 @@ export default function WizardTrigger({ onImagesAdded, autoOpen = false }: Wizar
     });
   };
 
-  const handleWizardComplete = async (placements: ImagePlacement[], productType: GarmentType) => {
+  const handleWizardComplete = async (placements: ImagePlacement[]) => {
     if (!user) {
       toast({
         title: 'Authentication Required',

@@ -34,23 +34,23 @@ export default function SimpleWizardStep({
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-12">
+    <div className="max-w-2xl mx-auto py-6">
       {/* Question */}
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-3">{question}</h2>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold mb-2">{question}</h2>
       </div>
 
       {/* Product Selection */}
       {step === 'product' && options && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {options.map(option => (
             <Card
               key={option.id}
-              className="p-6 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
+              className="p-5 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
               onClick={() => onSelect(option.id)}
             >
-              {option.icon && <div className="text-6xl mb-3">{option.icon}</div>}
-              <h3 className="font-semibold text-lg">{option.label}</h3>
+              {option.icon && <div className="text-5xl mb-2">{option.icon}</div>}
+              <h3 className="font-semibold">{option.label}</h3>
             </Card>
           ))}
         </div>
@@ -58,9 +58,9 @@ export default function SimpleWizardStep({
 
       {/* Name Product or Name Image */}
       {(step === 'name-product' || step === 'name-image') && (
-        <Card className="p-12 text-center">
+        <Card className="p-8 text-center">
           <div className="max-w-md mx-auto">
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-4 text-sm">
               {step === 'name-product' 
                 ? 'Give your product a name to help you track it'
                 : 'Describe this image so you can identify it later'}
@@ -71,7 +71,7 @@ export default function SimpleWizardStep({
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleTextSubmit()}
-              className="text-lg h-12 mb-4"
+              className="h-11 mb-4"
               autoFocus
             />
             <Button
@@ -89,10 +89,10 @@ export default function SimpleWizardStep({
 
       {/* Upload */}
       {step === 'upload' && onUpload && (
-        <Card className="p-12 border-2 border-dashed border-gray-300 hover:border-primary transition-colors text-center">
-          <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-xl font-semibold mb-2">Upload Your Image</h3>
-          <p className="text-muted-foreground mb-4">PNG, JPG, or SVG files</p>
+        <Card className="p-8 border-2 border-dashed border-gray-300 hover:border-primary transition-colors text-center">
+          <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+          <h3 className="text-lg font-semibold mb-2">Upload Your Image</h3>
+          <p className="text-muted-foreground mb-4 text-sm">PNG, JPG, or SVG files</p>
           <Input
             type="file"
             accept="image/*"
@@ -107,20 +107,20 @@ export default function SimpleWizardStep({
 
       {/* Location Selection */}
       {step === 'location' && options && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {options.map(option => (
             <Card
               key={option.id}
-              className="p-6 cursor-pointer hover:shadow-lg transition-all flex items-center justify-between"
+              className="p-4 cursor-pointer hover:shadow-lg transition-all flex items-center justify-between"
               onClick={() => onSelect(option.id)}
             >
               <div>
-                <h3 className="font-semibold text-xl mb-1">{option.label}</h3>
+                <h3 className="font-semibold text-lg mb-0.5">{option.label}</h3>
                 {option.description && (
-                  <p className="text-sm text-muted-foreground">{option.description}</p>
+                  <p className="text-xs text-muted-foreground">{option.description}</p>
                 )}
               </div>
-              <ArrowRight className="w-6 h-6 text-gray-400" />
+              <ArrowRight className="w-5 h-5 text-gray-400" />
             </Card>
           ))}
         </div>
@@ -128,8 +128,8 @@ export default function SimpleWizardStep({
 
       {/* Quantity */}
       {step === 'quantity' && (
-        <Card className="p-12 text-center">
-          <h3 className="text-xl font-semibold mb-6">Enter quantity</h3>
+        <Card className="p-8 text-center">
+          <h3 className="text-lg font-semibold mb-4">Enter quantity</h3>
           <div className="flex items-center justify-center gap-4">
             <Button
               size="lg"
@@ -166,20 +166,20 @@ export default function SimpleWizardStep({
 
       {/* More Locations / More Images / More Products - Yes/No */}
       {(step === 'more-locations' || step === 'more-images' || step === 'more-products') && (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-4">
           <Card
-            className="p-12 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
+            className="p-8 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
             onClick={() => onSelect('yes')}
           >
-            <Plus className="w-16 h-16 mx-auto mb-4 text-green-600" />
-            <h3 className="text-2xl font-bold text-green-600">Yes</h3>
+            <Plus className="w-12 h-12 mx-auto mb-3 text-green-600" />
+            <h3 className="text-xl font-bold text-green-600">Yes</h3>
           </Card>
           <Card
-            className="p-12 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
+            className="p-8 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
             onClick={() => onSelect('no')}
           >
-            <Check className="w-16 h-16 mx-auto mb-4 text-blue-600" />
-            <h3 className="text-2xl font-bold text-blue-600">{step === 'more-products' ? 'No, Finish' : 'No, Continue'}</h3>
+            <Check className="w-12 h-12 mx-auto mb-3 text-blue-600" />
+            <h3 className="text-xl font-bold text-blue-600">{step === 'more-products' ? 'No, Finish' : 'No, Continue'}</h3>
           </Card>
         </div>
       )}

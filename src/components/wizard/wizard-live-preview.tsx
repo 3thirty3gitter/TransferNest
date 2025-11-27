@@ -43,8 +43,8 @@ export default function WizardLivePreview({
         <p className="text-sm text-muted-foreground">Live preview of your selections</p>
       </div>
 
-      <ScrollArea className="h-[calc(85vh-120px)]">
-        <div className="p-6 space-y-6">
+      <ScrollArea className="h-[calc(85vh-100px)]">
+        <div className="p-4 space-y-4">
           {/* Product Info */}
           {productType && (
             <div className="space-y-3">
@@ -86,55 +86,78 @@ export default function WizardLivePreview({
             </div>
           )}
 
-          {/* Placements List */}
+          {/* Placements List - Grouped by Product */}
           {placements.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm">Added Placements</h4>
                 <Badge variant="secondary">{placements.length}</Badge>
               </div>
               
-              <div className="space-y-3">
-                {placements.map((placement, index) => (
-                  <Card key={placement.imageId} className="p-3 bg-white dark:bg-slate-800">
-                    <div className="flex gap-3">
-                      {/* Thumbnail */}
-                      <div className="relative w-16 h-16 rounded overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0">
-                        <Image
-                          src={placement.imagePreview}
-                          alt={placement.imageName}
-                          fill
-                          className="object-contain p-1"
-                        />
-                      </div>
+              {/* Group placements by product type */}
+              {(() => {
+                const grouped = placements.reduce((acc, placement) => {
+                  const key = placement.productType;
+                  if (!acc[key]) acc[key] = [];
+                  acc[key].push(placement);
+                  return acc;
+                }, {} as Record<string, typeof placements>);
 
-                      {/* Details */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm mb-1 truncate">
-                          {placement.imageName}
-                        </p>
-                        
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <MapPin className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">
-                            {LOCATION_INFO[placement.location]?.label || placement.location}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className="flex items-center gap-1">
-                            <Hash className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-xs font-medium">{placement.quantity}</span>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {placement.customWidth || placement.recommendedWidth}"
-                          </Badge>
-                        </div>
-                      </div>
+                return Object.entries(grouped).map(([productType, productPlacements]) => (
+                  <div key={productType} className="space-y-2">
+                    {/* Product Type Header */}
+                    <div className="flex items-center gap-2 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">
+                      <Badge variant="default" className="capitalize text-xs">
+                        {productType}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {productPlacements.length} placement{productPlacements.length !== 1 ? 's' : ''}
+                      </span>
                     </div>
-                  </Card>
-                ))}
-              </div>
+
+                    {/* Placements for this product */}
+                    {productPlacements.map((placement) => (
+                      <Card key={placement.imageId} className="p-3 bg-white dark:bg-slate-800">
+                        <div className="flex gap-3">
+                          {/* Thumbnail */}
+                          <div className="relative w-14 h-14 rounded overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0">
+                            <Image
+                              src={placement.imagePreview}
+                              alt={placement.imageName}
+                              fill
+                              className="object-contain p-1"
+                            />
+                          </div>
+
+                          {/* Details */}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-xs mb-0.5 truncate">
+                              {placement.imageName}
+                            </p>
+
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <MapPin className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {LOCATION_INFO[placement.location]?.label || placement.location}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-1">
+                                <Hash className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-xs font-medium">{placement.quantity}</span>
+                              </div>
+                              <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                {placement.customWidth || placement.recommendedWidth}"
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ));
+              })()}
             </div>
           )}
 

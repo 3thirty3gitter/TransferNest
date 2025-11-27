@@ -38,7 +38,7 @@ type WizardStep =
 interface SimpleDTFWizardProps {
   open: boolean;
   onClose: () => void;
-  onComplete: (placements: ImagePlacement[], productType: GarmentType) => void;
+  onComplete: (placements: ImagePlacement[]) => void;
 }
 
 export default function SimpleDTFWizard({ open, onClose, onComplete }: SimpleDTFWizardProps) {
@@ -182,9 +182,7 @@ export default function SimpleDTFWizard({ open, onClose, onComplete }: SimpleDTF
 
   const handleCompleteReview = () => {
     if (placements.length > 0) {
-      // Use first placement's product type or fallback
-      const firstProductType = placements[0]?.productType || productType!;
-      onComplete(placements, firstProductType);
+      onComplete(placements);
       handleReset();
       onClose();
     }
@@ -287,15 +285,15 @@ export default function SimpleDTFWizard({ open, onClose, onComplete }: SimpleDTF
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[85vh] overflow-hidden p-0">
         <VisuallyHidden>
           <DialogTitle>DTF Size Helper Wizard</DialogTitle>
         </VisuallyHidden>
         
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr,400px] h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr,380px] h-full">
           {/* Left Column - Wizard Flow */}
-          <div className="relative overflow-y-auto p-6 lg:p-8">
+          <div className="relative overflow-y-auto p-8">
             {/* Back Button */}
             {canGoBack && (
               <Button
@@ -310,7 +308,7 @@ export default function SimpleDTFWizard({ open, onClose, onComplete }: SimpleDTF
             )}
 
             {/* Progress Indicator */}
-            <div className="text-center text-sm text-muted-foreground mb-4 pt-8">
+            <div className="text-center text-sm text-muted-foreground mb-6 pt-8">
               {placements.length > 0 && currentStep !== 'review' && (
                 <p>{placements.length} placement{placements.length !== 1 ? 's' : ''} added</p>
               )}
