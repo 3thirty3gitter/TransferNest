@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Edit2, Check } from 'lucide-react';
+import { ArrowRight, Edit2, Check, Ruler, AlertCircle, Lock } from 'lucide-react';
 import { LOCATION_INFO } from '@/lib/wizard-config';
 import { GarmentType, PrintLocation } from '@/types/wizard';
 import Image from 'next/image';
@@ -31,6 +31,8 @@ interface WizardReviewStepProps {
 export default function WizardReviewStep({ placements, onUpdateWidth, onComplete }: WizardReviewStepProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempWidth, setTempWidth] = useState<string>('');
+  const [signature, setSignature] = useState<string>('');
+  const [showSignatureError, setShowSignatureError] = useState(false);
 
   const handleEditClick = (placement: ImagePlacement) => {
     setEditingId(placement.imageId);
@@ -50,6 +52,14 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
     setTempWidth('');
   };
 
+  const handleCompleteClick = () => {
+    if (!signature.trim()) {
+      setShowSignatureError(true);
+      return;
+    }
+    onComplete();
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8">
       {/* Header */}
@@ -58,16 +68,80 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
         <p className="text-muted-foreground text-lg">
           These are industry-standard recommended sizes. You can adjust the width if needed.
         </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          💡 Height will automatically adjust to maintain your design's aspect ratio
-        </p>
       </div>
+
+      {/* Important Sizing Information */}
+      <Card className="p-6 mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <Ruler className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div className="flex-1 space-y-4">
+            <div>
+              <h3 className="font-bold text-lg mb-2 text-blue-900 dark:text-blue-100">
+                📏 Important: Garment Size Matters!
+              </h3>
+              <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
+                The same design will look <strong>different sizes on different garments</strong>. For example, 
+                a 9.5" design on a Youth Small shirt will look much larger than the same 9.5" design on an Adult 4XL shirt.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Why Can't I Change Height?
+              </h4>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                Your image has a fixed <strong>aspect ratio</strong> (the relationship between width and height). 
+                When you change the width, the height automatically adjusts to keep your design looking correct and not stretched or squished.
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <strong>Think of it like a photo:</strong> If you make a photo wider, it has to get taller too, or it would look weird!
+              </p>
+            </div>
+
+            <div className="bg-amber-50 dark:bg-amber-950 rounded-lg p-4 border border-amber-300 dark:border-amber-700">
+              <h4 className="font-semibold mb-2 flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                <AlertCircle className="w-4 h-4" />
+                Before You Continue - Use a Measuring Tape!
+              </h4>
+              <ul className="text-sm space-y-2 text-amber-900 dark:text-amber-100">
+                <li>• <strong>Lay a garment flat</strong> (the actual size you're printing on)</li>
+                <li>• <strong>Measure with a tape measure</strong> to see if the width looks right</li>
+                <li>• <strong>Remember:</strong> Small shirts need smaller designs, large shirts can handle bigger designs</li>
+                <li>• <strong>Check both dimensions:</strong> Make sure width AND height fit comfortably on your garment</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Placements List */}
       <div className="space-y-4 mb-8">
         {placements.map((placement, index) => {
           const isEditing = editingId === placement.imageId;
           const displayWidth = placement.customWidth || placement.recommendedWidth;
+          
+          // Calculate height based on aspect ratio
+          const getImageDimensions = async () => {
+            return new Promise<{ width: number; height: number }>((resolve) => {
+              const img = new window.Image();
+              img.onload = () => {
+                const aspectRatio = img.naturalWidth / img.naturalHeight;
+                const heightInInches = displayWidth / aspectRatio;
+                resolve({ width: displayWidth, height: heightInInches });
+              };
+              img.src = placement.imagePreview;
+            });
+          };
+
+          // For display purposes, we'll calculate height synchronously
+          const [dimensions, setDimensions] = React.useState<{ width: number; height: number } | null>(null);
+          
+          React.useEffect(() => {
+            getImageDimensions().then(setDimensions);
+          }, [displayWidth, placement.imagePreview]);
           
           return (
             <Card key={placement.imageId} className="p-6">
@@ -102,7 +176,7 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
                   </div>
 
                   {/* Width Control */}
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Width:</span>
                       {isEditing ? (
@@ -156,6 +230,20 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
                     </div>
                   </div>
 
+                  {/* Height Display (Auto-calculated) */}
+                  {dimensions && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-muted-foreground">Height:</span>
+                      <span className="text-lg font-semibold text-muted-foreground">
+                        {dimensions.height.toFixed(2)}"
+                      </span>
+                      <Lock className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground italic">
+                        (auto-calculated to prevent stretching)
+                      </span>
+                    </div>
+                  )}
+
                   {/* Recommendation Badge */}
                   {!placement.customWidth && (
                     <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
@@ -197,11 +285,59 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
         </div>
       </Card>
 
+      {/* Signature / Acceptance */}
+      <Card className="p-6 mb-6 border-2 border-amber-500 dark:border-amber-600">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h3 className="font-bold text-lg mb-2">Important: Size Confirmation Required</h3>
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                By typing your name below, you confirm that you have:
+              </p>
+              <ul className="text-sm text-muted-foreground space-y-2 mb-4 ml-4">
+                <li>✓ Reviewed all print sizes (width and height)</li>
+                <li>✓ Used a measuring tape on your actual garments</li>
+                <li>✓ Verified the designs will fit properly on your chosen garment sizes</li>
+                <li>✓ Understand that we are not responsible if the final prints don't match your expectations</li>
+              </ul>
+              <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">
+                ⚠️ We cannot accept returns or refunds for size-related issues after production begins.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="signature" className="text-sm font-medium">
+              Type your full name to accept these sizes:
+            </label>
+            <Input
+              id="signature"
+              type="text"
+              placeholder="Enter your full name"
+              value={signature}
+              onChange={(e) => {
+                setSignature(e.target.value);
+                setShowSignatureError(false);
+              }}
+              className={`text-lg ${showSignatureError ? 'border-red-500' : ''}`}
+            />
+            {showSignatureError && (
+              <p className="text-sm text-red-600 flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                Please type your name to confirm you've reviewed and accept these sizes
+              </p>
+            )}
+          </div>
+        </div>
+      </Card>
+
       {/* Complete Button */}
       <Button
         size="lg"
         className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-        onClick={onComplete}
+        onClick={handleCompleteClick}
+        disabled={!signature.trim()}
       >
         Add to Nesting Tool
         <ArrowRight className="w-5 h-5 ml-2" />
