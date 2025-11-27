@@ -285,15 +285,15 @@ export default function SimpleDTFWizard({ open, onClose, onComplete }: SimpleDTF
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[85vh] overflow-hidden p-0">
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden p-0">
         <VisuallyHidden>
           <DialogTitle>DTF Size Helper Wizard</DialogTitle>
         </VisuallyHidden>
         
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr,380px] h-full">
+        {/* Two Column Layout - Full Width on Review Step */}
+        <div className={`grid h-full ${currentStep === 'review' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[1fr,380px]'}`}>
           {/* Left Column - Wizard Flow */}
-          <div className="relative overflow-y-auto p-8">
+          <div className="relative overflow-y-auto max-h-[90vh] p-8">
             {/* Back Button */}
             {canGoBack && (
               <Button
@@ -335,7 +335,7 @@ export default function SimpleDTFWizard({ open, onClose, onComplete }: SimpleDTF
 
           {/* Right Column - Live Preview (hidden on review step) */}
           {currentStep !== 'review' && (
-            <div className="hidden lg:block border-l bg-slate-50 dark:bg-slate-900">
+            <div className="hidden lg:block border-l bg-slate-50 dark:bg-slate-900 overflow-y-auto max-h-[90vh]">
               <WizardLivePreview
                 productType={productType}
                 productName={productName}

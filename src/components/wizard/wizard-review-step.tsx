@@ -61,24 +61,24 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
+    <div className="max-w-5xl mx-auto py-6 px-4">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-3">Review Your Prints</h2>
-        <p className="text-muted-foreground text-lg">
+      <div className="text-center mb-6">
+        <h2 className="text-3xl font-bold mb-2">Review Your Prints</h2>
+        <p className="text-muted-foreground">
           These are industry-standard recommended sizes. You can adjust the width if needed.
         </p>
       </div>
 
       {/* Important Sizing Information */}
-      <Card className="p-6 mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+      <Card className="p-5 mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
-            <Ruler className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <Ruler className="w-7 h-7 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="flex-1 space-y-4">
+          <div className="flex-1 space-y-3">
             <div>
-              <h3 className="font-bold text-lg mb-2 text-blue-900 dark:text-blue-100">
+              <h3 className="font-bold text-base mb-1.5 text-blue-900 dark:text-blue-100">
                 📏 Important: Garment Size Matters!
               </h3>
               <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
@@ -87,12 +87,12 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-              <h4 className="font-semibold mb-2 flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+              <h4 className="font-semibold text-sm mb-1.5 flex items-center gap-2">
                 <Lock className="w-4 h-4" />
                 Why Can't I Change Height?
               </h4>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-2">
                 Your image has a fixed <strong>aspect ratio</strong> (the relationship between width and height). 
                 When you change the width, the height automatically adjusts to keep your design looking correct and not stretched or squished.
               </p>
@@ -101,12 +101,12 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
               </p>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-950 rounded-lg p-4 border border-amber-300 dark:border-amber-700">
-              <h4 className="font-semibold mb-2 flex items-center gap-2 text-amber-900 dark:text-amber-100">
+            <div className="bg-amber-50 dark:bg-amber-950 rounded-lg p-3 border border-amber-300 dark:border-amber-700">
+              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2 text-amber-900 dark:text-amber-100">
                 <AlertCircle className="w-4 h-4" />
                 Before You Continue - Use a Measuring Tape!
               </h4>
-              <ul className="text-sm space-y-2 text-amber-900 dark:text-amber-100">
+              <ul className="text-sm space-y-1.5 text-amber-900 dark:text-amber-100">
                 <li>• <strong>Lay a garment flat</strong> (the actual size you're printing on)</li>
                 <li>• <strong>Measure with a tape measure</strong> to see if the width looks right</li>
                 <li>• <strong>Remember:</strong> Small shirts need smaller designs, large shirts can handle bigger designs</li>
@@ -118,7 +118,7 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
       </Card>
 
       {/* Placements List */}
-      <div className="space-y-4 mb-8">
+      <div className="space-y-3 mb-6">
         {placements.map((placement, index) => {
           const isEditing = editingId === placement.imageId;
           const displayWidth = placement.customWidth || placement.recommendedWidth;
@@ -144,10 +144,10 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
           }, [displayWidth, placement.imagePreview]);
           
           return (
-            <Card key={placement.imageId} className="p-6">
-              <div className="flex items-start gap-6">
+            <Card key={placement.imageId} className="p-4">
+              <div className="flex items-start gap-4">
                 {/* Image Preview */}
-                <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                   <Image
                     src={placement.imagePreview}
                     alt={placement.imageName}
@@ -158,17 +158,17 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
 
                 {/* Details */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h3 className="font-semibold text-lg mb-1">{placement.imageName}</h3>
+                      <h3 className="font-semibold text-base mb-1">{placement.imageName}</h3>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="secondary" className="capitalize">
+                        <Badge variant="secondary" className="capitalize text-xs">
                           {placement.productType}
                         </Badge>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs">
                           {LOCATION_INFO[placement.location]?.label || placement.location}
                         </Badge>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs">
                           {placement.quantity} {placement.quantity === 1 ? 'copy' : 'copies'}
                         </Badge>
                       </div>
@@ -176,7 +176,7 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
                   </div>
 
                   {/* Width Control */}
-                  <div className="flex items-center gap-4 mb-2">
+                  <div className="flex items-center gap-3 mb-1.5">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Width:</span>
                       {isEditing ? (
@@ -188,29 +188,29 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
                             step="0.5"
                             value={tempWidth}
                             onChange={(e) => setTempWidth(e.target.value)}
-                            className="w-20 h-9"
+                            className="w-20 h-8 text-sm"
                             autoFocus
                           />
                           <span className="text-sm font-medium">inches</span>
                           <Button
                             size="sm"
                             onClick={() => handleSaveWidth(placement.imageId)}
-                            className="h-9"
+                            className="h-8"
                           >
-                            <Check className="w-4 h-4" />
+                            <Check className="w-3 h-3" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={handleCancel}
-                            className="h-9"
+                            className="h-8"
                           >
                             Cancel
                           </Button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <span className="text-xl font-bold">{displayWidth}"</span>
+                          <span className="text-lg font-bold">{displayWidth}"</span>
                           {placement.customWidth && placement.customWidth !== placement.recommendedWidth && (
                             <span className="text-xs text-muted-foreground line-through">
                               (was {placement.recommendedWidth}")
@@ -220,7 +220,7 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
                             size="sm"
                             variant="ghost"
                             onClick={() => handleEditClick(placement)}
-                            className="h-8"
+                            className="h-7 text-xs"
                           >
                             <Edit2 className="w-3 h-3 mr-1" />
                             Edit
@@ -232,21 +232,21 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
 
                   {/* Height Display (Auto-calculated) */}
                   {dimensions && (
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-sm text-muted-foreground">Height:</span>
-                      <span className="text-lg font-semibold text-muted-foreground">
+                      <span className="text-base font-semibold text-muted-foreground">
                         {dimensions.height.toFixed(2)}"
                       </span>
                       <Lock className="w-3 h-3 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground italic">
-                        (auto-calculated to prevent stretching)
+                        (auto-calculated)
                       </span>
                     </div>
                   )}
 
                   {/* Recommendation Badge */}
                   {!placement.customWidth && (
-                    <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                    <div className="text-xs text-green-600 flex items-center gap-1">
                       <Check className="w-3 h-3" />
                       Recommended size for {placement.productType}
                     </div>
@@ -259,43 +259,39 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
       </div>
 
       {/* Summary */}
-      <Card className="p-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 mb-6">
-        <div className="flex items-start gap-3">
-          <div className="flex-1">
-            <h3 className="font-semibold mb-2">Summary</h3>
-            <div className="space-y-1 text-sm">
-              <p>
-                <span className="font-medium">{placements.length}</span> placement
-                {placements.length !== 1 ? 's' : ''}
-              </p>
-              <p>
-                <span className="font-medium">
-                  {placements.reduce((sum, p) => sum + p.quantity, 0)}
-                </span>{' '}
-                total print{placements.reduce((sum, p) => sum + p.quantity, 0) !== 1 ? 's' : ''}
-              </p>
-              <p>
-                <span className="font-medium">
-                  {new Set(placements.map(p => p.productType)).size}
-                </span>{' '}
-                product type{new Set(placements.map(p => p.productType)).size !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
+      <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 mb-5">
+        <h3 className="font-semibold mb-2 text-sm">Summary</h3>
+        <div className="space-y-1 text-sm">
+          <p>
+            <span className="font-medium">{placements.length}</span> placement
+            {placements.length !== 1 ? 's' : ''}
+          </p>
+          <p>
+            <span className="font-medium">
+              {placements.reduce((sum, p) => sum + p.quantity, 0)}
+            </span>{' '}
+            total print{placements.reduce((sum, p) => sum + p.quantity, 0) !== 1 ? 's' : ''}
+          </p>
+          <p>
+            <span className="font-medium">
+              {new Set(placements.map(p => p.productType)).size}
+            </span>{' '}
+            product type{new Set(placements.map(p => p.productType)).size !== 1 ? 's' : ''}
+          </p>
         </div>
       </Card>
 
       {/* Signature / Acceptance */}
-      <Card className="p-6 mb-6 border-2 border-amber-500 dark:border-amber-600">
-        <div className="space-y-4">
+      <Card className="p-5 mb-5 border-2 border-amber-500 dark:border-amber-600">
+        <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h3 className="font-bold text-lg mb-2">Important: Size Confirmation Required</h3>
-              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+              <h3 className="font-bold text-base mb-2">Important: Size Confirmation Required</h3>
+              <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
                 By typing your name below, you confirm that you have:
               </p>
-              <ul className="text-sm text-muted-foreground space-y-2 mb-4 ml-4">
+              <ul className="text-sm text-muted-foreground space-y-1 mb-3 ml-4">
                 <li>✓ Reviewed all print sizes (width and height)</li>
                 <li>✓ Used a measuring tape on your actual garments</li>
                 <li>✓ Verified the designs will fit properly on your chosen garment sizes</li>
@@ -320,7 +316,7 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
                 setSignature(e.target.value);
                 setShowSignatureError(false);
               }}
-              className={`text-lg ${showSignatureError ? 'border-red-500' : ''}`}
+              className={`text-base ${showSignatureError ? 'border-red-500' : ''}`}
             />
             {showSignatureError && (
               <p className="text-sm text-red-600 flex items-center gap-1">
@@ -335,7 +331,7 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
       {/* Complete Button */}
       <Button
         size="lg"
-        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 mb-3"
         onClick={handleCompleteClick}
         disabled={!signature.trim()}
       >
@@ -343,7 +339,7 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
         <ArrowRight className="w-5 h-5 ml-2" />
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground mt-4">
+      <p className="text-center text-sm text-muted-foreground mb-4">
         Your prints will be added to the nesting tool where our AI will optimize the layout
       </p>
     </div>
