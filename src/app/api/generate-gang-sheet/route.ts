@@ -1,177 +1,253 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
-import { createCanvas, loadImage } from 'canvas';
-import sharp from 'sharp';
 
 /**
- * Gang Sheet Export - DEFINITIVE FIX FOR ROTATION
- * Matches preview's exact CSS transform sequence and coordinate system
+ * API endpoint to generate a gang sheet PNG and upload it to Firebase Storage
+ * Used when adding items to cart - generates the print-ready PNG
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { placedItems, sheetWidth, sheetLength, userId, orderId, customerInfo } = body;
 
-    // Validation
+    // Validate required fields
     if (!placedItems || !Array.isArray(placedItems)) {
-      return NextResponse.json({ error: 'placedItems array is required' }, { status: 400 });
-    }
-    if (!sheetWidth || !sheetLength) {
-      return NextResponse.json({ error: 'sheetWidth and sheetLength are required' }, { status: 400 });
-    }
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'placedItems array is required' },
+        { status: 400 }
+      );
     }
 
-    console.log('[GANG_SHEET] Generating PNG:', {
+    if (!sheetWidth || !sheetLength) {
+      return NextResponse.json(
+        { error: 'sheetWidth and sheetLength are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('[GANG_SHEET] Generating PNG for cart item:', {
       itemCount: placedItems.length,
       sheetWidth,
-      sheetLength
+      sheetLength,
+      firstItem: placedItems[0] ? {
+        id: placedItems[0].id,
+        x: placedItems[0].x,
+        y: placedItems[0].y,
+        width: placedItems[0].width,
+        height: placedItems[0].height,
+        hasUrl: !!placedItems[0].url
+      } : null
     });
 
-    // CRITICAL: Assume source images are 300 DPI (standard for uploaded graphics)
-    const SOURCE_DPI = 300;
-    const EXPORT_DPI = 300;
+    // Generate the gang sheet PNG using print-export
+    // The PrintExportGenerator expects the exact sheet dimensions to create the canvas
+    const generator = new PrintExportGenerator();
+    
+    // CRITICAL: We need to generate with EXACT dimensions, not fixed 13x19 or 17x22
+    // Create a custom canvas based on actual nested dimensions
+    const dpi = 300;
+    const pixelWidth = Math.round(sheetWidth * dpi);
+    const pixelHeight = Math.round(sheetLength * dpi);
 
-    // Convert sheet dimensions to pixels
-    const canvasWidth = Math.round(sheetWidth * EXPORT_DPI);
-    const canvasHeight = Math.round(sheetLength * EXPORT_DPI);
-    const canvas = createCanvas(canvasWidth, canvasHeight);
-    const ctx = canvas.getContext('2d');
+    console.log('[GANG_SHEET] Canvas dimensions:', {
+      inches: `${sheetWidth}x${sheetLength}"`,
+      pixels: `${pixelWidth}x${pixelHeight}px`,
+      dpi
+    });
 
-    // White background for print
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // Process each image with CORRECT unit conversion
-    for (const imgData of placedItems) {
-      try {
-        if (!imgData.url || imgData.url.trim() === '') {
-          console.warn(`[GANG_SHEET] Skipping ${imgData.id} - no URL`);
-          continue;
-        }
-
-        console.log(`[GANG_SHEET] Processing ${imgData.id}:`, {
-          x: imgData.x,
-          y: imgData.y,
-          width: imgData.width,  // This is actually PIXELS from nesting
-          height: imgData.height,
-          rotated: imgData.rotated
-        });
-
-        // CRITICAL FIX #1: Convert PIXEL dimensions to INCHES
-        // Algorithm stores raw pixels in width/height fields, but they're documented as inches
-        const widthInches = imgData.width / SOURCE_DPI;   // Convert pixels to inches
-        const heightInches = imgData.height / SOURCE_DPI; // Convert pixels to inches
-
-        // x, y ARE in inches (algorithm converts positions correctly), so:
-        const xPx = imgData.x * EXPORT_DPI;  // Position in export pixels
-        const yPx = imgData.y * EXPORT_DPI;
-
-        // Frame dimensions in export pixels (inches * EXPORT_DPI)
-        const frameWidthPx = widthInches * EXPORT_DPI;   // Should equal imgData.width (pixels)
-        const frameHeightPx = heightInches * EXPORT_DPI; // Should equal imgData.height (pixels)
-
-        // Load image
-        const response = await fetch(imgData.url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const arrayBuffer = await response.arrayBuffer();
-        const imgBuffer = Buffer.from(arrayBuffer);
-        const image = await loadImage(imgBuffer);
-
-        console.log(`[GANG_SHEET] ${imgData.id} - Image: ${image.width}x${image.height}px`);
-        console.log(`[GANG_SHEET] ${imgData.id} - Frame: ${frameWidthPx.toFixed(0)}x${frameHeightPx.toFixed(0)}px at (${xPx.toFixed(0)}, ${yPx.toFixed(0)})`);
-
-        ctx.save();
-
-        if (imgData.rotated) {
-          // CRITICAL FIX #2: Match preview's CSS transform order and origin
-          // Preview: Container at (x*40, y*40), swapped dimensions
-          // Inner div: original size, rotate(90deg) translateY(-100%), origin top-left
-
-          // Step 1: Position to top-left of rotated container
-          const containerLeft = xPx;
-          const containerTop = yPx;
-          const containerWidth = frameHeightPx;  // SWAPPED for rotated container
-          const containerHeight = frameWidthPx;  // SWAPPED for rotated container
-
-          // Step 2: Apply transforms matching CSS order
-          ctx.translate(containerLeft, containerTop);                    // Container position
-          ctx.rotate(Math.PI / 2);                                       // rotate(90deg)
-          ctx.translate(0, -frameWidthPx);                               // translateY(-100%) of original width
-
-          // Step 3: Draw image centered within original frame (object-contain logic here if needed)
-          ctx.drawImage(
-            image,
-            -frameWidthPx / 2,   // Center in original frame
-            -frameHeightPx / 2,
-            frameWidthPx,        // Original dimensions
-            frameHeightPx
-          );
-
-        } else {
-          // Non-rotated: Simple positioning
-          ctx.drawImage(
-            image,
-            xPx,
-            yPx,
-            frameWidthPx,
-            frameHeightPx
-          );
-        }
-
-        ctx.restore();
-
-      } catch (error) {
-        console.error(`[GANG_SHEET] Failed to process ${imgData.id}:`, error);
-        // Placeholder
-        ctx.fillStyle = '#cccccc';
-        ctx.fillRect(imgData.x * EXPORT_DPI, imgData.y * EXPORT_DPI,
-          (imgData.width / SOURCE_DPI) * EXPORT_DPI,
-          (imgData.height / SOURCE_DPI) * EXPORT_DPI);
+    // We'll use sharp directly to create the exact canvas we need
+    const sharp = require('sharp');
+    
+    // Create blank white canvas
+    const canvas = sharp({
+      create: {
+        width: pixelWidth,
+        height: pixelHeight,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
       }
-    }
+    });
 
-    // Export PNG with DPI metadata
-    let pngBuffer = canvas.toBuffer('image/png');
-    pngBuffer = await sharp(pngBuffer)
-      .withMetadata({ density: EXPORT_DPI })
-      .png()
-      .toBuffer();
+    // Composite all images onto the sheet
+    const compositeOps = await Promise.all(
+      placedItems.map(async (img: any) => {
+        try {
+          // Validate coordinates
+          if (typeof img.x !== 'number' || typeof img.y !== 'number' || 
+              typeof img.width !== 'number' || typeof img.height !== 'number') {
+            console.error('[GANG_SHEET] Invalid image coordinates:', img);
+            return null;
+          }
 
-    console.log('[GANG_SHEET] PNG generated:', (pngBuffer.length / 1024).toFixed(2), 'KB');
+          // Handle rotation: when rotated=true, the item's width/height represent the original dimensions
+          // but on the sheet, it occupies a height×width space (swapped)
+          const isRotated = img.rotated === true;
+          
+          // Convert inches to pixels for the SHEET POSITION
+          const left = Math.round(img.x * dpi);
+          const top = Math.round(img.y * dpi);
+          
+          // Image dimensions in its original orientation
+          const imageWidth = Math.round(img.width * dpi);
+          const imageHeight = Math.round(img.height * dpi);
 
-    // Upload to storage (unchanged)
+          console.log(`[GANG_SHEET] Image ${img.id}: position ${left},${top} size ${imageWidth}x${imageHeight}px${isRotated ? ' (rotated)' : ''}`);
+
+          // Load actual image from URL
+          let imageBuffer: Buffer;
+          
+          if (img.url && img.url.trim() !== '') {
+            try {
+              const response = await fetch(img.url);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch: ${response.status}`);
+              }
+              const arrayBuffer = await response.arrayBuffer();
+              const buffer = Buffer.from(arrayBuffer);
+              
+              // Resize to exact dimensions first
+              let processedImage = sharp(buffer).resize(imageWidth, imageHeight, { fit: 'fill' });
+              
+              // If rotated, rotate WITHOUT expand, keeping exact dimensions
+              if (isRotated) {
+                // Rotate -90 degrees with background:transparent
+                processedImage = processedImage.rotate(-90, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
+              }
+              
+              // Convert to buffer to check actual dimensions
+              const tempBuffer = await processedImage.png().toBuffer();
+              const tempMeta = await sharp(tempBuffer).metadata();
+              
+              console.log(`[GANG_SHEET] After rotation - actual: ${tempMeta.width}x${tempMeta.height}px, expected: ${isRotated ? imageHeight : imageWidth}x${isRotated ? imageWidth : imageHeight}px`);
+              
+              // If dimensions don't match exactly (due to Sharp expansion), extract the exact region
+              const expectedWidth = isRotated ? imageHeight : imageWidth;
+              const expectedHeight = isRotated ? imageWidth : imageHeight;
+              
+              if (tempMeta.width !== expectedWidth || tempMeta.height !== expectedHeight) {
+                console.log(`[GANG_SHEET] Extracting exact dimensions from ${tempMeta.width}x${tempMeta.height} to ${expectedWidth}x${expectedHeight}`);
+                imageBuffer = await sharp(tempBuffer)
+                  .extract({
+                    left: 0,
+                    top: 0,
+                    width: Math.min(expectedWidth, tempMeta.width || expectedWidth),
+                    height: Math.min(expectedHeight, tempMeta.height || expectedHeight)
+                  })
+                  .png()
+                  .toBuffer();
+              } else {
+                imageBuffer = tempBuffer;
+              }
+                
+              console.log(`[GANG_SHEET] Loaded and ${isRotated ? 'rotated ' : ''}image from URL`);
+            } catch (fetchError) {
+              console.error(`[GANG_SHEET] Failed to fetch ${img.url}:`, fetchError);
+              // Fallback to placeholder
+              let placeholderWidth = isRotated ? imageHeight : imageWidth;
+              let placeholderHeight = isRotated ? imageWidth : imageHeight;
+              imageBuffer = await sharp({
+                create: { width: placeholderWidth, height: placeholderHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
+              }).png().toBuffer();
+            }
+          } else {
+            // No URL, use placeholder
+            console.warn(`[GANG_SHEET] No URL for image ${img.id}`);
+            let placeholderWidth = isRotated ? imageHeight : imageWidth;
+            let placeholderHeight = isRotated ? imageWidth : imageHeight;
+            imageBuffer = await sharp({
+              create: { width: placeholderWidth, height: placeholderHeight, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 0.5 } }
+            }).png().toBuffer();
+          }
+
+          return { input: imageBuffer, left, top };
+        } catch (error) {
+          console.error(`[GANG_SHEET] Failed to process image ${img.id}:`, error);
+          return null;
+        }
+      })
+    );
+
+    // Filter out failed operations
+    const validComposites = compositeOps.filter((op): op is NonNullable<typeof op> => op !== null);
+
+    console.log('[GANG_SHEET] Compositing', validComposites.length, 'images');
+
+    // Generate final image with explicit composite options to prevent stretching
+    const pngBuffer = validComposites.length > 0
+      ? await canvas.composite(validComposites.map(op => ({
+          input: op.input,
+          left: op.left,
+          top: op.top,
+          blend: 'over',        // Don't blend/resize, just overlay
+          gravity: 'northwest', // Top-left positioning, no centering
+          premultiplied: false  // Don't pre-multiply alpha
+        }))).png({ quality: 100 }).toBuffer()
+      : await canvas.png({ quality: 100 }).toBuffer();
+
+    console.log('[GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
+
+    // Upload to Firebase Storage
     const storage = new PrintFileStorageAdmin();
+    
+    // If orderId is provided, save to orders folder, otherwise to cart folder
     let uploadResult;
     if (orderId && customerInfo) {
+      // Format customer name and filename for order
       const customerName = `${customerInfo.firstName}_${customerInfo.lastName}`.replace(/[^a-zA-Z0-9_]/g, '_');
       const orderNumber = orderId.slice(-8);
       const sheetDimensions = `${sheetWidth}x${Math.round(sheetLength)}`;
       const filename = `${orderNumber}_${customerName}_${sheetDimensions}.png`;
-      console.log('[GANG_SHEET] Uploading to orders:', { userId, orderId, filename });
-      uploadResult = await storage.uploadPrintFile(pngBuffer, filename, orderId, userId);
+      
+      console.log('[GANG_SHEET] Uploading to orders folder:', { userId, orderId, filename });
+      
+      uploadResult = await storage.uploadPrintFile(
+        pngBuffer,
+        filename,
+        orderId,
+        userId
+      );
     } else {
+      // Save to cart folder (legacy support if needed)
       const cartItemId = `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const filename = `gangsheet_${sheetWidth}x${Math.round(sheetLength)}.png`;
-      console.log('[GANG_SHEET] Uploading to cart:', { userId, cartItemId, filename });
-      uploadResult = await storage.uploadCartFile(pngBuffer, filename, cartItemId, userId);
+      
+      console.log('[GANG_SHEET] Uploading to cart folder:', { userId, cartItemId, filename });
+      
+      uploadResult = await storage.uploadCartFile(
+        pngBuffer,
+        filename,
+        cartItemId,
+        userId
+      );
     }
 
     console.log('[GANG_SHEET] Upload successful:', uploadResult.url);
 
+    // Return the storage URL and metadata
     return NextResponse.json({
       success: true,
       pngUrl: uploadResult.url,
-      dimensions: { width: sheetWidth, height: sheetLength, dpi: EXPORT_DPI },
+      dimensions: {
+        width: sheetWidth,
+        height: sheetLength,
+        dpi: 300
+      },
       size: pngBuffer.length
     });
 
   } catch (error) {
     console.error('[GANG_SHEET] Error generating gang sheet:', error);
     return NextResponse.json(
-      {
-        error: 'Failed to generate gang sheet',
+      { 
+        error: 'Failed to generate gang sheet', 
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

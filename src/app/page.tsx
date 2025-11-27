@@ -9,6 +9,7 @@ import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scisso
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/layout/footer';
+import { useRouter } from 'next/navigation';
 
 interface Product {
   id: string;
@@ -33,6 +34,12 @@ interface Product {
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  const handleOpenWizard = () => {
+    // Navigate to nesting tool with a query parameter to auto-open wizard
+    router.push('/nesting-tool-13?openWizard=true');
+  };
 
   useEffect(() => {
     async function loadProducts() {
@@ -119,6 +126,137 @@ export default function Home() {
               <div className="glass rounded-2xl p-6">
                 <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-400 to-red-400 bg-clip-text text-transparent">24hr</div>
                 <div className="text-sm text-slate-400 mt-2">Turnaround</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* NEW: Size Wizard Feature Highlight */}
+        <section className="py-24 md:py-32 relative overflow-hidden">
+          {/* Animated Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-950/40 via-blue-950/40 to-transparent"></div>
+          <div className="absolute top-20 right-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+          <div className="absolute bottom-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+
+          <div className="container relative z-10">
+            <div className="max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                {/* Left: Content */}
+                <div>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6 animate-bounce">
+                    <Wand2 className="h-4 w-4 text-purple-400" />
+                    <span className="text-sm font-medium">✨ NEW: Size Helper Wizard</span>
+                  </div>
+                  
+                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                    <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+                      Not Sure What Size?
+                    </span>
+                    <br />
+                    <span className="text-white">We'll Help You Choose!</span>
+                  </h2>
+                  
+                  <p className="text-slate-300 text-lg md:text-xl leading-relaxed mb-8">
+                    New to DTF printing? Our friendly wizard walks you through 3 simple steps to determine 
+                    the perfect print sizes for your project. No guesswork needed!
+                  </p>
+
+                  <div className="space-y-4 mb-10">
+                    <div className="glass-strong rounded-2xl p-5 hover:scale-105 transition-transform flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 text-white font-bold">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg mb-1">Select Your Garment</h4>
+                        <p className="text-slate-400">T-shirt, hoodie, tote bag, hat, or more</p>
+                      </div>
+                    </div>
+
+                    <div className="glass-strong rounded-2xl p-5 hover:scale-105 transition-transform flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center flex-shrink-0 text-white font-bold">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg mb-1">Upload Your Design</h4>
+                        <p className="text-slate-400">See your artwork on an interactive mockup</p>
+                      </div>
+                    </div>
+
+                    <div className="glass-strong rounded-2xl p-5 hover:scale-105 transition-transform flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 text-white font-bold">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg mb-1">Pick Locations & Quantities</h4>
+                        <p className="text-slate-400">Front, back, sleeves - we recommend the perfect sizes</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button onClick={handleOpenWizard} size="lg" className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 px-10 py-7 text-lg glow-accent group">
+                    <Wand2 className="h-6 w-6" />
+                    Try the Size Helper
+                    <Sparkles className="h-5 w-5 group-hover:rotate-12 transition-transform" />
+                  </Button>
+
+                  <p className="text-sm text-slate-400 mt-4 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    Perfect for beginners • Takes less than 2 minutes
+                  </p>
+                </div>
+
+                {/* Right: Visual */}
+                <div className="relative">
+                  <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-500">
+                    <div className="space-y-6">
+                      {/* Mock wizard preview */}
+                      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-white/10">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-xl font-bold">What are you printing on?</h3>
+                          <div className="text-sm text-slate-400">Step 1 of 3</div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          {['👕', '🧥', '👜'].map((emoji, i) => (
+                            <div key={i} className="bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl p-4 text-center hover:scale-110 transition-transform cursor-pointer border border-purple-500/30">
+                              <div className="text-4xl mb-2">{emoji}</div>
+                              <div className="text-xs font-medium">{['T-Shirt', 'Hoodie', 'Tote'][i]}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                        <div className="flex-1 h-2 bg-slate-700 rounded-full"></div>
+                        <div className="flex-1 h-2 bg-slate-700 rounded-full"></div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 rounded-2xl p-6 border border-green-500/30">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-400 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-lg mb-2 text-green-300">Recommended Sizes</h4>
+                            <div className="space-y-1 text-sm text-slate-300">
+                              <div>✓ Front Chest: 12" × 16"</div>
+                              <div>✓ Full Back: 14" × 18"</div>
+                              <div>✓ Sleeves: 3" × 4"</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Floating badge */}
+                  <div className="absolute -top-4 -right-4 glass-strong rounded-2xl p-4 hover:scale-110 transition-transform">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">2min</div>
+                      <div className="text-xs text-slate-400 mt-1">Average Time</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

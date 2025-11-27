@@ -10,15 +10,18 @@ import { ImageCard } from './image-card';
 import { uploadImage } from '@/services/storage';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import WizardTrigger from './wizard-trigger';
 
 type ImageManagerProps = {
   images: ManagedImage[];
   onImagesChange: (images: ManagedImage[]) => void;
+  openWizard?: boolean;
 };
 
 export default function ImageManager({
   images,
   onImagesChange,
+  openWizard = false,
 }: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -151,36 +154,43 @@ export default function ImageManager({
   
   return (
     <div className="glass-strong rounded-2xl p-6 shadow-xl border border-white/10">
-      <div className="flex flex-row items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400"></span>
           Your Images
         </h2>
-        <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="image/png, image/jpeg, image/webp, image/svg+xml"
+        <div className="flex flex-wrap items-center gap-3">
+          <WizardTrigger 
+            onImagesAdded={(newImages) => onImagesChange([...images, ...newImages])} 
+            autoOpen={openWizard}
+          />
+          <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+              accept="image/png, image/jpeg, image/webp, image/svg+xml"
+              disabled={isUploading}
+              multiple
+          />
+          <button 
+            onClick={handleUploadClick} 
             disabled={isUploading}
-            multiple
-        />        <button 
-          onClick={handleUploadClick} 
-          disabled={isUploading}
-          className="py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-lg transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
-        >
-          {isUploading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Uploading...
-            </>
-          ) : (
-            <>
-              <Upload className="h-4 w-4" />
-              Upload
-            </>
-          )}
-        </button>
+            className="py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-lg transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2 whitespace-nowrap"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                Upload
+              </>
+            )}
+          </button>
+        </div>
       </div>
       <div>
         {images.length > 0 ? (

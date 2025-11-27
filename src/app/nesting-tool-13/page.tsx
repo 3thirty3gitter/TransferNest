@@ -1,8 +1,10 @@
+'use client';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import NestingTool from '@/components/nesting-tool';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 function NestingToolFallback() {
   return (
@@ -14,6 +16,19 @@ function NestingToolFallback() {
   )
 }
 
+function NestingToolContent() {
+  const searchParams = useSearchParams();
+  const [shouldOpenWizard, setShouldOpenWizard] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('openWizard') === 'true') {
+      setShouldOpenWizard(true);
+    }
+  }, [searchParams]);
+
+  return <NestingTool sheetWidth={13} openWizard={shouldOpenWizard} />;
+}
+
 export default function NestingTool13Page() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
@@ -22,7 +37,7 @@ export default function NestingTool13Page() {
       <div className="h-40"></div>
       <main className="flex-1">
         <Suspense fallback={<NestingToolFallback/>}>
-          <NestingTool sheetWidth={13} />
+          <NestingToolContent />
         </Suspense>
       </main>
       <Footer />

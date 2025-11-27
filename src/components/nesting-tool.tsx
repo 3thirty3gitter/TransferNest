@@ -23,9 +23,10 @@ const debugLog = (...args: any[]) => {
 
 interface NestingToolProps {
   sheetWidth?: number; // Optional now, defaults to 13
+  openWizard?: boolean; // Optional prop to auto-open wizard
 }
 
-export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingToolProps) {
+export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard = false }: NestingToolProps) {
   const [images, setImages] = useState<ManagedImage[]>([]);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -311,6 +312,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 13 }: NestingTo
           <ImageManager 
             images={images}
             onImagesChange={setImages}
+            openWizard={openWizard}
           />
         </div>
 
