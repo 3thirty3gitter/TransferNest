@@ -8,6 +8,7 @@ import NestingProgressModal from './nesting-progress-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +30,7 @@ interface NestingToolProps {
 export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard = false }: NestingToolProps) {
   const [images, setImages] = useState<ManagedImage[]>([]);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sheetWidth, setSheetWidth] = useState<13 | 17>(initialWidth as 13 | 17);
   
@@ -167,6 +169,15 @@ export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard 
       return;
     }
 
+    if (!acceptedTerms) {
+      toast({
+        title: "Terms Acceptance Required",
+        description: "Please confirm you have the legal rights to reproduce these images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const pricing = calculatePricing();
     const sheetSizeStr = sheetWidth === 17 ? '17' : '13';
     
@@ -197,6 +208,9 @@ export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard 
     };
 
     addItem(cartItem);
+    
+    // Reset terms checkbox after successful add
+    setAcceptedTerms(false);
     
     toast({
       title: "Added to Cart!",
@@ -276,11 +290,32 @@ export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard 
                     </div>
                   </div>
 
+                  {/* Copyright/IP Rights Agreement */}
+                  <div className="mt-4 p-3 border-2 border-red-500 dark:border-red-600 rounded-lg bg-red-50 dark:bg-red-950">
+                    <div className="flex items-start space-x-3">
+                      <Checkbox 
+                        id="copyright-terms"
+                        checked={acceptedTerms}
+                        onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <label 
+                          htmlFor="copyright-terms" 
+                          className="text-xs leading-relaxed cursor-pointer text-red-900 dark:text-red-100"
+                        >
+                          <strong className="block mb-1">Copyright & Intellectual Property Agreement:</strong>
+                          I hereby certify and warrant that I am the rightful owner of, or have obtained all necessary licenses, permissions, and rights to reproduce, print, and distribute all images and designs submitted for production. I understand and agree that I am solely responsible for ensuring all submitted content does not infringe upon any copyright, trademark, patent, trade secret, or other intellectual property rights of any third party. I agree to indemnify, defend, and hold harmless the printing company, its owners, employees, and agents from any and all claims, damages, liabilities, costs, and expenses (including reasonable attorney's fees) arising from or related to any actual or alleged intellectual property infringement. I acknowledge that the printing company has no obligation to verify the legality of submitted content and assumes no liability whatsoever for any legal violations resulting from my submissions.
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Add to Cart Button */}
                   <div className="mt-4 space-y-2">
                     <Button 
                       onClick={handleAddToCart}
-                      disabled={!user}
+                      disabled={!user || !acceptedTerms}
                       className="w-full"
                       size="lg"
                     >
@@ -291,6 +326,11 @@ export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard 
                     {!user && (
                       <p className="text-xs text-muted-foreground text-center">
                         Please sign in to add items to cart
+                      </p>
+                    )}
+                    {user && !acceptedTerms && (
+                      <p className="text-xs text-red-600 dark:text-red-400 text-center font-medium">
+                        Please accept the copyright agreement above
                       </p>
                     )}
                   </div>
