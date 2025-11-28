@@ -66,13 +66,13 @@ export async function POST(request: NextRequest) {
     // We'll use sharp directly to create the exact canvas we need
     const sharp = require('sharp');
     
-    // Create blank white canvas
+    // Create blank transparent canvas
     const canvas = sharp({
       create: {
         width: pixelWidth,
         height: pixelHeight,
         channels: 4,
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
     });
 
