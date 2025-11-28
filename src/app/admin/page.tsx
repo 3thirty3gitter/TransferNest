@@ -102,11 +102,24 @@ export default function AdminPage() {
       const q = query(ordersRef, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as Order[];
+      const ordersData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+        };
+      }) as Order[];
+      
+      // Debug: Log first order's printFiles structure
+      if (ordersData.length > 0) {
+        console.log('[ADMIN] First order printFiles:', {
+          orderId: ordersData[0].id,
+          hasPrintFiles: !!ordersData[0].printFiles,
+          printFilesCount: ordersData[0].printFiles?.length || 0,
+          printFiles: ordersData[0].printFiles
+        });
+      }
       
       setOrders(ordersData);
     } catch (error) {
