@@ -112,6 +112,8 @@ export async function POST(request: NextRequest) {
       console.log('[PAYMENT] Cart items for print files:', JSON.stringify(cartItems.map((item: any) => ({
         id: item.id,
         hasPngUrl: !!item.pngUrl,
+        hasPlacedItems: !!item.placedItems,
+        placedItemsCount: item.placedItems?.length || 0,
         sheetWidth: item.sheetWidth,
         sheetLength: item.sheetLength
       }))));
@@ -119,13 +121,16 @@ export async function POST(request: NextRequest) {
       const printFiles = await linkPrintFilesToOrder(cartItems, userId, orderId, customerInfo);
       
       console.log('[PAYMENT] Linked print files:', printFiles.length);
+      console.log('[PAYMENT] Print files details:', JSON.stringify(printFiles, null, 2));
       
       // Update the order with print files
       if (printFiles.length > 0) {
+        console.log('[PAYMENT] Updating order with print files...');
         await updateOrderPrintFiles(orderId, printFiles);
         console.log('[PAYMENT] Updated order with', printFiles.length, 'print files');
       } else {
-        console.warn('[PAYMENT] No print files were linked!');
+        console.warn('[PAYMENT] No print files were linked! Check cart items data.');
+        console.warn('[PAYMENT] Cart items structure:', JSON.stringify(cartItems, null, 2));
       }
 
       return NextResponse.json({
@@ -268,13 +273,19 @@ async function linkPrintFilesToOrder(cartItems: any[], userId: string, orderId: 
       console.log('[GENERATE_PRINT] Processing cart item:', {
         id: item.id,
         hasPlacedItems: !!item.placedItems,
+        placedItemsCount: item.placedItems?.length || 0,
         sheetWidth: item.sheetWidth,
-        sheetLength: item.sheetLength,
-        placedItemsCount: item.placedItems?.length || 0
+        sheetLength: item.sheetLength
       });
       
       if (!item.placedItems || !item.sheetWidth || !item.sheetLength) {
-        console.warn('[GENERATE_PRINT] Cart item missing required data:', item.id);
+        console.warn('[GENERATE_PRINT] Cart item missing required data:', {
+          id: item.id,
+          hasPlacedItems: !!item.placedItems,
+          hasSheetWidth: !!item.sheetWidth,
+          hasSheetLength: !!item.sheetLength,
+          placedItemsCount: item.placedItems?.length || 0
+        });
         continue;
       }
 
