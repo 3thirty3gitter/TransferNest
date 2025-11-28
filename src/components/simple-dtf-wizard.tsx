@@ -285,7 +285,7 @@ export default function SimpleDTFWizard({ open, onClose, onComplete }: SimpleDTF
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden p-0 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl border-slate-700/50">
         <VisuallyHidden>
           <DialogTitle>DTF Size Helper Wizard</DialogTitle>
         </VisuallyHidden>
@@ -335,7 +335,7 @@ export default function SimpleDTFWizard({ open, onClose, onComplete }: SimpleDTF
 
           {/* Right Column - Live Preview (hidden on review step) */}
           {currentStep !== 'review' && (
-            <div className="hidden lg:block border-l bg-slate-50 dark:bg-slate-900 overflow-y-auto max-h-[90vh]">
+            <div className="hidden lg:block border-l border-slate-700/50 bg-slate-950/40 backdrop-blur-sm overflow-y-auto max-h-[90vh]">
               <WizardLivePreview
                 productType={productType}
                 productName={productName}

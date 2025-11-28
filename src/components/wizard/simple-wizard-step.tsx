@@ -37,7 +37,7 @@ export default function SimpleWizardStep({
     <div className="max-w-2xl mx-auto py-6">
       {/* Question */}
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold mb-2">{question}</h2>
+        <h2 className="text-2xl font-bold mb-2 text-white">{question}</h2>
       </div>
 
       {/* Product Selection */}
@@ -46,11 +46,11 @@ export default function SimpleWizardStep({
           {options.map(option => (
             <Card
               key={option.id}
-              className="p-5 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
+              className="p-5 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center bg-slate-800/50 backdrop-blur-sm border-slate-700/50 hover:bg-slate-700/50"
               onClick={() => onSelect(option.id)}
             >
               {option.icon && <div className="text-5xl mb-2">{option.icon}</div>}
-              <h3 className="font-semibold">{option.label}</h3>
+              <h3 className="font-semibold text-white">{option.label}</h3>
             </Card>
           ))}
         </div>
@@ -58,9 +58,9 @@ export default function SimpleWizardStep({
 
       {/* Name Product or Name Image */}
       {(step === 'name-product' || step === 'name-image') && (
-        <Card className="p-8 text-center">
+        <Card className="p-8 text-center bg-slate-800/50 backdrop-blur-sm border-slate-700/50">
           <div className="max-w-md mx-auto">
-            <p className="text-muted-foreground mb-4 text-sm">
+            <p className="text-slate-300 mb-4 text-sm">
               {step === 'name-product' 
                 ? 'Give your product a name to help you track it'
                 : 'Describe this image so you can identify it later'}
@@ -71,7 +71,7 @@ export default function SimpleWizardStep({
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleTextSubmit()}
-              className="h-11 mb-4"
+              className="h-11 mb-4 bg-slate-900/50 border-slate-600 text-white"
               autoFocus
             />
             <Button
@@ -89,7 +89,7 @@ export default function SimpleWizardStep({
 
       {/* Upload */}
       {step === 'upload' && onUpload && (
-        <Card className="p-12 border-2 border-dashed hover:border-primary transition-colors text-center">
+        <Card className="p-12 border-2 border-dashed border-slate-600 hover:border-primary transition-colors text-center bg-slate-800/50 backdrop-blur-sm">
           <input
             type="file"
             accept="image/*"
@@ -112,12 +112,12 @@ export default function SimpleWizardStep({
             }}
           />
           <div className="flex flex-col items-center gap-6">
-            <div className="p-6 bg-primary/10 rounded-full">
+            <div className="p-6 bg-primary/20 rounded-full">
               <Upload className="w-16 h-16 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-2">Upload Your Image</h3>
-              <p className="text-muted-foreground mb-6 text-sm">PNG, JPG, or SVG files</p>
+              <h3 className="text-lg font-semibold mb-2 text-white">Upload Your Image</h3>
+              <p className="text-slate-300 mb-6 text-sm">PNG, JPG, or SVG files</p>
               <Button
                 type="button"
                 size="lg"
@@ -137,16 +137,16 @@ export default function SimpleWizardStep({
           {options.map(option => (
             <Card
               key={option.id}
-              className="p-4 cursor-pointer hover:shadow-lg transition-all flex items-center justify-between"
+              className="p-4 cursor-pointer hover:shadow-lg transition-all flex items-center justify-between bg-slate-800/50 backdrop-blur-sm border-slate-700/50 hover:bg-slate-700/50"
               onClick={() => onSelect(option.id)}
             >
               <div>
-                <h3 className="font-semibold text-lg mb-0.5">{option.label}</h3>
+                <h3 className="font-semibold text-lg mb-0.5 text-white">{option.label}</h3>
                 {option.description && (
-                  <p className="text-xs text-muted-foreground">{option.description}</p>
+                  <p className="text-xs text-slate-400">{option.description}</p>
                 )}
               </div>
-              <ArrowRight className="w-5 h-5 text-gray-400" />
+              <ArrowRight className="w-5 h-5 text-slate-400" />
             </Card>
           ))}
         </div>
@@ -154,13 +154,14 @@ export default function SimpleWizardStep({
 
       {/* Quantity */}
       {step === 'quantity' && (
-        <Card className="p-8 text-center">
-          <h3 className="text-lg font-semibold mb-4">Enter quantity</h3>
+        <Card className="p-8 text-center bg-slate-800/50 backdrop-blur-sm border-slate-700/50">
+          <h3 className="text-lg font-semibold mb-4 text-white">Enter quantity</h3>
           <div className="flex items-center justify-center gap-4">
             <Button
               size="lg"
               variant="outline"
               onClick={() => onSelect(String(Math.max(1, Number(currentValue || 1) - 1)))}
+              className="border-slate-600 bg-slate-900/50 hover:bg-slate-700/50"
             >
               -
             </Button>
@@ -169,12 +170,13 @@ export default function SimpleWizardStep({
               min="1"
               value={currentValue || 1}
               onChange={(e) => onSelect(e.target.value)}
-              className="w-24 text-center text-2xl"
+              className="w-24 text-center text-2xl bg-slate-900/50 border-slate-600 text-white"
             />
             <Button
               size="lg"
               variant="outline"
               onClick={() => onSelect(String(Number(currentValue || 1) + 1))}
+              className="border-slate-600 bg-slate-900/50 hover:bg-slate-700/50"
             >
               +
             </Button>
@@ -194,18 +196,18 @@ export default function SimpleWizardStep({
       {(step === 'more-locations' || step === 'more-images' || step === 'more-products') && (
         <div className="grid grid-cols-2 gap-4">
           <Card
-            className="p-8 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
+            className="p-8 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center bg-slate-800/50 backdrop-blur-sm border-slate-700/50 hover:bg-slate-700/50"
             onClick={() => onSelect('yes')}
           >
-            <Plus className="w-12 h-12 mx-auto mb-3 text-green-600" />
-            <h3 className="text-xl font-bold text-green-600">Yes</h3>
+            <Plus className="w-12 h-12 mx-auto mb-3 text-green-400" />
+            <h3 className="text-xl font-bold text-green-400">Yes</h3>
           </Card>
           <Card
-            className="p-8 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center"
+            className="p-8 cursor-pointer hover:shadow-lg hover:scale-105 transition-all text-center bg-slate-800/50 backdrop-blur-sm border-slate-700/50 hover:bg-slate-700/50"
             onClick={() => onSelect('no')}
           >
-            <Check className="w-12 h-12 mx-auto mb-3 text-blue-600" />
-            <h3 className="text-xl font-bold text-blue-600">{step === 'more-products' ? 'No, Finish' : 'No, Continue'}</h3>
+            <Check className="w-12 h-12 mx-auto mb-3 text-blue-400" />
+            <h3 className="text-xl font-bold text-blue-400">{step === 'more-products' ? 'No, Finish' : 'No, Continue'}</h3>
           </Card>
         </div>
       )}
