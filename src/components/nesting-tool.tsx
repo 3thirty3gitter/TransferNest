@@ -13,6 +13,7 @@ import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { ShoppingCart, Download } from 'lucide-react';
+import Link from 'next/link';
 
 // Development-only logging
 const debugLog = (...args: any[]) => {
@@ -305,7 +306,13 @@ export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard 
                           className="text-xs leading-relaxed cursor-pointer text-red-900 dark:text-red-100"
                         >
                           <strong className="block mb-1">Copyright & Intellectual Property Agreement:</strong>
-                          I hereby certify and warrant that I am the rightful owner of, or have obtained all necessary licenses, permissions, and rights to reproduce, print, and distribute all images and designs submitted for production. I understand and agree that I am solely responsible for ensuring all submitted content does not infringe upon any copyright, trademark, patent, trade secret, or other intellectual property rights of any third party. I agree to indemnify, defend, and hold harmless the printing company, its owners, employees, and agents from any and all claims, damages, liabilities, costs, and expenses (including reasonable attorney's fees) arising from or related to any actual or alleged intellectual property infringement. I acknowledge that the printing company has no obligation to verify the legality of submitted content and assumes no liability whatsoever for any legal violations resulting from my submissions.
+                          I hereby certify and warrant that I am the rightful owner of, or have obtained all necessary licenses, permissions, and rights to reproduce, print, and distribute all images and designs submitted for production. I understand and agree that I am solely responsible for ensuring all submitted content does not infringe upon any copyright, trademark, patent, trade secret, or other intellectual property rights of any third party. I agree to indemnify, defend, and hold harmless 3Thirty3 Ltd. o/a DTF Wholesale Canada, its owners, employees, and agents from any and all claims, damages, liabilities, costs, and expenses (including reasonable attorney's fees) arising from or related to any actual or alleged intellectual property infringement. I acknowledge that the printing company has no obligation to verify the legality of submitted content and assumes no liability whatsoever for any legal violations resulting from my submissions.
+                          <span className="block mt-2 text-blue-600 dark:text-blue-400">
+                            By checking this box, you agree to our{' '}
+                            <Link href="/terms" target="_blank" className="underline hover:text-blue-700 dark:hover:text-blue-300">
+                              full Terms of Service
+                            </Link>.
+                          </span>
                         </label>
                       </div>
                     </div>

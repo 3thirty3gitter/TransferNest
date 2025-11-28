@@ -18,20 +18,32 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Acceptance of Terms</h2>
               <p>
-                By accessing and using TransferNest's (DTF Wholesale) services, website, design tools, nesting wizard, 
-                or placing any order, you agree to be bound by these Terms of Service and all applicable laws and regulations. 
+                By accessing and using TransferNest's services (operated by 3Thirty3 Ltd. o/a DTF Wholesale Canada), 
+                including our website, design tools, nesting wizard, direct nesting tool, or placing any order, 
+                you agree to be bound by these Terms of Service and all applicable laws and regulations. 
                 If you do not agree to these terms in their entirety, you must immediately cease using our services.
               </p>
-            </section>
-
+              <p className="mt-2">
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Service Description</h2>
               <p>
-                TransferNest provides DTF (Direct-to-Film) transfer printing services with AI-powered 
-                gang sheet nesting and a conversational design wizard. We offer tools to upload designs, 
-                optimize layouts, specify product placements, and order professional transfers for apparel decoration.
+                TransferNest (operated by 3Thirty3 Ltd. o/a DTF Wholesale Canada) provides DTF (Direct-to-Film) 
+                transfer printing services with AI-powered gang sheet nesting and a conversational design wizard. 
+                We offer multiple tools to upload designs, optimize layouts, specify product placements, and order 
+                professional transfers for apparel decoration.
               </p>
               <p>
+                Our services include but are not limited to: image upload and management, automated nesting algorithms, 
+                product mockup previews, size recommendations, custom print file generation, order fulfillment, and 
+                direct-to-customer nesting tools for manual layout optimization.
+              </p>
+            <section>
+              <h2 className="text-2xl font-bold text-white mb-4">Design Wizard and Size Specifications</h2>
+              <p className="font-semibold text-amber-300">
+                ⚠️ CRITICAL: You are solely responsible for all size specifications entered through our design wizard 
+                or nesting tool.
+              </p>
+              <p>When using our design wizard or direct nesting tool, you acknowledge and agree that:</p>
                 Our services include but are not limited to: image upload and management, automated nesting algorithms, 
                 product mockup previews, size recommendations, custom print file generation, and order fulfillment.
               </p>
@@ -55,14 +67,14 @@ export default function TermsOfService() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-white mb-4">Intellectual Property and Copyright</h2>
-              <p className="font-semibold text-red-300">
-                ⚠️ YOU ARE SOLELY RESPONSIBLE FOR ALL CONTENT YOU UPLOAD
-              </p>
-              <p>By uploading any image, design, logo, text, or other content to our service, you certify, warrant, and agree that:</p>
-              <ul className="list-disc pl-6 space-y-2">
-                <li>You are the rightful owner of, or have obtained all necessary licenses, permissions, rights, and authorizations to reproduce, print, distribute, and commercially exploit all uploaded content</li>
-                <li>Your content does not infringe upon any copyright, trademark, patent, trade secret, right of publicity, right of privacy, or other intellectual property rights of any third party</li>
+              <p className="font-semibold text-red-300 mt-3">
+                INDEMNIFICATION: You agree to indemnify, defend, and hold harmless 3Thirty3 Ltd. o/a DTF Wholesale Canada, 
+                TransferNest, its owners, officers, employees, contractors, and agents from any and all claims, demands, damages, 
+                liabilities, losses, costs, and expenses (including reasonable attorney's fees and court costs) arising 
+                from or related to: (a) any actual or alleged intellectual property infringement, (b) any breach of 
+                these representations and warranties, (c) any third-party claims related to your uploaded content, 
+                (d) any legal actions or proceedings arising from the production or distribution of your designs.
+              </p>i>Your content does not infringe upon any copyright, trademark, patent, trade secret, right of publicity, right of privacy, or other intellectual property rights of any third party</li>
                 <li>You have obtained all necessary model releases, property releases, and permissions for any persons, logos, brands, or properties depicted in your content</li>
                 <li>Your content does not violate any law, statute, ordinance, or regulation</li>
                 <li>Your content is not defamatory, libelous, obscene, pornographic, threatening, harassing, or hateful</li>
@@ -158,15 +170,15 @@ export default function TermsOfService() {
                 <li>Copyright or intellectual property disputes</li>
                 <li>Changes in your design requirements after production begins</li>
                 <li>Customer error in specifications, quantities, or product selection</li>
-              </ul>
-            </section>
-
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Limitation of Liability</h2>
               <p className="font-semibold text-amber-300">
                 TO THE MAXIMUM EXTENT PERMITTED BY LAW:
               </p>
               <p>
+                3Thirty3 Ltd. o/a DTF Wholesale Canada, TransferNest, and all affiliated entities, officers, directors, 
+                employees, contractors, and agents SHALL NOT BE LIABLE for any indirect, incidental, special, consequential, 
+                punitive, or exemplary damages arising from or related to:
                 TransferNest, DTF Wholesale, and all affiliated entities, officers, directors, employees, contractors, 
                 and agents SHALL NOT BE LIABLE for any indirect, incidental, special, consequential, punitive, or 
                 exemplary damages arising from or related to:
@@ -221,18 +233,18 @@ export default function TermsOfService() {
                 We reserve the right to suspend or terminate your access to our services at any time, with or without 
                 notice, for any reason including but not limited to: violation of these terms, suspected fraudulent 
                 activity, copyright infringement, abusive behavior, or failure to pay amounts owed.
-              </p>
-            </section>
-
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Governing Law and Disputes</h2>
               <p>
                 These Terms of Service shall be governed by and construed in accordance with the laws of the Province 
-                of Ontario, Canada, without regard to its conflict of law provisions.
+                of Alberta, Canada, without regard to its conflict of law provisions.
               </p>
               <p>
                 Any disputes arising from these terms or our services shall be resolved through binding arbitration 
-                in accordance with the Arbitration Act (Ontario), except for intellectual property disputes and claims 
+                in accordance with the Arbitration Act (Alberta), except for intellectual property disputes and claims 
+                for injunctive relief which may be brought in the courts of Alberta.
+              </p>
+            </section>ordance with the Arbitration Act (Ontario), except for intellectual property disputes and claims 
                 for injunctive relief which may be brought in the courts of Ontario.
               </p>
             </section>
@@ -253,15 +265,12 @@ export default function TermsOfService() {
                 Changes will be effective immediately upon posting to our website. Your continued use of our 
                 services after changes constitutes acceptance of the modified terms. It is your responsibility 
                 to review these terms periodically.
-              </p>
-            </section>
-
             <section>
               <h2 className="text-2xl font-bold text-white mb-4">Entire Agreement</h2>
               <p>
                 These Terms of Service, together with our Privacy Policy and any other policies referenced herein, 
-                constitute the entire agreement between you and TransferNest regarding your use of our services and 
-                supersede all prior agreements and understandings.
+                constitute the entire agreement between you and 3Thirty3 Ltd. o/a DTF Wholesale Canada regarding 
+                your use of our services and supersede all prior agreements and understandings.
               </p>
             </section>
 
@@ -271,9 +280,14 @@ export default function TermsOfService() {
                 For questions about these Terms of Service, intellectual property concerns, or general inquiries, 
                 contact us at:
               </p>
-              <p className="mt-2">
-                <strong>Email:</strong> support@dtfwholesale.ca<br />
-                <strong>Business Name:</strong> TransferNest (DTF Wholesale)<br />
+              <div className="mt-3 space-y-1">
+                <p><strong>Legal Name:</strong> 3Thirty3 Ltd. o/a DTF Wholesale Canada</p>
+                <p><strong>Operating As:</strong> TransferNest / DTF Wholesale Canada</p>
+                <p><strong>Address:</strong> 201-5415 Calgary Trail NW, Edmonton, Alberta</p>
+                <p><strong>Phone:</strong> 587-405-3005</p>
+                <p><strong>Email:</strong> support@dtfwholesale.ca</p>
+              </div>
+            </section>g>Business Name:</strong> TransferNest (DTF Wholesale)<br />
                 <strong>Location:</strong> Ontario, Canada
               </p>
             </section>
