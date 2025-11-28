@@ -273,26 +273,26 @@ export default function Home() {
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-4">
                 <Scissors className="h-4 w-4 text-cyan-400" />
-                <span className="text-sm font-medium">Choose Your Size</span>
+                <span className="text-sm font-medium">Our Sheet Size</span>
               </div>
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
                 <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                  Gang Sheet Sizes
+                  Premium DTF Transfers
                 </span>
               </h2>
               <p className="max-w-3xl mx-auto text-slate-300 text-lg">
-                Pick the perfect size for your project. Both options deliver professional results.
+                Professional 17" wide gang sheets delivering exceptional results.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 gap-8 max-w-2xl mx-auto">
               {loading ? (
-                <div className="col-span-2 text-center py-12">
+                <div className="text-center py-12">
                   <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-cyan-400 border-r-transparent"></div>
                   <p className="mt-4 text-slate-300">Loading products...</p>
                 </div>
               ) : products.length === 0 ? (
-                <div className="col-span-2 text-center py-12">
+                <div className="text-center py-12">
                   <p className="text-slate-300">No products available at this time.</p>
                 </div>
               ) : (
