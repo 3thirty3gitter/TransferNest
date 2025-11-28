@@ -195,20 +195,16 @@ export async function POST(request: NextRequest) {
             gravity: 'northwest', // Top-left positioning, no centering
             premultiplied: false  // Don't pre-multiply alpha
           })))
-          .ensureAlpha()  // Ensure output has alpha channel
           .png({ 
-            quality: 100,
             compressionLevel: 9,
-            palette: false,       // Don't use palette (keeps full alpha channel)
+            adaptiveFiltering: false,
             force: true           // Force PNG format
           })
           .toBuffer()
       : await canvas
-          .ensureAlpha()
           .png({ 
-            quality: 100,
             compressionLevel: 9,
-            palette: false,
+            adaptiveFiltering: false,
             force: true
           })
           .toBuffer();
