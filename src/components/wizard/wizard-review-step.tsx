@@ -9,6 +9,7 @@ import { ArrowRight, Edit2, Check, Ruler, AlertCircle, Lock } from 'lucide-react
 import { LOCATION_INFO } from '@/lib/wizard-config';
 import { GarmentType, PrintLocation } from '@/types/wizard';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface ImagePlacement {
   imageId: string;
@@ -282,29 +283,36 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
       </Card>
 
       {/* Signature / Acceptance */}
-      <Card className="p-5 mb-5 border-2 border-amber-500 dark:border-amber-600">
+      <Card className="p-5 mb-5 border-2 border-amber-500 dark:border-amber-600 bg-slate-800/50 backdrop-blur-sm">
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h3 className="font-bold text-base mb-2">Important: Size Confirmation Required</h3>
-              <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+              <h3 className="font-bold text-base mb-2 text-white">Important: Size Confirmation Required</h3>
+              <p className="text-sm text-slate-300 mb-3 leading-relaxed">
                 By typing your name below, you confirm that you have:
               </p>
-              <ul className="text-sm text-muted-foreground space-y-1 mb-3 ml-4">
+              <ul className="text-sm text-slate-300 space-y-1 mb-3 ml-4">
                 <li>✓ Reviewed all print sizes (width and height)</li>
                 <li>✓ Used a measuring tape on your actual garments</li>
                 <li>✓ Verified the designs will fit properly on your chosen garment sizes</li>
                 <li>✓ Understand that we are not responsible if the final prints don't match your expectations</li>
               </ul>
-              <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">
+              <p className="text-xs text-amber-400 font-semibold mb-2">
                 ⚠️ We cannot accept returns or refunds for size-related issues after production begins.
+              </p>
+              <p className="text-xs text-slate-400">
+                By signing below, you agree to our{' '}
+                <Link href="/terms" target="_blank" className="text-blue-400 hover:text-blue-300 underline">
+                  full Terms of Service
+                </Link>
+                , including all intellectual property, copyright, and liability terms.
               </p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="signature" className="text-sm font-medium">
+            <label htmlFor="signature" className="text-sm font-medium text-white">
               Type your full name to accept these sizes:
             </label>
             <Input
@@ -316,10 +324,10 @@ export default function WizardReviewStep({ placements, onUpdateWidth, onComplete
                 setSignature(e.target.value);
                 setShowSignatureError(false);
               }}
-              className={`text-base ${showSignatureError ? 'border-red-500' : ''}`}
+              className={`text-base bg-slate-900/50 border-slate-600 text-white ${showSignatureError ? 'border-red-500' : ''}`}
             />
             {showSignatureError && (
-              <p className="text-sm text-red-600 flex items-center gap-1">
+              <p className="text-sm text-red-400 flex items-center gap-1">
                 <AlertCircle className="w-4 h-4" />
                 Please type your name to confirm you've reviewed and accept these sizes
               </p>
