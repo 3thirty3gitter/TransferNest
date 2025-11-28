@@ -184,25 +184,32 @@ export async function POST(request: NextRequest) {
 
     // Generate final image with explicit composite options to prevent stretching
     const pngBuffer = validComposites.length > 0
-      ? await canvas.composite(validComposites.map(op => ({
-          input: op.input,
-          left: op.left,
-          top: op.top,
-          blend: 'over',        // Don't blend/resize, just overlay
-          gravity: 'northwest', // Top-left positioning, no centering
-          premultiplied: false  // Don't pre-multiply alpha
-        }))).png({ 
-          quality: 100,
-          compressionLevel: 9,
-          palette: false,       // Don't use palette (keeps full alpha channel)
-          force: true           // Force PNG format
-        }).toBuffer()
-      : await canvas.png({ 
-          quality: 100,
-          compressionLevel: 9,
-          palette: false,
-          force: true
-        }).toBuffer();
+      ? await canvas
+          .composite(validComposites.map(op => ({
+            input: op.input,
+            left: op.left,
+            top: op.top,
+            blend: 'over',        // Don't blend/resize, just overlay
+            gravity: 'northwest', // Top-left positioning, no centering
+            premultiplied: false  // Don't pre-multiply alpha
+          })))
+          .ensureAlpha()  // Ensure output has alpha channel
+          .png({ 
+            quality: 100,
+            compressionLevel: 9,
+            palette: false,       // Don't use palette (keeps full alpha channel)
+            force: true           // Force PNG format
+          })
+          .toBuffer()
+      : await canvas
+          .ensureAlpha()
+          .png({ 
+            quality: 100,
+            compressionLevel: 9,
+            palette: false,
+            force: true
+          })
+          .toBuffer();
 
     console.log('[GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
 
