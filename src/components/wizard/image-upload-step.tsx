@@ -89,18 +89,18 @@ export default function ImageUploadStep({ onUpload, currentImage }: ImageUploadS
           </Card>
         ) : (
           <div className="w-full max-w-md">
+            <input
+              id="file-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
             <Card
               className="p-12 border-2 border-dashed hover:border-primary transition-colors"
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              <input
-                id="file-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
               <div className="flex flex-col items-center gap-6 text-center">
                 <div className="p-6 bg-primary/10 rounded-full">
                   <Upload className="h-16 w-16 text-primary" />
