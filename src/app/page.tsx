@@ -53,12 +53,15 @@ export default function Home() {
           ...doc.data(),
         })) as Product[];
         
+        console.log('All active products from DB:', productsData.map(p => ({ id: p.id, name: p.name, sheetSize: p.sheetSize, isActive: p.isActive })));
+        
         // Filter out 13" products and sort by sheetSize
         const filteredProducts = productsData
           .filter(p => p.sheetSize !== '13')
           .sort((a, b) => a.sheetSize.localeCompare(b.sheetSize));
         
-        console.log('Loaded products:', filteredProducts.length);
+        console.log('Filtered products (non-13"):', filteredProducts.map(p => ({ id: p.id, name: p.name, sheetSize: p.sheetSize })));
+        console.log('Final product count:', filteredProducts.length);
         setProducts(filteredProducts);
       } catch (error) {
         console.error('Error loading products:', error);
