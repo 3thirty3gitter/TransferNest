@@ -48,19 +48,19 @@ export default function ImageUploadStep({ onUpload, currentImage }: ImageUploadS
   }, [onUpload]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-xl font-semibold mb-2">Upload Your Design</h3>
+        <h3 className="text-xl font-semibold mb-2">Upload Your Image</h3>
         <p className="text-muted-foreground">
-          Upload the artwork you want to print on your garment
+          PNG, JPG, or SVG files
         </p>
       </div>
 
-      <div className="mt-6">
+      <div className="flex justify-center">
         {currentImage ? (
-          <Card className="p-6">
+          <Card className="p-6 w-full max-w-md">
             <div className="flex flex-col items-center gap-4">
-              <div className="relative w-full max-w-md aspect-square bg-gray-100 rounded-lg overflow-hidden">
+              <div className="relative w-full aspect-square bg-gray-100 rounded-lg overflow-hidden">
                 <img
                   src={currentImage}
                   alt="Preview"
@@ -88,37 +88,39 @@ export default function ImageUploadStep({ onUpload, currentImage }: ImageUploadS
             </div>
           </Card>
         ) : (
-          <Card
-            className="p-12 border-2 border-dashed hover:border-primary transition-colors cursor-pointer"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById('file-upload')?.click()}
-          >
-            <input
-              id="file-upload"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <div className="flex flex-col items-center gap-4 text-center pointer-events-none">
-              <div className="p-4 bg-primary/10 rounded-full">
-                <ImageIcon className="h-12 w-12 text-primary" />
+          <div className="w-full max-w-md">
+            <Card
+              className="p-12 border-2 border-dashed hover:border-primary transition-colors"
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <input
+                id="file-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <div className="flex flex-col items-center gap-6 text-center">
+                <div className="p-6 bg-primary/10 rounded-full">
+                  <Upload className="h-16 w-16 text-primary" />
+                </div>
+                <div className="space-y-4">
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={() => document.getElementById('file-upload')?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Choose File
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    or drag and drop your file here
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-lg font-semibold mb-1">
-                  Drop your image here or click to browse
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  PNG, JPG, SVG up to 10MB
-                </p>
-              </div>
-              <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2">
-                <Upload className="h-4 w-4 mr-2" />
-                Choose File
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         )}
       </div>
     </div>
