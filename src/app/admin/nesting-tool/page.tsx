@@ -19,7 +19,7 @@ export default function AdminNestingTool() {
   const [images, setImages] = useState<ManagedImage[]>([]);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [sheetWidth, setSheetWidth] = useState<13 | 17>(13);
+  const [sheetWidth, setSheetWidth] = useState<13 | 17>(17);
 
   // Progress modal state
   const [modalStage, setModalStage] = useState<'preparing' | 'genetic-algorithm' | 'optimizing' | 'complete'>('preparing');

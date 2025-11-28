@@ -38,7 +38,7 @@ export default function Home() {
 
   const handleOpenWizard = () => {
     // Navigate to nesting tool with a query parameter to auto-open wizard
-    router.push('/nesting-tool-13?openWizard=true');
+    router.push('/nesting-tool-17?openWizard=true');
   };
 
   useEffect(() => {
@@ -401,7 +401,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold mb-3">Wholesale Pricing</h3>
                 <p className="text-slate-300 leading-relaxed">
-                  Pay by the inch and save big. Just $0.45/inch for 13" sheets and $0.59/inch for 17" sheets.
+                  Pay by the inch and save big. Just $0.59/inch for 17" wide sheets.
                 </p>
               </div>
 
