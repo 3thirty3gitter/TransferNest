@@ -89,9 +89,10 @@ export default function ImageUploadStep({ onUpload, currentImage }: ImageUploadS
           </Card>
         ) : (
           <Card
-            className="p-12 border-2 border-dashed hover:border-primary transition-colors"
+            className="p-12 border-2 border-dashed hover:border-primary transition-colors cursor-pointer"
             onDragOver={handleDragOver}
             onDrop={handleDrop}
+            onClick={() => document.getElementById('file-upload')?.click()}
           >
             <input
               id="file-upload"
@@ -100,25 +101,23 @@ export default function ImageUploadStep({ onUpload, currentImage }: ImageUploadS
               onChange={handleFileChange}
               className="hidden"
             />
-            <label htmlFor="file-upload" className="cursor-pointer block">
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div className="p-4 bg-primary/10 rounded-full">
-                  <ImageIcon className="h-12 w-12 text-primary" />
-                </div>
-                <div>
-                  <p className="text-lg font-semibold mb-1">
-                    Drop your image here or click to browse
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    PNG, JPG, SVG up to 10MB
-                  </p>
-                </div>
-                <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Choose File
-                </div>
+            <div className="flex flex-col items-center gap-4 text-center pointer-events-none">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <ImageIcon className="h-12 w-12 text-primary" />
               </div>
-            </label>
+              <div>
+                <p className="text-lg font-semibold mb-1">
+                  Drop your image here or click to browse
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  PNG, JPG, SVG up to 10MB
+                </p>
+              </div>
+              <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2">
+                <Upload className="h-4 w-4 mr-2" />
+                Choose File
+              </div>
+            </div>
           </Card>
         )}
       </div>
