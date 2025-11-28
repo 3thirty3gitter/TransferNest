@@ -53,12 +53,13 @@ export default function Home() {
           ...doc.data(),
         })) as Product[];
         
-        console.log('All active products from DB:', productsData.map(p => ({ id: p.id, name: p.name, sheetSize: p.sheetSize, isActive: p.isActive })));
+        console.log('All active products from DB:', productsData.map(p => ({ id: p.id, name: p.name, sheetSize: p.sheetSize, sheetSizeType: typeof p.sheetSize, isActive: p.isActive })));
         
         // Filter out 13" products and sort by sheetSize
+        // Check both string '13' and number 13
         const filteredProducts = productsData
-          .filter(p => p.sheetSize !== '13')
-          .sort((a, b) => a.sheetSize.localeCompare(b.sheetSize));
+          .filter(p => p.sheetSize !== '13' && p.sheetSize !== 13)
+          .sort((a, b) => String(a.sheetSize).localeCompare(String(b.sheetSize)));
         
         console.log('Filtered products (non-13"):', filteredProducts.map(p => ({ id: p.id, name: p.name, sheetSize: p.sheetSize })));
         console.log('Final product count:', filteredProducts.length);
