@@ -53,11 +53,13 @@ export default function Home() {
           ...doc.data(),
         })) as Product[];
         
-        // Sort by sheetSize in memory instead of in query
-        productsData.sort((a, b) => a.sheetSize.localeCompare(b.sheetSize));
+        // Filter out 13" products and sort by sheetSize
+        const filteredProducts = productsData
+          .filter(p => p.sheetSize !== '13')
+          .sort((a, b) => a.sheetSize.localeCompare(b.sheetSize));
         
-        console.log('Loaded products:', productsData.length);
-        setProducts(productsData);
+        console.log('Loaded products:', filteredProducts.length);
+        setProducts(filteredProducts);
       } catch (error) {
         console.error('Error loading products:', error);
       } finally {
