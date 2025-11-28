@@ -94,30 +94,26 @@ export default function ImageUploadStep({ onUpload, currentImage }: ImageUploadS
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
+              <input
+                id="file-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
               <div className="flex flex-col items-center gap-6 text-center">
                 <div className="p-6 bg-primary/10 rounded-full">
                   <Upload className="h-16 w-16 text-primary" />
                 </div>
                 <div className="space-y-4">
-                  <input
-                    id="file-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <label htmlFor="file-upload">
-                    <Button
-                      type="button"
-                      size="lg"
-                      asChild
-                    >
-                      <span className="cursor-pointer">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Choose File
-                      </span>
-                    </Button>
-                  </label>
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={() => document.getElementById('file-upload')?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Choose File
+                  </Button>
                   <p className="text-sm text-muted-foreground">
                     or drag and drop your file here
                   </p>
