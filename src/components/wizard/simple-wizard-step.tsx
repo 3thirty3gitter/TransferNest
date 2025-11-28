@@ -89,19 +89,45 @@ export default function SimpleWizardStep({
 
       {/* Upload */}
       {step === 'upload' && onUpload && (
-        <Card className="p-8 border-2 border-dashed border-gray-300 hover:border-primary transition-colors text-center">
-          <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-          <h3 className="text-lg font-semibold mb-2">Upload Your Image</h3>
-          <p className="text-muted-foreground mb-4 text-sm">PNG, JPG, or SVG files</p>
-          <Input
+        <Card className="p-12 border-2 border-dashed hover:border-primary transition-colors text-center">
+          <input
             type="file"
             accept="image/*"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) onUpload(file);
             }}
-            className="max-w-sm mx-auto"
+            id="wizard-file-upload"
+            style={{
+              position: 'absolute',
+              width: '1px',
+              height: '1px',
+              padding: '0',
+              margin: '-1px',
+              overflow: 'hidden',
+              clip: 'rect(0, 0, 0, 0)',
+              whiteSpace: 'nowrap',
+              border: '0',
+              visibility: 'hidden'
+            }}
           />
+          <div className="flex flex-col items-center gap-6">
+            <div className="p-6 bg-primary/10 rounded-full">
+              <Upload className="w-16 h-16 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Upload Your Image</h3>
+              <p className="text-muted-foreground mb-6 text-sm">PNG, JPG, or SVG files</p>
+              <Button
+                type="button"
+                size="lg"
+                onClick={() => document.getElementById('wizard-file-upload')?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Choose File
+              </Button>
+            </div>
+          </div>
         </Card>
       )}
 
