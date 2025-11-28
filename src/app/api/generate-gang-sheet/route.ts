@@ -113,8 +113,10 @@ export async function POST(request: NextRequest) {
               const arrayBuffer = await response.arrayBuffer();
               const buffer = Buffer.from(arrayBuffer);
               
-              // Resize to exact dimensions first
-              let processedImage = sharp(buffer).resize(imageWidth, imageHeight, { fit: 'fill' });
+              // Resize to exact dimensions first - ensure alpha channel is preserved
+              let processedImage = sharp(buffer)
+                .ensureAlpha()  // Ensure alpha channel exists
+                .resize(imageWidth, imageHeight, { fit: 'fill' });
               
               // If rotated, rotate WITHOUT expand, keeping exact dimensions
               if (isRotated) {
@@ -122,8 +124,8 @@ export async function POST(request: NextRequest) {
                 processedImage = processedImage.rotate(-90, { background: { r: 0, g: 0, b: 0, alpha: 0 } });
               }
               
-              // Convert to buffer to check actual dimensions
-              const tempBuffer = await processedImage.png().toBuffer();
+              // Convert to buffer to check actual dimensions - force PNG to preserve alpha
+              const tempBuffer = await processedImage.png({ palette: false, force: true }).toBuffer();
               const tempMeta = await sharp(tempBuffer).metadata();
               
               console.log(`[GANG_SHEET] After rotation - actual: ${tempMeta.width}x${tempMeta.height}px, expected: ${isRotated ? imageHeight : imageWidth}x${isRotated ? imageWidth : imageHeight}px`);
@@ -141,7 +143,7 @@ export async function POST(request: NextRequest) {
                     width: Math.min(expectedWidth, tempMeta.width || expectedWidth),
                     height: Math.min(expectedHeight, tempMeta.height || expectedHeight)
                   })
-                  .png()
+                  .png({ palette: false, force: true })
                   .toBuffer();
               } else {
                 imageBuffer = tempBuffer;
@@ -189,8 +191,18 @@ export async function POST(request: NextRequest) {
           blend: 'over',        // Don't blend/resize, just overlay
           gravity: 'northwest', // Top-left positioning, no centering
           premultiplied: false  // Don't pre-multiply alpha
-        }))).png({ quality: 100 }).toBuffer()
-      : await canvas.png({ quality: 100 }).toBuffer();
+        }))).png({ 
+          quality: 100,
+          compressionLevel: 9,
+          palette: false,       // Don't use palette (keeps full alpha channel)
+          force: true           // Force PNG format
+        }).toBuffer()
+      : await canvas.png({ 
+          quality: 100,
+          compressionLevel: 9,
+          palette: false,
+          force: true
+        }).toBuffer();
 
     console.log('[GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
 
