@@ -6,6 +6,7 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { checkAdminAccess } from '@/middleware/adminAuth';
+import { Download } from 'lucide-react';
 
 type OrderStatus = 'pending' | 'paid' | 'printing' | 'shipped' | 'completed';
 type PaymentStatus = 'pending' | 'paid' | 'refunded';
@@ -138,22 +139,29 @@ export default function AdminPage() {
     
     // If single file, download directly
     if (order.printFiles.length === 1) {
-      window.open(order.printFiles[0].url, '_blank');
+      triggerDownload(order.printFiles[0].url, order.printFiles[0].filename);
       return;
     }
     
-    // If multiple files, show selection
-    const fileNames = order.printFiles.map((f, i) => `${i + 1}. ${f.filename}`).join('\n');
-    const selection = prompt(`Select file to download:\n\n${fileNames}\n\nEnter file number (1-${order.printFiles.length}):`);
-    
-    if (!selection) return;
-    
-    const index = parseInt(selection) - 1;
-    if (index >= 0 && index < order.printFiles.length) {
-      window.open(order.printFiles[index].url, '_blank');
-    } else {
-      alert('Invalid file number');
+    // If multiple files, download all with a short delay between each
+    if (confirm(`Download all ${order.printFiles.length} files?\n\nNote: Your browser may ask for permission to download multiple files.`)) {
+      for (let i = 0; i < order.printFiles.length; i++) {
+        const file = order.printFiles[i];
+        setTimeout(() => {
+          triggerDownload(file.url, file.filename);
+        }, i * 300); // 300ms delay between each download
+      }
     }
+  }
+
+  function triggerDownload(url: string, filename: string) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function toggleOrderSelection(orderId: string) {
@@ -498,7 +506,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => downloadPrintFile(order)}
                         disabled={!order.printFiles || order.printFiles.length === 0}
-                        className={`px-3 py-1 rounded-lg transition-colors ${
+                        className={`px-3 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
                           order.printFiles && order.printFiles.length > 0
                             ? 'bg-blue-600 hover:bg-blue-700 text-white'
                             : 'glass border border-white/10 text-slate-500 cursor-not-allowed'
@@ -507,8 +515,9 @@ export default function AdminPage() {
                           ? `Download ${order.printFiles.length} file(s)` 
                           : 'No files available'}
                       >
+                        <Download className="h-4 w-4" />
                         {order.printFiles && order.printFiles.length > 0 
-                          ? `Files (${order.printFiles.length})` 
+                          ? `${order.printFiles.length}` 
                           : 'No Files'}
                       </button>
                     </div>
