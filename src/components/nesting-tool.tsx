@@ -28,12 +28,12 @@ interface NestingToolProps {
   openWizard?: boolean; // Optional prop to auto-open wizard
 }
 
-export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard = false }: NestingToolProps) {
+export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard = false }: NestingToolProps) {
   const [images, setImages] = useState<ManagedImage[]>([]);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [sheetWidth, setSheetWidth] = useState<13 | 17>(initialWidth as 13 | 17);
+  const [sheetWidth, setSheetWidth] = useState<13 | 17>(17); // Always 17 now
   
   // Progress modal state
   const [modalStage, setModalStage] = useState<'preparing' | 'genetic-algorithm' | 'optimizing' | 'complete'>('preparing');
@@ -244,20 +244,12 @@ export default function NestingTool({ sheetWidth: initialWidth = 13, openWizard 
               <label className="text-sm font-medium mb-2 block">Sheet Width</label>
               <div className="flex gap-2">
                 <Button
-                  variant={sheetWidth === 13 ? 'default' : 'outline'}
-                  onClick={() => setSheetWidth(13)}
+                  variant="default"
+                  disabled
                   className="flex-1"
                   size="sm"
                 >
-                  13"
-                </Button>
-                <Button
-                  variant={sheetWidth === 17 ? 'default' : 'outline'}
-                  onClick={() => setSheetWidth(17)}
-                  className="flex-1"
-                  size="sm"
-                >
-                  17"
+                  17" Wide Sheets
                 </Button>
               </div>
             </div>

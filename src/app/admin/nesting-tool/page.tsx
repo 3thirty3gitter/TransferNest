@@ -300,22 +300,10 @@ export default function AdminNestingTool() {
                 <label className="text-sm font-semibold mb-3 block text-slate-300">Sheet Width</label>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setSheetWidth(13)}
-                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${sheetWidth === 13
-                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg scale-105'
-                      : 'bg-white/10 text-slate-300 hover:bg-white/20 border border-white/20'
-                      }`}
-                  >
-                    13"
-                  </button>
-                  <button
                     onClick={() => setSheetWidth(17)}
-                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${sheetWidth === 17
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg scale-105'
-                      : 'bg-white/10 text-slate-300 hover:bg-white/20 border border-white/20'
-                      }`}
+                    className="flex-1 py-3 px-4 rounded-xl font-semibold transition-all bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
                   >
-                    17"
+                    17" Wide Sheets
                   </button>
                 </div>
               </div>
