@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
 
     // We'll use sharp directly to create the exact canvas we need
     const sharp = require('sharp');
+    sharp.cache(false); // Disable cache to ensure fresh processing
     
     // Create blank transparent canvas using 'create' operation
     // This ensures a properly initialized RGBA buffer with 0 alpha
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
         channels: 4,
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
-    }).ensureAlpha();
+    });
 
     // Composite all images onto the sheet
     const compositeOps = await Promise.all(
@@ -192,7 +193,6 @@ export async function POST(request: NextRequest) {
             top: op.top,
             blend: 'over',        // Don't blend/resize, just overlay
             gravity: 'northwest', // Top-left positioning, no centering
-            // premultiplied: false  // Let Sharp handle premultiplication automatically
           })))
           .png({ 
             compressionLevel: 9,
@@ -209,6 +209,15 @@ export async function POST(request: NextRequest) {
             palette: false
           })
           .toBuffer();
+
+    // Log metadata to verify transparency
+    const meta = await sharp(pngBuffer).metadata();
+    console.log('[GANG_SHEET] Output metadata:', {
+      channels: meta.channels,
+      hasAlpha: meta.hasAlpha,
+      space: meta.space,
+      size: pngBuffer.length
+    });
 
     console.log('[GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
 
