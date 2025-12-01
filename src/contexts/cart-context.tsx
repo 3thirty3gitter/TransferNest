@@ -25,6 +25,7 @@ export interface CartItem {
   sheetWidth?: number;  // Numeric sheet width for print generation
   sheetLength?: number;  // Numeric sheet length for print generation
   placedItems?: any[];  // Placed items for print generation after payment
+  thumbnailUrl?: string; // Optional preview image URL
 }
 
 interface CartState {
