@@ -72,8 +72,7 @@ export class PrintExportGenerator {
 
         // Transparent background for print (default)
         // Do NOT fill with white as we need transparency for DTF printing
-        // ctx.fillStyle = 'white';
-        // ctx.fillRect(0, 0, pixelWidth, pixelHeight);
+        // ctx.clearRect(0, 0, pixelWidth, pixelHeight); // Ensure it's clear
 
         // Fetch and draw each image
         for (const imgData of images) {

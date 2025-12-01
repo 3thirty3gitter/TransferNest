@@ -67,15 +67,18 @@ export async function POST(request: NextRequest) {
     const sharp = require('sharp');
     sharp.cache(false); // Disable cache to ensure fresh processing
     
-    // Create blank transparent canvas using 'create' operation
-    // This ensures a properly initialized RGBA buffer with 0 alpha
-    const canvas = sharp({
-      create: {
+    // Create blank transparent canvas using raw pixel data
+    // This is the most reliable way to ensure a transparent background
+    // We use Buffer.alloc to create a zero-filled buffer (transparent black)
+    const transparentPixels = Buffer.alloc(pixelWidth * pixelHeight * 4, 0);
+    
+    const canvas = sharp(transparentPixels, {
+      raw: {
         width: pixelWidth,
         height: pixelHeight,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 }
-      }
+        channels: 4
+      },
+      limitInputPixels: false // Allow large images
     });
 
     // Composite all images onto the sheet
