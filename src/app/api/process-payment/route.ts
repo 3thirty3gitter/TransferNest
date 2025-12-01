@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
+import { sendOrderConfirmationEmail, sendAdminNewOrderEmail } from '@/lib/email';
 
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
@@ -132,6 +133,25 @@ export async function POST(request: NextRequest) {
         console.warn('[PAYMENT] No print files were linked! Check cart items data.');
         console.warn('[PAYMENT] Cart items structure:', JSON.stringify(cartItems, null, 2));
       }
+
+      // Send emails (fire and forget)
+      const emailDetails = {
+        orderId,
+        customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
+        customerEmail: customerInfo.email,
+        items: cartItems,
+        total: actualAmountDollars,
+        shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined
+      };
+
+      Promise.all([
+        sendOrderConfirmationEmail(emailDetails),
+        sendAdminNewOrderEmail(emailDetails)
+      ]).then(results => {
+        console.log('[EMAIL] Email sending results:', results);
+      }).catch(err => {
+        console.error('[EMAIL] Failed to send emails:', err);
+      });
 
       return NextResponse.json({
         success: true,
