@@ -8,8 +8,8 @@ import { useRouter } from 'next/navigation';
 import { checkAdminAccess } from '@/middleware/adminAuth';
 import { Download } from 'lucide-react';
 
-type OrderStatus = 'pending' | 'paid' | 'printing' | 'shipped' | 'completed';
-type PaymentStatus = 'pending' | 'paid' | 'refunded';
+type OrderStatus = 'pending' | 'printing' | 'shipped' | 'completed';
+type PaymentStatus = 'paid' | 'refunded';
 type ShippingStatus = 'pending' | 'processing' | 'shipped' | 'delivered';
 
 type PrintFile = {
@@ -338,11 +338,6 @@ export default function AdminPage() {
             color="yellow"
           />
           <StatCard 
-            title="Paid" 
-            count={orders.filter(o => o.paymentStatus === 'paid').length}
-            color="green"
-          />
-          <StatCard 
             title="Printing" 
             count={orders.filter(o => o.status === 'printing').length}
             color="blue"
@@ -352,12 +347,17 @@ export default function AdminPage() {
             count={orders.filter(o => o.status === 'shipped').length}
             color="purple"
           />
+          <StatCard 
+            title="Completed" 
+            count={orders.filter(o => o.status === 'completed').length}
+            color="green"
+          />
         </div>
 
         {/* Filter Tabs */}
         <div className="glass-strong rounded-lg border border-white/10 mb-6">
           <div className="flex border-b border-white/10">
-            {(['all', 'pending', 'paid', 'printing', 'shipped', 'completed'] as const).map(status => (
+            {(['all', 'pending', 'printing', 'shipped', 'completed'] as const).map(status => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
@@ -393,10 +393,10 @@ export default function AdminPage() {
                 Mark as Shipped
               </button>
               <button
-                onClick={() => bulkUpdateStatus('paymentStatus', 'paid')}
+                onClick={() => bulkUpdateStatus('status', 'completed')}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
-                Mark as Paid
+                Mark as Completed
               </button>
               <button
                 onClick={downloadAllPrintFiles}
@@ -474,7 +474,6 @@ export default function AdminPage() {
                         'bg-yellow-500/20 text-yellow-300'
                       }`}
                     >
-                      <option value="pending">Pending</option>
                       <option value="paid">Paid</option>
                       <option value="refunded">Refunded</option>
                     </select>
@@ -487,12 +486,10 @@ export default function AdminPage() {
                         order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
                         order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
                         order.status === 'printing' ? 'bg-blue-500/20 text-blue-300' :
-                        order.status === 'paid' ? 'bg-green-500/20 text-green-300' :
                         'bg-yellow-500/20 text-yellow-300'
                       }`}
                     >
                       <option value="pending">Pending</option>
-                      <option value="paid">Paid</option>
                       <option value="printing">Printing</option>
                       <option value="shipped">Shipped</option>
                       <option value="completed">Completed</option>

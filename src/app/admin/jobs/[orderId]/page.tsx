@@ -180,6 +180,7 @@ export default function JobDetailsPage() {
           <div className="flex gap-3">
             <span className={`px-4 py-2 rounded-full text-sm font-medium ${
               order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
+              order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
               order.status === 'printing' ? 'bg-blue-500/20 text-blue-300' :
               'bg-yellow-500/20 text-yellow-300'
             }`}>
@@ -187,6 +188,7 @@ export default function JobDetailsPage() {
             </span>
             <span className={`px-4 py-2 rounded-full text-sm font-medium ${
               order.paymentStatus === 'paid' ? 'bg-green-500/20 text-green-300' :
+              order.paymentStatus === 'refunded' ? 'bg-red-500/20 text-red-300' :
               'bg-yellow-500/20 text-yellow-300'
             }`}>
               {order.paymentStatus}
