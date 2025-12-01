@@ -70,9 +70,10 @@ export class PrintExportGenerator {
         const canvas = createCanvas(pixelWidth, pixelHeight);
         const ctx = canvas.getContext('2d');
 
-        // White background for print
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, pixelWidth, pixelHeight);
+        // Transparent background for print (default)
+        // Do NOT fill with white as we need transparency for DTF printing
+        // ctx.fillStyle = 'white';
+        // ctx.fillRect(0, 0, pixelWidth, pixelHeight);
 
         // Fetch and draw each image
         for (const imgData of images) {

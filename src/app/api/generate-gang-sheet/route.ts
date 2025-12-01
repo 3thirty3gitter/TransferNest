@@ -66,15 +66,14 @@ export async function POST(request: NextRequest) {
     // We'll use sharp directly to create the exact canvas we need
     const sharp = require('sharp');
     
-    // Create blank transparent canvas using raw pixel data
-    // Create a buffer of transparent pixels (RGBA with all values 0)
-    const transparentPixels = Buffer.alloc(pixelWidth * pixelHeight * 4, 0);
-    
-    const canvas = sharp(transparentPixels, {
-      raw: {
+    // Create blank transparent canvas using 'create' operation
+    // This ensures a properly initialized RGBA buffer with 0 alpha
+    const canvas = sharp({
+      create: {
         width: pixelWidth,
         height: pixelHeight,
-        channels: 4
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
     });
 
