@@ -1,7 +1,29 @@
+'use client';
+
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
+import { useState, useEffect } from 'react';
+import { getCompanySettings, type CompanySettings } from '@/lib/company-settings';
 
 export default function PrivacyPolicy() {
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await getCompanySettings();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error('Error loading company settings:', error);
+      }
+    }
+    loadSettings();
+  }, []);
+
+  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+
   return (
     <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
       <Header />
@@ -50,7 +72,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-2xl font-bold text-white mb-4">Your Rights</h2>
               <p>
                 You have the right to access, update, or delete your personal information. 
-                Contact us at support@dtfwholesale.ca to exercise these rights.
+                Contact us at {email} to exercise these rights.
               </p>
             </section>
 
@@ -58,7 +80,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-2xl font-bold text-white mb-4">Contact Us</h2>
               <p>
                 If you have any questions about this Privacy Policy, please contact us at 
-                support@dtfwholesale.ca
+                {email}
               </p>
             </section>
 

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle2, Mail, Home, Package, Sparkles, Clock, Truck, Heart } from 'lucide-react';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
+import { getCompanySettings, type CompanySettings } from '@/lib/company-settings';
 
 export default function OrderConfirmationPage() {
   const params = useParams();
@@ -15,6 +16,7 @@ export default function OrderConfirmationPage() {
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [confettiVisible, setConfettiVisible] = useState(true);
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
 
   useEffect(() => {
     // In a real implementation, you'd fetch order details from your backend
@@ -25,6 +27,23 @@ export default function OrderConfirmationPage() {
     const timer = setTimeout(() => setConfettiVisible(false), 3000);
     return () => clearTimeout(timer);
   }, [orderId]);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await getCompanySettings();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error('Error loading company settings:', error);
+      }
+    }
+    loadSettings();
+  }, []);
+
+  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+  const phone = settings?.companyInfo?.phone || '587-405-3005';
 
   if (loading) {
     return (
@@ -199,17 +218,17 @@ export default function OrderConfirmationPage() {
               Questions about your order? We're here to help!<br />
               Contact us at{' '}
               <a 
-                href="mailto:support@dtfwholesale.ca" 
+                href={`mailto:${email}`} 
                 className="text-purple-400 hover:text-purple-300 underline underline-offset-2 transition-colors font-medium"
               >
-                support@dtfwholesale.ca
+                {email}
               </a>
               {' '}or call{' '}
               <a 
-                href="tel:587-405-3005" 
+                href={`tel:${phone.replace(/[^0-9+]/g, '')}`} 
                 className="text-purple-400 hover:text-purple-300 underline underline-offset-2 transition-colors font-medium"
               >
-                587-405-3005
+                {phone}
               </a>
             </p>
           </div>

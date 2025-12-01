@@ -1,8 +1,40 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Mail, MapPin, Phone } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { getCompanySettings, type CompanySettings } from '@/lib/company-settings';
 
 export default function Footer() {
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await getCompanySettings();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error('Error loading company settings for footer:', error);
+      }
+    }
+    loadSettings();
+  }, []);
+
+  // Default values if settings not loaded yet or missing
+  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+  const phone = settings?.companyInfo?.phone || '587-405-3005';
+  const address = settings?.companyInfo?.address ? (
+    <>
+      {settings.companyInfo.address.street}<br/>
+      {settings.companyInfo.address.city}, {settings.companyInfo.address.state} {settings.companyInfo.address.zipCode}
+    </>
+  ) : (
+    <>201-5415 Calgary Trail NW<br/>Edmonton, AB T6H 4J9</>
+  );
+
   return (
     <footer className="border-t border-white/10 bg-gradient-to-b from-transparent to-black/20 backdrop-blur-sm mt-20">
       <div className="container mx-auto px-4 py-12">
@@ -58,20 +90,20 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="mailto:support@dtfwholesale.ca" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <a href={`mailto:${email}`} className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  support@dtfwholesale.ca
+                  {email}
                 </a>
               </li>
               <li>
-                <a href="tel:+15874053005" className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                <a href={`tel:${phone.replace(/[^0-9+]/g, '')}`} className="text-slate-400 hover:text-white transition-colors flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  587-405-3005
+                  {phone}
                 </a>
               </li>
               <li className="text-slate-400 flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>201-5415 Calgary Trail NW<br/>Edmonton, AB T6H 4J9</span>
+                <span>{address}</span>
               </li>
             </ul>
           </div>

@@ -1,7 +1,35 @@
+'use client';
+
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
+import { useState, useEffect } from 'react';
+import { getCompanySettings, type CompanySettings } from '@/lib/company-settings';
 
 export default function TermsOfService() {
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await getCompanySettings();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error('Error loading company settings:', error);
+      }
+    }
+    loadSettings();
+  }, []);
+
+  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+  const phone = settings?.companyInfo?.phone || '587-405-3005';
+  const address = settings?.companyInfo?.address ? (
+    `${settings.companyInfo.address.street}, ${settings.companyInfo.address.city}, ${settings.companyInfo.address.state}`
+  ) : (
+    '201-5415 Calgary Trail NW, Edmonton, Alberta'
+  );
+
   return (
     <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
       <Header />
@@ -278,9 +306,9 @@ export default function TermsOfService() {
               <div className="mt-3 space-y-1">
                 <p><strong>Legal Name:</strong> 3Thirty3 Ltd. o/a DTF Wholesale Canada</p>
                 <p><strong>Operating As:</strong> TransferNest / DTF Wholesale Canada</p>
-                <p><strong>Address:</strong> 201-5415 Calgary Trail NW, Edmonton, Alberta</p>
-                <p><strong>Phone:</strong> 587-405-3005</p>
-                <p><strong>Email:</strong> support@dtfwholesale.ca</p>
+                <p><strong>Address:</strong> {address}</p>
+                <p><strong>Phone:</strong> {phone}</p>
+                <p><strong>Email:</strong> {email}</p>
               </div>
             </section>
 
