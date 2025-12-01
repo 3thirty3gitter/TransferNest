@@ -65,7 +65,7 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
     `;
 
     const data = await resend.emails.send({
-      from: 'DTF Wholesale <orders@dtfwholesale.ca>',
+      from: 'DTF Wholesale <orders@dtf-wholesale.ca>',
       to: [customerEmail],
       subject: `Order Confirmation #${orderId}`,
       html: html,
@@ -102,7 +102,7 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails) {
     `;
 
     const data = await resend.emails.send({
-      from: 'DTF Wholesale System <system@dtfwholesale.ca>',
+      from: 'DTF Wholesale System <system@dtf-wholesale.ca>',
       to: adminEmails,
       subject: `[New Order] #${orderId} - $${total.toFixed(2)}`,
       html: html,
