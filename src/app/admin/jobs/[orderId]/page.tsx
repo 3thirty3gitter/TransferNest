@@ -6,7 +6,7 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter, useParams } from 'next/navigation';
 import { checkAdminAccess } from '@/middleware/adminAuth';
-import { ArrowLeft, Download, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer } from 'lucide-react';
 import Link from 'next/link';
 
 type OrderItem = {
@@ -61,6 +61,19 @@ export default function JobDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderItem | null>(null);
+
+  // Shipping State
+  const [shippingRates, setShippingRates] = useState<any[]>([]);
+  const [selectedRate, setSelectedRate] = useState<string | null>(null);
+  const [currentShipmentId, setCurrentShipmentId] = useState<string | null>(null);
+  const [parcelDetails, setParcelDetails] = useState({
+    length: '12',
+    width: '9',
+    height: '1',
+    weight: '16' // 1 lb
+  });
+  const [isFetchingRates, setIsFetchingRates] = useState(false);
+  const [isBuyingLabel, setIsBuyingLabel] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -118,6 +131,84 @@ export default function JobDetailsPage() {
       router.push('/admin');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchRates() {
+    if (!order?.shippingAddress) {
+      alert('No shipping address found for this order');
+      return;
+    }
+
+    setIsFetchingRates(true);
+    setShippingRates([]);
+    setSelectedRate(null);
+    
+    try {
+      const response = await fetch('/api/admin/shipments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'rates',
+          orderId: order.id,
+          toAddress: {
+            name: `${order.customerInfo?.firstName} ${order.customerInfo?.lastName}`,
+            street1: order.shippingAddress.line1 || order.shippingAddress.address1,
+            street2: order.shippingAddress.line2 || order.shippingAddress.address2,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            zip: order.shippingAddress.postal_code || order.shippingAddress.zip,
+            country: order.shippingAddress.country || 'CA',
+            phone: order.customerInfo?.phone,
+            email: order.customerInfo?.email
+          },
+          parcel: parcelDetails
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setShippingRates(data.shipment.rates);
+        setCurrentShipmentId(data.shipment.id);
+      } else {
+        alert('Failed to fetch rates: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching rates:', error);
+      alert('Error fetching rates');
+    } finally {
+      setIsFetchingRates(false);
+    }
+  }
+
+  async function buyLabel() {
+    if (!selectedRate || !currentShipmentId || !order) return;
+
+    setIsBuyingLabel(true);
+    try {
+      const response = await fetch('/api/admin/shipments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'buy',
+          orderId: order.id,
+          shipmentId: currentShipmentId,
+          rateId: selectedRate
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Label purchased successfully!');
+        loadOrder(); // Reload to show new status
+      } else {
+        alert('Failed to buy label: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error buying label:', error);
+      alert('Error buying label');
+    } finally {
+      setIsBuyingLabel(false);
     }
   }
 
@@ -244,6 +335,122 @@ export default function JobDetailsPage() {
                 </div>
               </div>
             )}
+
+            {/* Shipping Management */}
+            <div className="glass-strong rounded-lg border border-white/10 p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                Shipping Management
+              </h2>
+              
+              {order.status === 'shipped' ? (
+                <div className="space-y-4">
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-green-400 mb-2">
+                      <Package className="h-5 w-5" />
+                      <span className="font-semibold">Order Shipped</span>
+                    </div>
+                    <p className="text-sm text-slate-300 mb-1">
+                      Tracking Number: <span className="text-white font-mono">{(order as any).shippingInfo?.trackingNumber || 'N/A'}</span>
+                    </p>
+                  </div>
+                  {(order as any).shippingInfo?.labelUrl && (
+                    <a 
+                      href={(order as any).shippingInfo.labelUrl} 
+                      target="_blank"
+                      className="block w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Printer className="h-4 w-4" />
+                      Print Shipping Label
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">Length (in)</label>
+                      <input 
+                        type="number" 
+                        value={parcelDetails.length}
+                        onChange={e => setParcelDetails({...parcelDetails, length: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">Width (in)</label>
+                      <input 
+                        type="number" 
+                        value={parcelDetails.width}
+                        onChange={e => setParcelDetails({...parcelDetails, width: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">Height (in)</label>
+                      <input 
+                        type="number" 
+                        value={parcelDetails.height}
+                        onChange={e => setParcelDetails({...parcelDetails, height: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">Weight (oz)</label>
+                      <input 
+                        type="number" 
+                        value={parcelDetails.weight}
+                        onChange={e => setParcelDetails({...parcelDetails, weight: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={fetchRates}
+                    disabled={isFetchingRates}
+                    className="w-full py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    {isFetchingRates ? 'Fetching Rates...' : 'Get Shipping Rates'}
+                  </button>
+
+                  {shippingRates.length > 0 && (
+                    <div className="space-y-2 mt-4">
+                      <h3 className="text-sm font-medium text-slate-300">Select Rate:</h3>
+                      <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                        {shippingRates.map((rate: any) => (
+                          <div 
+                            key={rate.id}
+                            onClick={() => setSelectedRate(rate.id)}
+                            className={`p-3 rounded border cursor-pointer transition-all ${
+                              selectedRate === rate.id 
+                                ? 'bg-blue-500/20 border-blue-500' 
+                                : 'bg-white/5 border-white/10 hover:bg-white/10'
+                            }`}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-medium text-sm">{rate.carrier} - {rate.service}</p>
+                                <p className="text-xs text-slate-400">{rate.delivery_days ? `${rate.delivery_days} days` : 'Standard'}</p>
+                              </div>
+                              <p className="font-bold text-green-400">${parseFloat(rate.rate).toFixed(2)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={buyLabel}
+                        disabled={!selectedRate || isBuyingLabel}
+                        className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 text-white rounded-lg transition-colors font-medium mt-2"
+                      >
+                        {isBuyingLabel ? 'Purchasing...' : 'Buy Shipping Label'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Print Files */}
             {order.printFiles && order.printFiles.length > 0 && (
