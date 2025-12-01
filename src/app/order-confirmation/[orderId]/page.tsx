@@ -107,10 +107,10 @@ export default function OrderConfirmationPage() {
               Order Confirmed! 🎉
             </h1>
             <p className="text-2xl text-slate-300 font-medium">
-              Thank you for your order!
+              Thank you for your business!
             </p>
             <p className="text-lg text-slate-400 max-w-2xl">
-              We're thrilled to bring your designs to life. Your order has been received and we're already getting started!
+              We truly appreciate you choosing TransferNest. Your order has been received and we're already getting started on bringing your designs to life!
             </p>
           </div>
 
