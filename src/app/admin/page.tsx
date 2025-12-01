@@ -468,7 +468,7 @@ export default function AdminPage() {
                     <select
                       value={order.paymentStatus}
                       onChange={(e) => updateOrderStatus(order.id, 'paymentStatus', e.target.value)}
-                      className={`text-sm rounded-full px-3 py-1 font-medium border-0 ${
+                      className={`text-sm rounded-full px-3 py-1 font-medium border-0 [&>option]:bg-slate-900 [&>option]:text-slate-300 ${
                         order.paymentStatus === 'paid' ? 'bg-green-500/20 text-green-300' :
                         order.paymentStatus === 'refunded' ? 'bg-red-500/20 text-red-300' :
                         'bg-yellow-500/20 text-yellow-300'
@@ -482,7 +482,7 @@ export default function AdminPage() {
                     <select
                       value={order.status}
                       onChange={(e) => updateOrderStatus(order.id, 'status', e.target.value)}
-                      className={`text-sm rounded-full px-3 py-1 font-medium border-0 ${
+                      className={`text-sm rounded-full px-3 py-1 font-medium border-0 [&>option]:bg-slate-900 [&>option]:text-slate-300 ${
                         order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
                         order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
                         order.status === 'printing' ? 'bg-blue-500/20 text-blue-300' :
