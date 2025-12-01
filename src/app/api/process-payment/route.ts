@@ -15,7 +15,20 @@ const client = new SquareClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const { sourceId, amount, currency, customerInfo, cartItems, userId, taxAmount, shippingAddress, deliveryMethod } = await request.json();
+    const { 
+      sourceId, 
+      amount, 
+      currency, 
+      customerInfo, 
+      cartItems, 
+      userId, 
+      taxAmount, 
+      shippingAddress, 
+      deliveryMethod,
+      shippingCost,
+      shippingRate,
+      taxBreakdown
+    } = await request.json();
 
     // Validate Square configuration
     if (!process.env.SQUARE_ACCESS_TOKEN) {
@@ -104,7 +117,10 @@ export async function POST(request: NextRequest) {
         printFiles: [], // Will be updated after generation
         taxAmount: taxAmount || 0,
         shippingAddress,
-        deliveryMethod
+        deliveryMethod,
+        shippingCost,
+        shippingRate,
+        taxBreakdown
       });
 
       console.log('[PAYMENT] Order created:', orderId);
@@ -228,10 +244,10 @@ async function saveOrder(orderData: any) {
     // Use the actual tax amount charged to the customer
     const tax = orderData.taxAmount || 0;
     
-    // Shipping is always free (as shown in checkout page)
-    const shipping = 0;
+    // Shipping cost
+    const shipping = orderData.shippingCost || 0;
     
-    // Use the actual amount charged to the customer (should match subtotal + tax)
+    // Use the actual amount charged to the customer (should match subtotal + tax + shipping)
     const total = orderData.amount;
 
     console.log('[SAVE ORDER] Calculated values:', { 
@@ -255,7 +271,9 @@ async function saveOrder(orderData: any) {
       currency: orderData.currency || 'CAD',
       printFiles: orderData.printFiles || [],
       shippingAddress: orderData.shippingAddress,
-      deliveryMethod: orderData.deliveryMethod
+      deliveryMethod: orderData.deliveryMethod,
+      shippingRate: orderData.shippingRate || null,
+      taxBreakdown: orderData.taxBreakdown || null,
     };
 
     console.log('[SAVE ORDER] Print files count:', orderData.printFiles?.length || 0);

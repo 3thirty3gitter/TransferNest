@@ -55,6 +55,12 @@ export default function CheckoutPage() {
     country: 'CA',
   });
 
+  // Shipping Rates State
+  const [shippingRates, setShippingRates] = useState<any[]>([]);
+  const [selectedShippingRate, setSelectedShippingRate] = useState<any>(null);
+  const [isFetchingRates, setIsFetchingRates] = useState(false);
+  const [shippingError, setShippingError] = useState<string | null>(null);
+
   // Redirect if not authenticated or cart is empty
   useEffect(() => {
     if (!user) {
@@ -178,18 +184,81 @@ export default function CheckoutPage() {
     }));
   };
 
+  // Fetch shipping rates when address changes
+  useEffect(() => {
+    const fetchRates = async () => {
+      if (deliveryMethod !== 'shipping') {
+        setShippingRates([]);
+        setSelectedShippingRate(null);
+        return;
+      }
+
+      const addressToUse = useShippingAddress ? shippingAddress : customerInfo;
+      
+      // Check if we have enough info to fetch rates
+      if (!addressToUse.address || !addressToUse.city || !addressToUse.state || !addressToUse.zipCode) {
+        return;
+      }
+
+      setIsFetchingRates(true);
+      setShippingError(null);
+      setShippingRates([]);
+      setSelectedShippingRate(null);
+
+      try {
+        const response = await fetch('/api/shipping/rates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address: addressToUse,
+            items: items
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          setShippingRates(data.rates);
+          // Auto-select cheapest option
+          if (data.rates.length > 0) {
+            setSelectedShippingRate(data.rates[0]);
+          }
+        } else {
+          setShippingError(data.message || 'Failed to fetch shipping rates');
+        }
+      } catch (error) {
+        console.error('Error fetching rates:', error);
+        setShippingError('Unable to load shipping rates');
+      } finally {
+        setIsFetchingRates(false);
+      }
+    };
+
+    // Debounce the fetch
+    const timer = setTimeout(fetchRates, 1000);
+    return () => clearTimeout(timer);
+  }, [deliveryMethod, useShippingAddress, shippingAddress, customerInfo.address, customerInfo.city, customerInfo.state, customerInfo.zipCode, items]);
+
+  // Calculate shipping cost
+  const shippingCost = useMemo(() => {
+    if (deliveryMethod === 'pickup') return 0;
+    return selectedShippingRate ? parseFloat(selectedShippingRate.rate) : 0;
+  }, [deliveryMethod, selectedShippingRate]);
+
   // Calculate tax dynamically based on contact location (postal code determines tax)
   const taxCalculation = useMemo(() => {
+    const taxableAmount = totalPrice + shippingCost;
+    
     // Tax is ALWAYS based on contact information province/state
     if (customerInfo.state && customerInfo.country) {
-      return calculateTax(totalPrice, customerInfo.state, customerInfo.country);
+      return calculateTax(taxableAmount, customerInfo.state, customerInfo.country);
     }
     
     // Default to Ontario if no state selected yet
-    return calculateTax(totalPrice, 'ON', 'CA');
-  }, [totalPrice, customerInfo.state, customerInfo.country]);
+    return calculateTax(taxableAmount, 'ON', 'CA');
+  }, [totalPrice, shippingCost, customerInfo.state, customerInfo.country]);
 
-  const orderTotal = totalPrice + taxCalculation.total;
+  const orderTotal = totalPrice + shippingCost + taxCalculation.total;
 
   const validateForm = () => {
     const contactRequired = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'] as const;
@@ -221,6 +290,16 @@ export default function CheckoutPage() {
       }
     }
     
+    // Validate shipping rate selection
+    if (deliveryMethod === 'shipping' && !selectedShippingRate) {
+      toast({
+        title: "Shipping Method Required",
+        description: "Please select a shipping method.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     if (!cardPayment) {
       toast({
         title: "Payment Error",
@@ -277,6 +356,8 @@ export default function CheckoutPage() {
               pst: taxCalculation.pst,
               hst: taxCalculation.hst,
             },
+            shippingCost,
+            shippingRate: selectedShippingRate,
           }),
         });
         
@@ -485,7 +566,11 @@ export default function CheckoutPage() {
                       <div className="text-sm text-slate-400 mt-1">
                         We'll ship your order to your address
                       </div>
-                      <div className="text-sm text-green-400 mt-1">Free Shipping</div>
+                      <div className="text-sm text-blue-400 mt-1">
+                        {selectedShippingRate 
+                          ? `$${parseFloat(selectedShippingRate.rate).toFixed(2)}` 
+                          : 'Calculated at next step'}
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -630,6 +715,60 @@ export default function CheckoutPage() {
                     </>
                   )}
                 </div>
+
+                {/* Shipping Rates Selection */}
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <h3 className="text-lg font-semibold text-white mb-4">Shipping Method</h3>
+                  
+                  {isFetchingRates ? (
+                    <div className="flex items-center justify-center p-8 bg-white/5 rounded-xl border border-white/10">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      <span className="ml-3 text-slate-300">Calculating shipping rates...</span>
+                    </div>
+                  ) : shippingError ? (
+                    <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+                      {shippingError}
+                    </div>
+                  ) : shippingRates.length > 0 ? (
+                    <div className="space-y-3">
+                      {shippingRates.map((rate) => (
+                        <button
+                          key={rate.id}
+                          type="button"
+                          onClick={() => setSelectedShippingRate(rate)}
+                          className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
+                            selectedShippingRate?.id === rate.id
+                              ? 'border-blue-500 bg-blue-500/10'
+                              : 'border-white/10 bg-white/5 hover:bg-white/10'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                              selectedShippingRate?.id === rate.id ? 'border-blue-500' : 'border-white/40'
+                            }`}>
+                              {selectedShippingRate?.id === rate.id && (
+                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                              )}
+                            </div>
+                            <div className="text-left">
+                              <div className="font-medium text-white">{rate.service}</div>
+                              <div className="text-xs text-slate-400">
+                                {rate.delivery_days ? `${rate.delivery_days} business days` : 'Standard shipping'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="font-semibold text-white">
+                            ${parseFloat(rate.rate).toFixed(2)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-slate-400 text-sm text-center">
+                      Enter your full address to see shipping rates
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -752,7 +891,9 @@ export default function CheckoutPage() {
                     </div>
                     <div className="flex justify-between">
                       <span>Shipping</span>
-                      <span className="text-green-400">Free</span>
+                      <span className={shippingCost > 0 ? "text-white" : "text-green-400"}>
+                        {shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tax {customerInfo.state && `(${customerInfo.state})`}</span>
@@ -766,7 +907,7 @@ export default function CheckoutPage() {
                     )}
                     {taxCalculation.pst > 0 && (
                       <div className="flex justify-between text-sm text-slate-400 pl-4">
-                        <span>PST ({(taxCalculation.pst / totalPrice * 100).toFixed(2)}%)</span>
+                        <span>PST ({(taxCalculation.pst / (totalPrice + shippingCost) * 100).toFixed(2)}%)</span>
                         <span>${taxCalculation.pst.toFixed(2)}</span>
                       </div>
                     )}
