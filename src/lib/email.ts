@@ -114,3 +114,107 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails) {
     return { success: false, error };
   }
 }
+
+export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: string, trackingNumber?: string) {
+  const resend = getResend();
+  if (!resend) {
+    return { success: false, error: 'Missing API Key' };
+  }
+
+  try {
+    const { orderId, customerName, customerEmail } = details;
+
+    let statusMessage = '';
+    let subject = `Order Update #${orderId}`;
+
+    switch (status) {
+      case 'printing':
+        statusMessage = 'Your order is now being printed! Our team is ensuring everything looks perfect.';
+        break;
+      case 'shipped':
+        statusMessage = 'Great news! Your order has been shipped.';
+        subject = `Order Shipped #${orderId}`;
+        break;
+      case 'completed':
+        statusMessage = 'Your order has been marked as completed. Thank you for choosing DTF Wholesale!';
+        break;
+      default:
+        statusMessage = `Your order status has been updated to: ${status}`;
+    }
+
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #3b82f6;">Order Update</h1>
+        <p>Hi ${customerName},</p>
+        <p>${statusMessage}</p>
+        
+        ${trackingNumber ? `
+          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Tracking Number:</strong> ${trackingNumber}</p>
+          </div>
+        ` : ''}
+
+        <p>You can check the status of your order at any time by logging into your account.</p>
+        
+        <p>Best regards,<br/>The DTF Wholesale Team</p>
+      </div>
+    `;
+
+    const data = await resend.emails.send({
+      from: 'DTF Wholesale <orders@dtf-wholesale.ca>',
+      to: [customerEmail],
+      subject: subject,
+      html: html,
+    });
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error sending update email:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendOrderReadyForPickupEmail(details: EmailOrderDetails) {
+  const resend = getResend();
+  if (!resend) {
+    return { success: false, error: 'Missing API Key' };
+  }
+
+  try {
+    const { orderId, customerName, customerEmail } = details;
+
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #10b981;">Ready for Pickup!</h1>
+        <p>Hi ${customerName},</p>
+        <p>Good news! Your order <strong>#${orderId}</strong> is ready for pickup.</p>
+        
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Pickup Location</h3>
+          <p>
+            DTF Wholesale<br/>
+            201-5415 Calgary Trail NW<br/>
+            Edmonton, AB T6H 4J9
+          </p>
+          <p><strong>Hours:</strong> Mon-Fri: 9am - 5pm</p>
+        </div>
+
+        <p>Please bring your order number when you come to collect your items.</p>
+        
+        <p>Best regards,<br/>The DTF Wholesale Team</p>
+      </div>
+    `;
+
+    const data = await resend.emails.send({
+      from: 'DTF Wholesale <orders@dtf-wholesale.ca>',
+      to: [customerEmail],
+      subject: `Ready for Pickup: Order #${orderId}`,
+      html: html,
+    });
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error sending pickup email:', error);
+    return { success: false, error };
+  }
+}
