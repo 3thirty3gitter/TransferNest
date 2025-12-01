@@ -162,9 +162,10 @@ export default function AdminNestingTool() {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // White background
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Transparent background (default)
+      // Do NOT fill with white
+      // ctx.fillStyle = 'white';
+      // ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Load and draw all images with proper CORS handling
       const imagePromises = nestingResult.placedItems.map(item => {
