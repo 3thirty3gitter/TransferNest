@@ -112,12 +112,7 @@ export default function Home() {
             <div className="mt-10 flex flex-wrap justify-center gap-4">
               <Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 px-8 py-6 text-lg glow group">
                 <Link href="/nesting-tool" className="flex items-center gap-2">
-                  Start Creating <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="glass-strong border-white/20 text-white hover:bg-white/10 px-8 py-6 text-lg">
-                <Link href="#features" className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" /> See How It Works
+                  Build My Gang Sheet <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
             </div>
