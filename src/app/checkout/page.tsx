@@ -398,7 +398,7 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
       <Header />
-      <div className="h-16"></div>
+      <div className="h-40"></div>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <Link
