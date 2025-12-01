@@ -819,7 +819,12 @@ export default function CheckoutPage() {
                   <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                     <p className="text-white font-medium mb-2">Hours:</p>
                     {companySettings?.companyInfo?.pickupInfo?.hours ? (
-                      Object.entries(companySettings.companyInfo.pickupInfo.hours).map(([day, hours]: [string, any]) => (
+                      Object.entries(companySettings.companyInfo.pickupInfo.hours)
+                        .sort(([dayA], [dayB]) => {
+                          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                          return days.indexOf(dayA.toLowerCase()) - days.indexOf(dayB.toLowerCase());
+                        })
+                        .map(([day, hours]: [string, any]) => (
                         <p key={day} className="text-slate-300 capitalize">
                           {day}: {hours}
                         </p>
