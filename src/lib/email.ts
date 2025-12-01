@@ -60,12 +60,12 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
 
         <p>We will notify you when your order ships.</p>
         
-        <p>Best regards,<br/>The TransferNest Team</p>
+        <p>Best regards,<br/>The DTF Wholesale Team</p>
       </div>
     `;
 
     const data = await resend.emails.send({
-      from: 'TransferNest <orders@transfernest.com>', // Update this with verified domain later
+      from: 'DTF Wholesale <orders@dtfwholesale.ca>',
       to: [customerEmail],
       subject: `Order Confirmation #${orderId}`,
       html: html,
@@ -102,7 +102,7 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails) {
     `;
 
     const data = await resend.emails.send({
-      from: 'TransferNest System <system@transfernest.com>',
+      from: 'DTF Wholesale System <system@dtfwholesale.ca>',
       to: adminEmails,
       subject: `[New Order] #${orderId} - $${total.toFixed(2)}`,
       html: html,
