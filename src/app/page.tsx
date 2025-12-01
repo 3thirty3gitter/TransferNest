@@ -5,7 +5,7 @@ import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Header from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp } from 'lucide-react';
+import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp, Clock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/layout/footer';
@@ -118,10 +118,32 @@ export default function Home() {
             </div>
 
             {/* Stats */}
-            <div className="mt-16 flex justify-center gap-8 max-w-xl mx-auto">
-              <div className="glass rounded-2xl p-6 px-12">
-                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-400 to-red-400 bg-clip-text text-transparent">24hr</div>
-                <div className="text-sm text-slate-400 mt-2">Turnaround</div>
+            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto px-4">
+              {/* Stat 1 */}
+              <div className="glass p-6 rounded-2xl border border-white/5 hover:border-white/10 transition-all hover:-translate-y-1 duration-300 text-center group">
+                <div className="w-12 h-12 mx-auto bg-pink-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="h-6 w-6 text-pink-400" />
+                </div>
+                <div className="text-2xl font-bold text-white mb-1">24hr</div>
+                <div className="text-sm text-slate-400">Turnaround Time</div>
+              </div>
+
+              {/* Stat 2 */}
+              <div className="glass p-6 rounded-2xl border border-white/5 hover:border-white/10 transition-all hover:-translate-y-1 duration-300 text-center group">
+                <div className="w-12 h-12 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <Sparkles className="h-6 w-6 text-purple-400" />
+                </div>
+                <div className="text-2xl font-bold text-white mb-1">Premium</div>
+                <div className="text-sm text-slate-400">DTF Quality</div>
+              </div>
+
+              {/* Stat 3 */}
+              <div className="glass p-6 rounded-2xl border border-white/5 hover:border-white/10 transition-all hover:-translate-y-1 duration-300 text-center group">
+                <div className="w-12 h-12 mx-auto bg-blue-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <CheckCircle className="h-6 w-6 text-blue-400" />
+                </div>
+                <div className="text-2xl font-bold text-white mb-1">No Minimums</div>
+                <div className="text-sm text-slate-400">Order Any Amount</div>
               </div>
             </div>
           </div>
