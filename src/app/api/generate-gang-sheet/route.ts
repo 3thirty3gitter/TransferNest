@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         channels: 4,
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
-    });
+    }).ensureAlpha();
 
     // Composite all images onto the sheet
     const compositeOps = await Promise.all(
@@ -192,19 +192,21 @@ export async function POST(request: NextRequest) {
             top: op.top,
             blend: 'over',        // Don't blend/resize, just overlay
             gravity: 'northwest', // Top-left positioning, no centering
-            premultiplied: false  // Don't pre-multiply alpha
+            // premultiplied: false  // Let Sharp handle premultiplication automatically
           })))
           .png({ 
             compressionLevel: 9,
             adaptiveFiltering: false,
-            force: true           // Force PNG format
+            force: true,          // Force PNG format
+            palette: false        // Ensure true color with alpha, no palette
           })
           .toBuffer()
       : await canvas
           .png({ 
             compressionLevel: 9,
             adaptiveFiltering: false,
-            force: true
+            force: true,
+            palette: false
           })
           .toBuffer();
 
