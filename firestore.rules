@@ -37,7 +37,7 @@ service cloud.firestore {
       allow read: if isOwner(userId) || isAdmin();
       // Allow users to create their own profile and update their own data
       allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
     
