@@ -27,7 +27,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Safety timeout: If Firebase doesn't respond within 2 seconds, 
+    // stop loading so the app doesn't hang.
+    const timeout = setTimeout(() => {
+      setLoading((currentLoading) => {
+        if (currentLoading) {
+          console.warn('AuthProvider: Firebase auth listener timed out, forcing render.');
+          return false;
+        }
+        return currentLoading;
+      });
+    }, 2000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   if (loading) {
