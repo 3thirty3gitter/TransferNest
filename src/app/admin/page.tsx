@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Download, Search, Filter, ChevronDown, CheckSquare, Square } from 'lucide-react';
+import Link from 'next/link';
 
 type OrderStatus = 'pending' | 'printing' | 'shipped' | 'completed';
 type PaymentStatus = 'paid' | 'refunded';
@@ -316,7 +317,12 @@ export default function AdminPage() {
                     </button>
                   </td>
                   <td className="p-4">
-                    <span className="font-mono text-sm text-white">#{order.id.slice(-6)}</span>
+                    <Link 
+                      href={`/admin/jobs/${order.id}`}
+                      className="font-mono text-sm text-white hover:text-blue-400 hover:underline"
+                    >
+                      #{order.id.slice(-6)}
+                    </Link>
                   </td>
                   <td className="p-4">
                     <div className="flex flex-col">
