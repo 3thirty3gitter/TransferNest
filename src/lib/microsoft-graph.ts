@@ -20,7 +20,7 @@ interface GraphEmail {
 
 export async function getMicrosoftGraphToken() {
   const settings = await getCompanySettings();
-  if (!settings?.email?.microsoft365?.enabled) {
+  if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) {
     throw new Error('Microsoft 365 integration is not enabled');
   }
 
@@ -52,7 +52,7 @@ export async function getMicrosoftGraphToken() {
 
 export async function getEmails(folder = 'inbox', top = 20): Promise<GraphEmail[]> {
   const settings = await getCompanySettings();
-  if (!settings?.email?.microsoft365?.enabled) {
+  if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) {
     throw new Error('Microsoft 365 integration is not enabled');
   }
 
@@ -80,7 +80,7 @@ export async function getEmails(folder = 'inbox', top = 20): Promise<GraphEmail[
 
 export async function markEmailAsRead(messageId: string): Promise<void> {
   const settings = await getCompanySettings();
-  if (!settings?.email?.microsoft365?.enabled) return;
+  if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) return;
 
   const { userEmail } = settings.email.microsoft365;
   const token = await getMicrosoftGraphToken();
