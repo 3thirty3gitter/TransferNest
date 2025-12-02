@@ -28,10 +28,14 @@ import {
   ArrowLeft,
   CheckCircle2,
   XCircle,
+  PenTool,
 } from 'lucide-react';
 import Link from 'next/link';
 
-type TabType = 'company' | 'integrations' | 'social';
+import EmailTemplateManager from '@/components/admin/EmailTemplateManager';
+import SignatureManager from '@/components/admin/SignatureManager';
+
+type TabType = 'company' | 'integrations' | 'social' | 'email';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -40,6 +44,7 @@ export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('company');
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [testingShipping, setTestingShipping] = useState(false);
+  const [isSignatureManagerOpen, setIsSignatureManagerOpen] = useState(false);
   
   const router = useRouter();
   const { toast } = useToast();
@@ -277,6 +282,17 @@ export default function AdminSettingsPage() {
           >
             <Facebook className="inline h-5 w-5 mr-2" />
             Social Media
+          </button>
+          <button
+            onClick={() => setActiveTab('email')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'email'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white/10 text-slate-300 hover:bg-white/20'
+            }`}
+          >
+            <Mail className="inline h-5 w-5 mr-2" />
+            Email Settings
           </button>
         </div>
 
@@ -755,6 +771,45 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         )}
+
+        {/* Email Settings Tab */}
+        {activeTab === 'email' && (
+          <div className="space-y-6">
+            <div className="glass-strong rounded-2xl p-6 border border-white/10">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Mail className="h-6 w-6" />
+                  Email Templates
+                </h2>
+              </div>
+              <EmailTemplateManager />
+            </div>
+
+            <div className="glass-strong rounded-2xl p-6 border border-white/10">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <PenTool className="h-6 w-6" />
+                  Email Signatures
+                </h2>
+                <button
+                  onClick={() => setIsSignatureManagerOpen(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+                >
+                  Manage Signatures
+                </button>
+              </div>
+              <p className="text-slate-300">
+                Configure your email signatures for outgoing messages.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <SignatureManager 
+          isOpen={isSignatureManagerOpen} 
+          onClose={() => setIsSignatureManagerOpen(false)}
+          onUpdate={() => {}} 
+        />
       </div>
     </div>
   );

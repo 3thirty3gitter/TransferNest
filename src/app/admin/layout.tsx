@@ -26,6 +26,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname === '/admin/login') {
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     let resolved = false;
 
@@ -63,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       unsubscribe();
       clearTimeout(timeout);
     };
-  }, [router]);
+  }, [router, pathname]);
 
   const handleSignOut = async () => {
     try {
@@ -73,6 +78,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       console.error('Error signing out:', error);
     }
   };
+
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
