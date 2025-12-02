@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { auth } from '@/lib/firebase';
 import { getCompanySettings, type EmailSignature } from '@/lib/company-settings';
-import { Mail, RefreshCw, Search, Star, Trash2, Archive, MoreVertical, Reply, Forward, Edit, X, Send, PenTool } from 'lucide-react';
+import SignatureManager from '@/components/admin/SignatureManager';
+import { Mail, RefreshCw, Search, Star, Trash2, Archive, MoreVertical, Reply, Forward, Edit, X, Send, PenTool, Settings } from 'lucide-react';
 
 interface Email {
   id: string;
@@ -38,6 +39,7 @@ export default function EmailPage() {
   const [sending, setSending] = useState(false);
   const [signatures, setSignatures] = useState<EmailSignature[]>([]);
   const [selectedSignatureId, setSelectedSignatureId] = useState<string>('');
+  const [isSignatureManagerOpen, setIsSignatureManagerOpen] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -483,6 +485,14 @@ export default function EmailPage() {
                       <option key={sig.id} value={sig.id}>{sig.name}</option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsSignatureManagerOpen(true)}
+                    className="p-1 text-slate-400 hover:text-white hover:bg-white/10 rounded"
+                    title="Manage Signatures"
+                  >
+                    <Settings size={16} />
+                  </button>
                 </div>
 
                 <div className="flex gap-2">
@@ -516,6 +526,12 @@ export default function EmailPage() {
           </div>
         </div>
       )}
+
+      <SignatureManager 
+        isOpen={isSignatureManagerOpen} 
+        onClose={() => setIsSignatureManagerOpen(false)}
+        onUpdate={loadSignatures}
+      />
     </div>
   );
 }
