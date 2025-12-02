@@ -138,17 +138,16 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       setIsProcessing(false);
     }
   };  const calculatePricing = () => {
-    if (!nestingResult) return { basePrice: 0, setupFee: 0, total: 0 };
+    if (!nestingResult) return { basePrice: 0, total: 0 };
     
     const totalDesigns = nestingResult.placedItems.length;
     const sheetSizeNum = sheetWidth === 17 ? 17 : 13;
     
     // Base pricing logic (adjust as needed)
     const basePrice = nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59);
-    const setupFee = totalDesigns * 2.50; // $2.50 per unique design (hidden for now)
-    const total = basePrice; // Setup fee excluded from total
+    const total = basePrice;
     
-    return { basePrice, setupFee, total };
+    return { basePrice, total };
   };
 
   const handleAddToCart = () => {
@@ -270,12 +269,6 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
                         <span>Base Price:</span>
                         <span>${calculatePricing().basePrice.toFixed(2)}</span>
                       </div>
-                      {/* Setup Fee - Commented out for now, can be re-enabled later
-                      <div className="flex justify-between">
-                        <span>Setup Fee ({nestingResult.placedItems.length} designs):</span>
-                        <span>${calculatePricing().setupFee.toFixed(2)}</span>
-                      </div>
-                      */}
                       <div className="flex justify-between font-medium border-t pt-1">
                         <span>Total:</span>
                         <span>${calculatePricing().total.toFixed(2)}</span>

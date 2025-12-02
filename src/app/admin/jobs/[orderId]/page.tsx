@@ -589,12 +589,6 @@ export default function JobDetailsPage() {
                         <span className="text-slate-400">Base Price:</span>
                         <span>${selectedItem.pricing.basePrice?.toFixed(2)}</span>
                       </div>
-                      {selectedItem.pricing.setupFee > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Setup Fee:</span>
-                          <span>${selectedItem.pricing.setupFee?.toFixed(2)}</span>
-                        </div>
-                      )}
                       <div className="flex justify-between border-t border-white/10 pt-1 mt-1 font-medium">
                         <span>Total:</span>
                         <span className="text-green-400">${selectedItem.pricing.total?.toFixed(2)}</span>

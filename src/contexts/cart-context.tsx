@@ -17,7 +17,6 @@ export interface CartItem {
   };
   pricing: {
     basePrice: number;
-    setupFee: number;
     total: number;
   };
   quantity: number;
