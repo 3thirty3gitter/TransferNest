@@ -35,11 +35,12 @@ export async function saveSignature(name: string, html: string): Promise<Signatu
   const updatedSignatures = [...currentSignatures, newSignature];
 
   await updateCompanySettings({
+    ...settings,
     email: {
       ...settings.email,
       signatures: updatedSignatures
     }
-  });
+  }, 'system');
 
   return {
     id: newSignature.id,
@@ -56,9 +57,10 @@ export async function deleteSignature(id: string): Promise<void> {
   const updatedSignatures = settings.email.signatures.filter(s => s.id !== id);
 
   await updateCompanySettings({
+    ...settings,
     email: {
       ...settings.email,
       signatures: updatedSignatures
     }
-  });
+  }, 'system');
 }
