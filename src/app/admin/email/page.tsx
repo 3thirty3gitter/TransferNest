@@ -278,10 +278,11 @@ export default function EmailPage() {
                   </div>
                 </div>
 
-                <div className="bg-white text-black p-8 rounded-lg shadow-sm">
-                  <div 
-                    className="prose max-w-none"
-                    dangerouslySetInnerHTML={{ __html: processEmailBody(selectedEmail.body.content) }}
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden min-h-[600px]">
+                  <iframe 
+                    srcDoc={processEmailBody(selectedEmail.body.content)}
+                    className="w-full h-full min-h-[600px] border-0"
+                    title="Email content"
                   />
                 </div>
               </div>
