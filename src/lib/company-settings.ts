@@ -57,11 +57,27 @@ export interface ShippingIntegration {
   lastUpdated?: Date;
 }
 
+export interface EmailIntegration {
+  provider: 'microsoft365' | 'resend' | 'none';
+  enabled: boolean;
+  microsoft365?: {
+    tenantId: string;
+    clientId: string;
+    clientSecret: string;
+    userEmail: string;
+  };
+  resend?: {
+    apiKey: string;
+  };
+  lastUpdated?: Date;
+}
+
 export interface CompanySettings {
   companyInfo: CompanyInfo;
   socialMedia: SocialMediaLinks;
   payment: PaymentIntegration;
   shipping: ShippingIntegration;
+  email: EmailIntegration;
   updatedAt: Date;
   updatedBy: string;
 }
@@ -91,6 +107,10 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
       shipping: {
         ...data.shipping,
         lastUpdated: data.shipping?.lastUpdated?.toDate() || new Date(),
+      },
+      email: {
+        ...data.email,
+        lastUpdated: data.email?.lastUpdated?.toDate() || new Date(),
       },
     } as CompanySettings;
   } catch (error) {
@@ -185,6 +205,11 @@ export function getDefaultSettings(): CompanySettings {
       lastUpdated: new Date(),
     },
     shipping: {
+      provider: 'none',
+      enabled: false,
+      lastUpdated: new Date(),
+    },
+    email: {
       provider: 'none',
       enabled: false,
       lastUpdated: new Date(),

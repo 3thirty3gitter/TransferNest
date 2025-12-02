@@ -197,6 +197,35 @@ export default function AdminSettingsPage() {
     });
   };
 
+  const updateEmail = (field: string, value: any) => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      email: {
+        ...settings.email,
+        [field]: value,
+      },
+    });
+  };
+
+  const updateMicrosoft365 = (field: string, value: string) => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      email: {
+        ...settings.email,
+        microsoft365: {
+          tenantId: settings.email.microsoft365?.tenantId || '',
+          clientId: settings.email.microsoft365?.clientId || '',
+          clientSecret: settings.email.microsoft365?.clientSecret || '',
+          userEmail: settings.email.microsoft365?.userEmail || '',
+          ...settings.email.microsoft365,
+          [field]: value,
+        },
+      },
+    });
+  };
+
   if (loading || !isAdmin || !settings) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
@@ -570,6 +599,94 @@ export default function AdminSettingsPage() {
                         'Test Connection'
                       )}
                     </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Email Integration */}
+            <div className="glass-strong rounded-2xl p-6 border border-white/10">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <Mail className="h-6 w-6" />
+                Email Integration
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-slate-200">Email Provider</Label>
+                  <select
+                    value={settings.email?.provider || 'none'}
+                    onChange={(e) => updateEmail('provider', e.target.value)}
+                    className="w-full bg-white/10 border border-white/20 text-white rounded-md px-3 py-2 mt-2 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="none" className="bg-slate-800">None</option>
+                    <option value="microsoft365" className="bg-slate-800">Microsoft 365 (Graph API)</option>
+                    <option value="resend" className="bg-slate-800">Resend (Default)</option>
+                  </select>
+                </div>
+
+                {settings.email?.provider === 'microsoft365' && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="emailEnabled"
+                        checked={settings.email.enabled}
+                        onChange={(e) => updateEmail('enabled', e.target.checked)}
+                        className="w-5 h-5 rounded border-2 border-blue-500 bg-white/10 checked:bg-blue-500 cursor-pointer"
+                      />
+                      <Label htmlFor="emailEnabled" className="text-white cursor-pointer">
+                        Enable Microsoft 365 Integration
+                      </Label>
+                    </div>
+
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg mb-4">
+                      <p className="text-sm text-blue-200">
+                        To connect Microsoft 365, you need to register an application in Azure Active Directory.
+                        Grant the application <strong>Mail.Send</strong> permissions.
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label className="text-slate-200">Tenant ID</Label>
+                      <Input
+                        value={settings.email.microsoft365?.tenantId || ''}
+                        onChange={(e) => updateMicrosoft365('tenantId', e.target.value)}
+                        placeholder="Enter Azure Tenant ID"
+                        className="bg-white/10 border-white/20 text-white mt-2"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-slate-200">Client ID (App ID)</Label>
+                      <Input
+                        value={settings.email.microsoft365?.clientId || ''}
+                        onChange={(e) => updateMicrosoft365('clientId', e.target.value)}
+                        placeholder="Enter Azure Client ID"
+                        className="bg-white/10 border-white/20 text-white mt-2"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-slate-200">Client Secret</Label>
+                      <Input
+                        type="password"
+                        value={settings.email.microsoft365?.clientSecret || ''}
+                        onChange={(e) => updateMicrosoft365('clientSecret', e.target.value)}
+                        placeholder="Enter Azure Client Secret"
+                        className="bg-white/10 border-white/20 text-white mt-2"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-slate-200">Sender Email Address</Label>
+                      <Input
+                        value={settings.email.microsoft365?.userEmail || ''}
+                        onChange={(e) => updateMicrosoft365('userEmail', e.target.value)}
+                        placeholder="orders@yourdomain.com"
+                        className="bg-white/10 border-white/20 text-white mt-2"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Must match the user account associated with the app registration or have "Send As" permissions.</p>
+                    </div>
                   </>
                 )}
               </div>
