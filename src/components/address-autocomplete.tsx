@@ -47,7 +47,13 @@ export default function AddressAutocomplete({
     
     // Set attributes
     pickerElement.setAttribute('type', 'address');
-    pickerElement.setAttribute('country', country.toLowerCase());
+    
+    // Normalize country code (Google Maps requires ISO 3166-1 Alpha-2)
+    let countryCode = country.toLowerCase();
+    if (countryCode === 'canada') countryCode = 'ca';
+    if (countryCode === 'united states' || countryCode === 'usa') countryCode = 'us';
+    
+    pickerElement.setAttribute('country', countryCode);
     if (placeholder) {
       pickerElement.setAttribute('placeholder', placeholder);
     }
