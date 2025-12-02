@@ -105,8 +105,9 @@ export default function Home() {
             </h1>
             
             <p className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-slate-300 leading-relaxed">
-              Premium DTF transfers with cutting-edge AI nesting technology. Upload your designs, 
-              watch our AI optimize your gang sheets, and get professional results in minutes.
+              Canadian owned and operated. Premium custom DTF transfers printed in Edmonton, Alberta. 
+              Upload your designs, watch our AI optimize your gang sheets, and get professional results in minutes.
+              100% Satisfaction Guaranteed.
             </p>
 
             <div className="mt-10 flex flex-wrap justify-center gap-4">
@@ -124,8 +125,8 @@ export default function Home() {
                 <div className="w-12 h-12 mx-auto bg-pink-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                   <Clock className="h-6 w-6 text-pink-400" />
                 </div>
-                <div className="text-2xl font-bold text-white mb-1">24hr</div>
-                <div className="text-sm text-slate-400">Turnaround Time</div>
+                <div className="text-2xl font-bold text-white mb-1">Same Day</div>
+                <div className="text-sm text-slate-400">Shipping from Edmonton</div>
               </div>
 
               {/* Stat 2 */}
@@ -133,8 +134,8 @@ export default function Home() {
                 <div className="w-12 h-12 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                   <Sparkles className="h-6 w-6 text-purple-400" />
                 </div>
-                <div className="text-2xl font-bold text-white mb-1">Premium</div>
-                <div className="text-sm text-slate-400">DTF Quality</div>
+                <div className="text-2xl font-bold text-white mb-1">Canadian</div>
+                <div className="text-sm text-slate-400">Owned & Operated</div>
               </div>
 
               {/* Stat 3 */}
@@ -142,8 +143,8 @@ export default function Home() {
                 <div className="w-12 h-12 mx-auto bg-blue-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                   <CheckCircle className="h-6 w-6 text-blue-400" />
                 </div>
-                <div className="text-2xl font-bold text-white mb-1">No Minimums</div>
-                <div className="text-sm text-slate-400">Order Any Amount</div>
+                <div className="text-2xl font-bold text-white mb-1">Guaranteed</div>
+                <div className="text-sm text-slate-400">100% Satisfaction</div>
               </div>
             </div>
           </div>

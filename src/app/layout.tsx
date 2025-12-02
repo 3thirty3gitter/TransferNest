@@ -5,8 +5,17 @@ import { AuthProvider } from '@/contexts/auth-context';
 import { CartProvider } from '@/contexts/cart-context';
 
 export const metadata: Metadata = {
-  title: 'DTF Wholesale Canada - High Quality DTF Transfers',
-  description: 'Your #1 source for wholesale DTF transfers in Canada. Fast turnarounds, vibrant colors, and unbeatable prices. Upload your designs and get started today!',
+  title: 'DTF Wholesale Canada | Custom Direct to Film Transfers | Edmonton, Alberta',
+  description: 'Canadian owned and operated. Premium custom DTF transfers printed in Edmonton, Alberta. No minimums, same-day shipping, and 100% satisfaction guaranteed. The best direct to film transfers in Canada.',
+  keywords: ['DTF transfers Canada', 'Direct to Film Edmonton', 'Custom DTF transfers', 'Wholesale DTF Canada', 'Edmonton t-shirt printing', 'DTF gang sheets Canada'],
+  openGraph: {
+    title: 'DTF Wholesale Canada | Premium Direct to Film Transfers',
+    description: 'Canadian owned and operated in Edmonton, Alberta. High-quality DTF transfers with 100% satisfaction guaranteed.',
+    url: 'https://transfernest.ca',
+    siteName: 'DTF Wholesale Canada',
+    locale: 'en_CA',
+    type: 'website',
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -21,6 +30,43 @@ export const metadata: Metadata = {
       { rel: 'android-chrome', url: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
   },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: 'DTF Wholesale Canada',
+  image: 'https://transfernest.ca/dtf-wholesale-candada-proudly-canadian.jpg',
+  description: 'Premium custom DTF transfers printed in Edmonton, Alberta. Canadian owned and operated.',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Edmonton',
+    addressLocality: 'Edmonton',
+    addressRegion: 'AB',
+    addressCountry: 'CA'
+  },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: 53.5461,
+    longitude: -113.4938
+  },
+  url: 'https://transfernest.ca',
+  telephone: '+15555555555', // Placeholder, should be updated if real number exists
+  priceRange: '$$',
+  openingHoursSpecification: [
+    {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday'
+      ],
+      opens: '09:00',
+      closes: '17:00'
+    }
+  ]
 };
 
 export default function RootLayout({
@@ -47,6 +93,10 @@ export default function RootLayout({
             defer
           ></script>
         )}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body className="font-body antialiased">
         <AuthProvider>

@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server';
 import EasyPost from '@easypost/api';
 import { getFirestore } from '@/lib/firebase-admin';
 
-const adminDb = getFirestore();
-
 export async function POST(request: Request) {
   try {
+    const adminDb = getFirestore();
     const body = await request.json();
     const { address, items } = body;
 
@@ -17,11 +16,28 @@ export async function POST(request: Request) {
     const settingsDoc = await adminDb.collection('settings').doc('company-settings').get();
     const settings = settingsDoc.data();
 
-    if (!settings?.shipping?.enabled || settings.shipping.provider !== 'easypost' || !settings.shipping.apiKey) {
+    if (!settings) {
+      console.error('[SHIPPING] Settings document not found');
+      return NextResponse.json({ success: false, message: 'System settings not found' });
+    }
+
+    if (!settings.shipping?.enabled || settings.shipping.provider !== 'easypost' || !settings.shipping.apiKey) {
+      console.warn('[SHIPPING] Shipping not configured:', {
+        enabled: settings.shipping?.enabled,
+        provider: settings.shipping?.provider,
+        hasKey: !!settings.shipping?.apiKey
+      });
       return NextResponse.json({ success: false, message: 'Shipping not configured' });
     }
 
+    if (!settings.companyInfo?.address) {
+      console.error('[SHIPPING] Company address missing');
+      return NextResponse.json({ success: false, message: 'Company address configuration missing' });
+    }
+
     const client = new EasyPost(settings.shipping.apiKey);
+
+    console.log('[SHIPPING] Creating shipment with EasyPost...');
 
     // 2. Prepare From Address
     const fromAddress = {
@@ -45,6 +61,8 @@ export async function POST(request: Request) {
     const totalSheets = items.reduce((acc: number, item: any) => acc + item.quantity, 0);
     const height = Math.max(1, Math.ceil(totalSheets * 0.02));
 
+    console.log('[SHIPPING] Parcel details:', { weight: totalWeightOz, height });
+
     // 4. Fetch Rates
     const shipment = await client.Shipment.create({
       to_address: {
@@ -65,6 +83,8 @@ export async function POST(request: Request) {
         weight: totalWeightOz,
       },
     });
+
+    console.log('[SHIPPING] Rates fetched:', shipment.rates?.length);
 
     // Filter and sort rates (cheapest first)
     const rates = shipment.rates
