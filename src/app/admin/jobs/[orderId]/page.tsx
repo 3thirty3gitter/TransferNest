@@ -57,7 +57,6 @@ export default function JobDetailsPage() {
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OrderItem | null>(null);
 
   // Shipping State
@@ -240,7 +239,7 @@ export default function JobDetailsPage() {
     );
   }
 
-  if (!isAdmin || !order) {
+  if (!order) {
     return null;
   }
 

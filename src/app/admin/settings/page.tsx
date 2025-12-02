@@ -40,7 +40,6 @@ type TabType = 'company' | 'integrations' | 'social' | 'email';
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('company');
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [testingShipping, setTestingShipping] = useState(false);
@@ -213,7 +212,7 @@ export default function AdminSettingsPage() {
     });
   };
 
-  if (loading || !isAdmin || !settings) {
+  if (loading || !settings) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
