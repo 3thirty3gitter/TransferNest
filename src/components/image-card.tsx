@@ -106,28 +106,32 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
         {/* Dimensions */}
         <div className="space-y-2">
             <div className="flex items-center gap-2">
-                <Label htmlFor={`width-${image.id}`} className="w-16">Width</Label>
-                <Input
-                    id={`width-${image.id}`}
-                    type="number"
-                    value={localWidth}
-                    onChange={(e) => handleDimensionChange('width', e.target.value)}
-                    onBlur={() => triggerUpdate('width')}
-                    className="h-8"
-                />
-                <span className="text-sm text-muted-foreground">in</span>
+                <Label htmlFor={`width-${image.id}`} className="w-16 shrink-0">Width</Label>
+                <div className="relative flex-1">
+                    <Input
+                        id={`width-${image.id}`}
+                        type="number"
+                        value={localWidth}
+                        onChange={(e) => handleDimensionChange('width', e.target.value)}
+                        onBlur={() => triggerUpdate('width')}
+                        className="h-8 pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">in</span>
+                </div>
             </div>
             <div className="flex items-center gap-2">
-                <Label htmlFor={`height-${image.id}`} className="w-16">Height</Label>
-                 <Input
-                    id={`height-${image.id}`}
-                    type="number"
-                    value={localHeight}
-                    onChange={(e) => handleDimensionChange('height', e.target.value)}
-                    onBlur={() => triggerUpdate('height')}
-                    className="h-8"
-                />
-                <span className="text-sm text-muted-foreground">in</span>
+                <Label htmlFor={`height-${image.id}`} className="w-16 shrink-0">Height</Label>
+                <div className="relative flex-1">
+                    <Input
+                        id={`height-${image.id}`}
+                        type="number"
+                        value={localHeight}
+                        onChange={(e) => handleDimensionChange('height', e.target.value)}
+                        onBlur={() => triggerUpdate('height')}
+                        className="h-8 pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">in</span>
+                </div>
             </div>
         </div>
 

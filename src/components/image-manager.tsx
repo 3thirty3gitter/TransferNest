@@ -77,12 +77,17 @@ export default function ImageManager({
           // Get image dimensions
           const { width, height } = await processImageFile(file);
           
+          // Convert to inches (assuming 300 DPI)
+          // This ensures the default size is print-ready, not raw pixels
+          const widthInches = parseFloat((width / 300).toFixed(2));
+          const heightInches = parseFloat((height / 300).toFixed(2));
+          
           // Create ManagedImage object
           const managedImage: ManagedImage = {
             id: `img-${Date.now()}-${i}`,
             url,
-            width,
-            height,
+            width: widthInches,
+            height: heightInches,
             aspectRatio: width / height,
             copies: 1,
           };

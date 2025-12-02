@@ -8,10 +8,13 @@ import Link from 'next/link';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import Image from 'next/image';
+import { useState } from 'react';
+import CopyrightModal from '@/components/copyright-modal';
 
 export default function CartPage() {
   const { items, totalItems, totalPrice, removeItem } = useCart();
   const { user } = useAuth();
+  const [isCopyrightModalOpen, setIsCopyrightModalOpen] = useState(false);
 
   if (!user) {
     return (
@@ -180,13 +183,13 @@ export default function CartPage() {
                 <p className="text-xs text-slate-500 mt-2 text-right">CAD Currency</p>
               </div>
 
-              <Link 
-                href="/checkout"
+              <button 
+                onClick={() => setIsCopyrightModalOpen(true)}
                 className="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 group"
               >
                 Proceed to Checkout
                 <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              </button>
 
               <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-500">
                 <ShieldCheck className="h-4 w-4" />
@@ -197,6 +200,10 @@ export default function CartPage() {
         </div>
       </div>
       <Footer />
+      <CopyrightModal 
+        open={isCopyrightModalOpen} 
+        onClose={() => setIsCopyrightModalOpen(false)} 
+      />
     </div>
   );
 }
