@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/admin-auth-server';
-import { getEmails, markEmailAsRead } from '@/lib/microsoft-graph';
+import { getEmails, markEmailAsRead, sendEmail } from '@/lib/microsoft-graph';
 
 export async function GET(request: Request) {
   const auth = await verifyAdminRequest(request);
@@ -39,6 +39,30 @@ export async function PATCH(request: Request) {
     console.error('Error updating email:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to update email' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  const auth = await verifyAdminRequest(request);
+  if (!auth.authorized) {
+    return NextResponse.json({ error: auth.message }, { status: 401 });
+  }
+
+  try {
+    const { to, subject, content } = await request.json();
+    
+    if (!to || !subject || !content) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    await sendEmail(to, subject, content);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error sending email:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to send email' },
       { status: 500 }
     );
   }

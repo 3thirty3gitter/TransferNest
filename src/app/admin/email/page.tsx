@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { auth } from '@/lib/firebase';
-import { Mail, RefreshCw, Search, Star, Trash2, Archive, MoreVertical, Reply, Forward } from 'lucide-react';
+import { Mail, RefreshCw, Search, Star, Trash2, Archive, MoreVertical, Reply, Forward, Edit, X, Send } from 'lucide-react';
 
 interface Email {
   id: string;
@@ -28,6 +28,13 @@ export default function EmailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Compose State
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [composeTo, setComposeTo] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -60,6 +67,64 @@ export default function EmailPage() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  function handleCompose() {
+    setComposeTo('');
+    setComposeSubject('');
+    setComposeBody('');
+    setIsComposeOpen(true);
+  }
+
+  function handleReply(email: Email) {
+    setComposeTo(email.from.emailAddress.address);
+    setComposeSubject(`Re: ${email.subject}`);
+    setComposeBody(`<br><br><blockquote>On ${new Date(email.receivedDateTime).toLocaleString()}, ${email.from.emailAddress.name} wrote:<br>${email.body.content}</blockquote>`);
+    setIsComposeOpen(true);
+  }
+
+  function handleForward(email: Email) {
+    setComposeTo('');
+    setComposeSubject(`Fwd: ${email.subject}`);
+    setComposeBody(`<br><br>---------- Forwarded message ---------<br>From: ${email.from.emailAddress.name} &lt;${email.from.emailAddress.address}&gt;<br>Date: ${new Date(email.receivedDateTime).toLocaleString()}<br>Subject: ${email.subject}<br><br>${email.body.content}`);
+    setIsComposeOpen(true);
+  }
+
+  async function handleSendEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setSending(true);
+
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+
+      const response = await fetch('/api/admin/email', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: composeTo,
+          subject: composeSubject,
+          content: composeBody,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send email');
+      }
+
+      setIsComposeOpen(false);
+      // Optionally show success toast
+    } catch (err: any) {
+      console.error('Error sending email:', err);
+      alert(`Failed to send email: ${err.message}`);
+    } finally {
+      setSending(false);
     }
   }
 
@@ -139,13 +204,22 @@ export default function EmailPage() {
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex justify-between items-center">
           <h2 className="text-xl font-bold text-white">Inbox</h2>
-          <button 
-            onClick={fetchEmails}
-            disabled={refreshing}
-            className={`p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/5 transition-colors ${refreshing ? 'animate-spin' : ''}`}
-          >
-            <RefreshCw size={18} />
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleCompose}
+              className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-full transition-colors"
+              title="Compose"
+            >
+              <Edit size={18} />
+            </button>
+            <button 
+              onClick={fetchEmails}
+              disabled={refreshing}
+              className={`p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/5 transition-colors ${refreshing ? 'animate-spin' : ''}`}
+            >
+              <RefreshCw size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -269,10 +343,16 @@ export default function EmailPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-sm">
+                    <button 
+                      onClick={() => handleReply(selectedEmail)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-sm"
+                    >
                       <Reply size={16} /> Reply
                     </button>
-                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-sm">
+                    <button 
+                      onClick={() => handleForward(selectedEmail)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-sm"
+                    >
                       <Forward size={16} /> Forward
                     </button>
                   </div>
@@ -295,6 +375,88 @@ export default function EmailPage() {
           </div>
         )}
       </div>
+      {/* Compose Modal */}
+      {isComposeOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <h3 className="text-lg font-bold text-white">Compose Message</h3>
+              <button 
+                onClick={() => setIsComposeOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSendEmail} className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">To</label>
+                  <input
+                    type="email"
+                    required
+                    value={composeTo}
+                    onChange={(e) => setComposeTo(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="recipient@example.com"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    required
+                    value={composeSubject}
+                    onChange={(e) => setComposeSubject(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Subject"
+                  />
+                </div>
+                
+                <div className="flex-1 min-h-[200px]">
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Message</label>
+                  <textarea
+                    required
+                    value={composeBody}
+                    onChange={(e) => setComposeBody(e.target.value)}
+                    className="w-full h-full min-h-[300px] bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                    placeholder="Type your message here..."
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-white/10 flex justify-end gap-2 bg-slate-900">
+                <button
+                  type="button"
+                  onClick={() => setIsComposeOpen(false)}
+                  className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  Discard
+                </button>
+                <button
+                  type="submit"
+                  disabled={sending}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {sending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Send
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
