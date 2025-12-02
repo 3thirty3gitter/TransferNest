@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import EasyPost from '@easypost/api';
 import { getFirestore } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
+import { verifyAdminRequest } from '@/lib/admin-auth-server';
 
 const adminDb = getFirestore();
 
@@ -20,6 +21,11 @@ async function getOrder(orderId: string) {
 }
 
 export async function POST(request: Request) {
+  const authResult = await verifyAdminRequest(request);
+  if (!authResult.authorized) {
+    return NextResponse.json({ success: false, message: authResult.message }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { action, orderId } = body;

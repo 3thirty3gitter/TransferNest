@@ -74,7 +74,12 @@ export default function OrdersPage() {
       }
 
       try {
-        const response = await fetch(`/api/orders?userId=${user.uid}`);
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/orders?userId=${user.uid}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch orders');
         }

@@ -101,7 +101,12 @@ export default function JobDetailsPage() {
     
     try {
       // Use API endpoint for consistent data access
-      const response = await fetch(`/api/orders/${orderId}`);
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/orders/${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch order');
       
       const data = await response.json();
@@ -145,9 +150,13 @@ export default function JobDetailsPage() {
     setSelectedRate(null);
     
     try {
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/admin/shipments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           action: 'rates',
           orderId: order.id,
@@ -186,9 +195,13 @@ export default function JobDetailsPage() {
 
     setIsBuyingLabel(true);
     try {
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/admin/shipments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           action: 'buy',
           orderId: order.id,

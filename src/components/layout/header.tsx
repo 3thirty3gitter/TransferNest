@@ -73,6 +73,9 @@ export default function Header() {
             <Link href="/nesting-tool" className={navLinkClasses}>
               Create Gang Sheet
             </Link>
+            <Link href="/blog" className={navLinkClasses}>
+              Blog
+            </Link>
             <Link href="/#features" className={navLinkClasses}>
               Features
             </Link>
@@ -130,6 +133,13 @@ export default function Header() {
               onClick={() => setMobileMenuOpen(false)}
             >
               Create Gang Sheet
+            </Link>
+            <Link 
+              href="/blog" 
+              className="block text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Blog
             </Link>
             <Link 
               href="/#features" 

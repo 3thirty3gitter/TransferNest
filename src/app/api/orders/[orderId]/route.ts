@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
+import { verifyAdminRequest } from '@/lib/admin-auth-server';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
+  const authResult = await verifyAdminRequest(request);
+  if (!authResult.authorized) {
+    return NextResponse.json({ error: authResult.message }, { status: 401 });
+  }
+
   try {
     const { orderId } = await params;
 

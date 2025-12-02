@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from '@/lib/firebase-admin';
+import { verifyUserRequest, verifyAdminRequest } from '@/lib/admin-auth-server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,6 +8,28 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
     const limitParam = searchParams.get('limit');
+
+    // Security Check
+    const authResult = await verifyUserRequest(request);
+    if (!authResult.authorized || !authResult.user) {
+      return NextResponse.json({ error: authResult.message }, { status: 401 });
+    }
+
+    // If querying by status, must be admin
+    if (status) {
+      const adminCheck = await verifyAdminRequest(request);
+      if (!adminCheck.authorized) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      }
+    }
+
+    // If querying by userId, must be that user or admin
+    if (userId && userId !== authResult.user.uid) {
+      const adminCheck = await verifyAdminRequest(request);
+      if (!adminCheck.authorized) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
+    }
 
     if (!userId && !status) {
       return NextResponse.json(
