@@ -510,6 +510,7 @@ export default function EmailPage() {
                     </>
                   )}
                 </button>
+                </div>
               </div>
             </form>
           </div>
