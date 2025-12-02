@@ -235,17 +235,10 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
-      <div className="container mx-auto px-4 py-8">
+    <div className="p-8">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link
-            href="/admin"
-            className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors mb-4"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin Dashboard
-          </Link>
           <div className="flex items-center justify-between">
             <h1 className="text-4xl font-bold text-white">Settings</h1>
             <button

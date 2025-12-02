@@ -358,20 +358,10 @@ export default function ProductsManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
-      <div className="container mx-auto px-4 py-8">
+    <div className="p-8">
+      <div className="max-w-6xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Button
-                onClick={() => window.location.href = '/admin'}
-                variant="outline"
-                className="glass border-white/20 text-white hover:bg-white/10"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </div>
             <h1 className="text-4xl font-bold text-white mb-2">Product Management</h1>
             <p className="text-slate-300">Manage DTF transfer pricing and products</p>
           </div>

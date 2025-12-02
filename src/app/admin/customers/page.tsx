@@ -61,24 +61,8 @@ export default function CustomersPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white p-8">
+    <div className="p-8 text-white">
       <div className="max-w-7xl mx-auto">
-        {/* Back to Dashboard Link */}
-        <Link 
-          href="/admin" 
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors group"
-        >
-          <svg 
-            className="w-5 h-5 group-hover:-translate-x-1 transition-transform" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Dashboard
-        </Link>
-
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-3">
             <Users className="h-8 w-8 text-blue-400" />
