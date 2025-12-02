@@ -114,6 +114,13 @@ export default function EmailPage() {
     });
   }
 
+  function processEmailBody(content: string) {
+    if (!content) return '';
+    // Replace cid: images with a transparent pixel to prevent console errors
+    // This handles the "net::ERR_UNKNOWN_URL_SCHEME" error for inline images
+    return content.replace(/src="cid:[^"]*"/g, 'src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="display:none"');
+  }
+
   if (loading && !refreshing && emails.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -273,7 +280,7 @@ export default function EmailPage() {
 
                 <div 
                   className="prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: selectedEmail.body.content }}
+                  dangerouslySetInnerHTML={{ __html: processEmailBody(selectedEmail.body.content) }}
                 />
               </div>
             </div>
