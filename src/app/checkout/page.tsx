@@ -60,6 +60,7 @@ export default function CheckoutPage() {
   const [selectedShippingRate, setSelectedShippingRate] = useState<any>(null);
   const [isFetchingRates, setIsFetchingRates] = useState(false);
   const [shippingError, setShippingError] = useState<string | null>(null);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
 
   // Redirect if not authenticated or cart is empty
   useEffect(() => {
@@ -76,11 +77,16 @@ export default function CheckoutPage() {
     // Load customer profile from Firestore
     const loadCustomerProfile = async () => {
       try {
-        const profileRef = doc(db, 'customers', user.uid);
+        const profileRef = doc(db, 'users', user.uid);
         const profileSnap = await getDoc(profileRef);
         
         if (profileSnap.exists()) {
           const profileData = profileSnap.data();
+          
+          if (profileData.discountPercentage) {
+            setDiscountPercentage(profileData.discountPercentage);
+          }
+
           setCustomerInfo({
             email: user.email || '',
             firstName: profileData.firstName || '',
@@ -245,9 +251,15 @@ export default function CheckoutPage() {
     return selectedShippingRate ? parseFloat(selectedShippingRate.rate) : 0;
   }, [deliveryMethod, selectedShippingRate]);
 
+  const discountAmount = useMemo(() => {
+    return (totalPrice * discountPercentage) / 100;
+  }, [totalPrice, discountPercentage]);
+
+  const discountedSubtotal = totalPrice - discountAmount;
+
   // Calculate tax dynamically based on contact location (postal code determines tax)
   const taxCalculation = useMemo(() => {
-    const taxableAmount = totalPrice + shippingCost;
+    const taxableAmount = discountedSubtotal + shippingCost;
     
     // Tax is ALWAYS based on contact information province/state
     if (customerInfo.state && customerInfo.country) {
@@ -256,9 +268,9 @@ export default function CheckoutPage() {
     
     // Default to Ontario if no state selected yet
     return calculateTax(taxableAmount, 'ON', 'CA');
-  }, [totalPrice, shippingCost, customerInfo.state, customerInfo.country]);
+  }, [discountedSubtotal, shippingCost, customerInfo.state, customerInfo.country]);
 
-  const orderTotal = totalPrice + shippingCost + taxCalculation.total;
+  const orderTotal = discountedSubtotal + shippingCost + taxCalculation.total;
 
   const validateForm = () => {
     const contactRequired = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'] as const;
@@ -358,6 +370,8 @@ export default function CheckoutPage() {
             },
             shippingCost,
             shippingRate: selectedShippingRate,
+            discountPercentage,
+            discountAmount,
           }),
         });
         
@@ -894,6 +908,12 @@ export default function CheckoutPage() {
                       <span>Subtotal</span>
                       <span className="text-white">${totalPrice.toFixed(2)}</span>
                     </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-green-400">
+                        <span>Discount ({discountPercentage}%)</span>
+                        <span>-${discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span>Shipping</span>
                       <span className={shippingCost > 0 ? "text-white" : "text-green-400"}>

@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, 
   User, 
@@ -16,7 +17,8 @@ import {
   ShoppingBag,
   Package,
   DollarSign,
-  Clock
+  Clock,
+  Percent
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -32,6 +34,7 @@ interface Customer {
   zipCode?: string;
   country?: string;
   createdAt: string;
+  discountPercentage?: number;
 }
 
 interface Order {
@@ -53,6 +56,8 @@ export default function CustomerDetailPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [updatingDiscount, setUpdatingDiscount] = useState(false);
+  const [discountInput, setDiscountInput] = useState('');
 
   useEffect(() => {
     if (customerId) {
@@ -65,15 +70,43 @@ export default function CustomerDetailPage() {
     try {
       const customerDoc = await getDoc(doc(db, 'users', customerId));
       if (customerDoc.exists()) {
+        const data = customerDoc.data();
         setCustomer({
           id: customerDoc.id,
-          ...customerDoc.data(),
+          ...data,
         } as Customer);
+        if (data.discountPercentage) {
+          setDiscountInput(data.discountPercentage.toString());
+        }
       }
     } catch (error) {
       console.error('Error loading customer:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleUpdateDiscount() {
+    if (!customer) return;
+    setUpdatingDiscount(true);
+    try {
+      const discount = parseFloat(discountInput);
+      if (isNaN(discount) || discount < 0 || discount > 100) {
+        alert('Please enter a valid discount percentage (0-100)');
+        return;
+      }
+      
+      await updateDoc(doc(db, 'users', customer.id), {
+        discountPercentage: discount
+      });
+      
+      setCustomer(prev => prev ? { ...prev, discountPercentage: discount } : null);
+      alert('Discount updated successfully');
+    } catch (error) {
+      console.error('Error updating discount:', error);
+      alert('Failed to update discount');
+    } finally {
+      setUpdatingDiscount(false);
     }
   }
 
@@ -297,6 +330,37 @@ export default function CustomerDetailPage() {
                       month: 'long',
                       day: 'numeric'
                     })}
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-white/10">
+                  <p className="text-slate-400 text-sm mb-2 flex items-center gap-2">
+                    <Percent className="h-4 w-4" />
+                    Customer Discount
+                  </p>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={discountInput}
+                        onChange={(e) => setDiscountInput(e.target.value)}
+                        placeholder="0"
+                        className="bg-white/10 border-white/20 text-white pr-8"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                    </div>
+                    <Button 
+                      onClick={handleUpdateDiscount}
+                      disabled={updatingDiscount}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {updatingDiscount ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    This discount will be automatically applied to all future orders.
                   </p>
                 </div>
               </CardContent>

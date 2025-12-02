@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
       deliveryMethod,
       shippingCost,
       shippingRate,
-      taxBreakdown
+      taxBreakdown,
+      discountPercentage,
+      discountAmount
     } = await request.json();
 
     // Validate Square configuration
@@ -120,7 +122,9 @@ export async function POST(request: NextRequest) {
         deliveryMethod,
         shippingCost,
         shippingRate,
-        taxBreakdown
+        taxBreakdown,
+        discountPercentage,
+        discountAmount
       });
 
       console.log('[PAYMENT] Order created:', orderId);
@@ -247,15 +251,20 @@ async function saveOrder(orderData: any) {
     // Shipping cost
     const shipping = orderData.shippingCost || 0;
     
+    // Discount
+    const discountPercentage = orderData.discountPercentage || 0;
+    const discountAmount = orderData.discountAmount || 0;
+    
     // Use the actual amount charged to the customer (should match subtotal + tax + shipping)
     const total = orderData.amount;
 
     console.log('[SAVE ORDER] Calculated values:', { 
       subtotal: subtotal.toFixed(2), 
+      discount: discountAmount.toFixed(2),
       tax: tax.toFixed(2), 
       shipping: shipping.toFixed(2), 
       total: total.toFixed(2),
-      verification: (subtotal + tax + shipping).toFixed(2)
+      verification: (subtotal - discountAmount + tax + shipping).toFixed(2)
     });
 
     const order = {
@@ -265,6 +274,8 @@ async function saveOrder(orderData: any) {
       customerInfo: orderData.customerInfo,
       items: orderItems,
       subtotal,
+      discountPercentage,
+      discountAmount,
       tax,
       shipping,
       total,

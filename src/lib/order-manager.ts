@@ -69,6 +69,8 @@ export interface Order {
   // Order Details
   items: OrderItem[];
   subtotal: number;
+  discountPercentage?: number;
+  discountAmount?: number;
   tax: number;
   shipping: number;
   total: number;
