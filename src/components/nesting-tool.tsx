@@ -144,7 +144,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
     const sheetSizeNum = sheetWidth === 17 ? 17 : 13;
     
     // Base pricing logic (adjust as needed)
-    const basePrice = nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59);
+    const basePrice = nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.67);
     const total = basePrice;
     
     return { basePrice, total };
@@ -259,7 +259,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
                 <h3 className="font-medium mb-2">Your Gang Sheet</h3>
                 <div className="text-sm space-y-1">
                   <div>Sheet Length: {nestingResult.sheetLength.toFixed(2)}"</div>
-                  <div>Cost: ${(nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59)).toFixed(2)}</div>
+                  <div>Cost: ${(nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.67)).toFixed(2)}</div>
                   
                   {/* Pricing Breakdown */}
                   <div className="mt-4 p-3 bg-muted rounded-md">

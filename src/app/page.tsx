@@ -341,7 +341,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold mb-3">Wholesale Pricing</h3>
                 <p className="text-slate-300 leading-relaxed">
-                  Pay by the inch and save big. Just $0.59/inch for 17" wide sheets.
+                  Pay by the inch and save big. Just $0.67/inch for 17" wide sheets.
                 </p>
               </div>
 

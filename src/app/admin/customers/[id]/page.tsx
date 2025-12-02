@@ -390,9 +390,10 @@ export default function CustomerDetailPage() {
                 ) : (
                   <div className="space-y-4">
                     {orders.map((order) => (
-                      <div
+                      <Link
+                        href={`/admin/jobs/${order.id}`}
                         key={order.id}
-                        className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors"
+                        className="block bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors"
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div>
@@ -437,7 +438,7 @@ export default function CustomerDetailPage() {
                             ))}
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}

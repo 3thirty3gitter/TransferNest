@@ -36,7 +36,7 @@ const products = [
     name: '17" Gang Sheet',
     description: 'Ideal for oversized prints, hoodies, and maximizing designs per sheet for high-volume orders.',
     sheetSize: '17',
-    pricePerInch: 0.59,
+    pricePerInch: 0.67,
     basePrice: 0,
     isActive: true,
     badge: 'MAXIMUM SIZE',

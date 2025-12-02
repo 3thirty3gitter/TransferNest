@@ -123,7 +123,7 @@ export default function AdminNestingTool() {
   const calculatePricing = () => {
     if (!nestingResult) return { basePrice: 0, total: 0 };
 
-    const basePrice = nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.59);
+    const basePrice = nestingResult.sheetLength * (sheetWidth === 13 ? 0.45 : 0.67);
 
     return { basePrice, total: basePrice };
   };
