@@ -2,9 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { checkAdminAccess } from '@/middleware/adminAuth';
 import { executeNesting, ManagedImage, NestingResult } from '@/lib/nesting-algorithm';
 import SheetPreview from '@/components/sheet-preview';
 import ImageManager from '@/components/image-manager';
@@ -28,24 +25,9 @@ export default function AdminNestingTool() {
   const [bestUtilization, setBestUtilization] = useState(0);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const hasAccess = await checkAdminAccess();
-        setIsAdmin(hasAccess);
-        if (!hasAccess) {
-          router.push('/admin/login');
-        } else {
-          // Check for job data to load
-          loadJobFromSession();
-        }
-      } else {
-        router.push('/admin/login');
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    loadJobFromSession();
+    setLoading(false);
+  }, []);
 
   const loadJobFromSession = () => {
     try {

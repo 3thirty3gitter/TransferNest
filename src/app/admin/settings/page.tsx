@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { checkAdminAccess } from '@/middleware/adminAuth';
 import { 
   getCompanySettings, 
   updateCompanySettings, 
@@ -47,24 +45,8 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.push('/admin/login');
-        return;
-      }
-      
-      const hasAccess = await checkAdminAccess();
-      if (!hasAccess) {
-        router.push('/admin/login');
-        return;
-      }
-      
-      setIsAdmin(true);
-      await loadSettings();
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    loadSettings();
+  }, []);
 
   async function loadSettings() {
     try {

@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { checkAdminAccess } from '@/middleware/adminAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -67,24 +65,9 @@ export default function ProductsManagementPage() {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.push('/admin/login');
-        return;
-      }
-
-      const isAdmin = await checkAdminAccess();
-      if (!isAdmin) {
-        router.push('/');
-        return;
-      }
-
-      await loadProducts();
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    loadProducts();
+    setLoading(false);
+  }, []);
 
   const loadProducts = async () => {
     try {

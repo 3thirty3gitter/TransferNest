@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter, useParams } from 'next/navigation';
-import { checkAdminAccess } from '@/middleware/adminAuth';
 import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer } from 'lucide-react';
 import Link from 'next/link';
 
@@ -76,25 +74,8 @@ export default function JobDetailsPage() {
   const [isBuyingLabel, setIsBuyingLabel] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.push('/admin/login');
-        return;
-      }
-      
-      const hasAccess = await checkAdminAccess();
-      if (!hasAccess) {
-        alert('Access denied. Admin privileges required.');
-        router.push('/admin/login');
-        return;
-      }
-      
-      setIsAdmin(true);
-      loadOrder();
-    });
-
-    return () => unsubscribe();
-  }, [orderId, router]);
+    loadOrder();
+  }, [orderId]);
 
   async function loadOrder() {
     if (!orderId) return;

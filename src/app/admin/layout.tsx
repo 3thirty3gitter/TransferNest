@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { checkAdminAccess } from '@/middleware/adminAuth';
+import { isAdminEmail } from '@/middleware/adminAuth';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -26,13 +26,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   useEffect(() => {
+    let mounted = true;
+    let resolved = false;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!mounted) return;
+      resolved = true;
+
       if (!user) {
         router.push('/admin/login');
         return;
       }
       
-      const hasAccess = await checkAdminAccess();
+      const hasAccess = isAdminEmail(user.email);
+      if (!mounted) return;
+
       if (!hasAccess) {
         router.push('/admin/login');
         return;
@@ -42,7 +50,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted && !resolved) {
+        console.warn('Admin auth check timed out');
+        router.push('/admin/login');
+      }
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [router]);
 
   const handleSignOut = async () => {
