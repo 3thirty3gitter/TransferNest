@@ -278,10 +278,12 @@ export default function EmailPage() {
                   </div>
                 </div>
 
-                <div 
-                  className="prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: processEmailBody(selectedEmail.body.content) }}
-                />
+                <div className="bg-white text-black p-8 rounded-lg shadow-sm">
+                  <div 
+                    className="prose max-w-none"
+                    dangerouslySetInnerHTML={{ __html: processEmailBody(selectedEmail.body.content) }}
+                  />
+                </div>
               </div>
             </div>
           </>
