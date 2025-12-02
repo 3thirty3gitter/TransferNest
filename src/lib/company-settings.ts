@@ -57,6 +57,13 @@ export interface ShippingIntegration {
   lastUpdated?: Date;
 }
 
+export interface EmailSignature {
+  id: string;
+  name: string;
+  content: string; // HTML content
+  isDefault: boolean;
+}
+
 export interface EmailIntegration {
   provider: 'microsoft365' | 'resend' | 'none';
   enabled: boolean;
@@ -69,6 +76,7 @@ export interface EmailIntegration {
   resend?: {
     apiKey: string;
   };
+  signatures?: EmailSignature[];
   lastUpdated?: Date;
 }
 

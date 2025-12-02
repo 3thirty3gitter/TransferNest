@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { auth } from '@/lib/firebase';
-import { Mail, RefreshCw, Search, Star, Trash2, Archive, MoreVertical, Reply, Forward, Edit, X, Send } from 'lucide-react';
+import { getCompanySettings, type EmailSignature } from '@/lib/company-settings';
+import { Mail, RefreshCw, Search, Star, Trash2, Archive, MoreVertical, Reply, Forward, Edit, X, Send, PenTool } from 'lucide-react';
 
 interface Email {
   id: string;
@@ -35,10 +36,41 @@ export default function EmailPage() {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [signatures, setSignatures] = useState<EmailSignature[]>([]);
+  const [selectedSignatureId, setSelectedSignatureId] = useState<string>('');
 
   useEffect(() => {
     fetchEmails();
+    loadSignatures();
   }, []);
+
+  async function loadSignatures() {
+    const settings = await getCompanySettings();
+    if (settings?.email?.signatures) {
+      setSignatures(settings.email.signatures);
+      // Set default signature if exists
+      const defaultSig = settings.email.signatures.find(s => s.isDefault);
+      if (defaultSig) setSelectedSignatureId(defaultSig.id);
+    } else {
+      // Add default signatures if none exist
+      const defaultSignatures: EmailSignature[] = [
+        {
+          id: 'default',
+          name: 'Default',
+          isDefault: true,
+          content: '<br><br>Best regards,<br><strong>The DTF Wholesale Team</strong>'
+        },
+        {
+          id: 'formal',
+          name: 'Formal',
+          isDefault: false,
+          content: '<br><br>Sincerely,<br><strong>DTF Wholesale</strong><br>201-5415 Calgary Trail NW<br>Edmonton, AB T6H 4J9<br><a href="https://dtf-wholesale.ca">www.dtf-wholesale.ca</a>'
+        }
+      ];
+      setSignatures(defaultSignatures);
+      setSelectedSignatureId('default');
+    }
+  }
 
   async function fetchEmails() {
     try {
@@ -100,6 +132,17 @@ export default function EmailPage() {
       if (!user) return;
       const token = await user.getIdToken();
 
+      // Format body with HTML line breaks
+      let finalContent = composeBody.replace(/\n/g, '<br>');
+      
+      // Append signature if selected
+      if (selectedSignatureId) {
+        const signature = signatures.find(s => s.id === selectedSignatureId);
+        if (signature) {
+          finalContent += signature.content;
+        }
+      }
+
       const response = await fetch('/api/admin/email', {
         method: 'POST',
         headers: {
@@ -109,7 +152,7 @@ export default function EmailPage() {
         body: JSON.stringify({
           to: composeTo,
           subject: composeSubject,
-          content: composeBody,
+          content: finalContent,
         }),
       });
 
@@ -427,17 +470,32 @@ export default function EmailPage() {
                 </div>
               </div>
 
-              <div className="p-4 border-t border-white/10 flex justify-end gap-2 bg-slate-900">
-                <button
-                  type="button"
-                  onClick={() => setIsComposeOpen(false)}
-                  className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                >
-                  Discard
-                </button>
-                <button
-                  type="submit"
-                  disabled={sending}
+              <div className="p-4 border-t border-white/10 flex justify-between items-center bg-slate-900">
+                <div className="flex items-center gap-2">
+                  <PenTool size={16} className="text-slate-400" />
+                  <select
+                    value={selectedSignatureId}
+                    onChange={(e) => setSelectedSignatureId(e.target.value)}
+                    className="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">No Signature</option>
+                    {signatures.map(sig => (
+                      <option key={sig.id} value={sig.id}>{sig.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsComposeOpen(false)}
+                    className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={sending}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {sending ? (
