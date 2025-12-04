@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer, Mail, Send } from 'lucide-react';
 import Link from 'next/link';
 
 type OrderItem = {
@@ -71,6 +71,7 @@ export default function JobDetailsPage() {
   });
   const [isFetchingRates, setIsFetchingRates] = useState(false);
   const [isBuyingLabel, setIsBuyingLabel] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrder();
@@ -205,6 +206,38 @@ export default function JobDetailsPage() {
     }
   }
 
+  async function sendNotification(type: 'confirmation' | 'shipped' | 'pickup' | 'update') {
+    if (!order) return;
+    
+    setSendingEmail(type);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/admin/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          type
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert(`${type.charAt(0).toUpperCase() + type.slice(1)} email sent successfully!`);
+      } else {
+        alert('Failed to send email: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      alert('Error sending notification');
+    } finally {
+      setSendingEmail(null);
+    }
+  }
+
   const openInEditor = (item: OrderItem) => {
     if (!item.placedItems || !item.images) {
       alert('No layout data available for this item');
@@ -328,6 +361,49 @@ export default function JobDetailsPage() {
                 </div>
               </div>
             )}
+
+            {/* Send Notifications */}
+            <div className="glass-strong rounded-lg border border-white/10 p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Send Notifications
+              </h2>
+              <div className="space-y-2">
+                <button
+                  onClick={() => sendNotification('confirmation')}
+                  disabled={sendingEmail !== null}
+                  className="w-full py-2 px-3 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingEmail === 'confirmation' ? 'Sending...' : 'Send Order Confirmation'}
+                </button>
+                <button
+                  onClick={() => sendNotification('update')}
+                  disabled={sendingEmail !== null}
+                  className="w-full py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingEmail === 'update' ? 'Sending...' : 'Send Status Update'}
+                </button>
+                <button
+                  onClick={() => sendNotification('shipped')}
+                  disabled={sendingEmail !== null}
+                  className="w-full py-2 px-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingEmail === 'shipped' ? 'Sending...' : 'Send Shipped Notification'}
+                </button>
+                <button
+                  onClick={() => sendNotification('pickup')}
+                  disabled={sendingEmail !== null}
+                  className="w-full py-2 px-3 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-500/30 text-yellow-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingEmail === 'pickup' ? 'Sending...' : 'Send Ready for Pickup'}
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 mt-3">Emails sent to: {order.customerInfo?.email || 'N/A'}</p>
+            </div>
 
             {/* Shipping Management */}
             <div className="glass-strong rounded-lg border border-white/10 p-6">
