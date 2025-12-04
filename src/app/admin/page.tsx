@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Download, Search, Filter, ChevronDown, CheckSquare, Square } from 'lucide-react';
 import Link from 'next/link';
 
-type OrderStatus = 'pending' | 'printing' | 'shipped' | 'completed';
+type OrderStatus = 'pending' | 'printing' | 'shipped' | 'completed' | 'ready_for_pickup';
 type PaymentStatus = 'paid' | 'refunded';
 type ShippingStatus = 'pending' | 'processing' | 'shipped' | 'delivered';
 
@@ -101,8 +101,27 @@ export default function AdminPage() {
 
   async function updateOrderStatus(orderId: string, field: keyof Order, value: any) {
     try {
-      const orderRef = doc(db, 'orders', orderId);
-      await updateDoc(orderRef, { [field]: value });
+      // For status changes, use the API to trigger email notifications
+      if (field === 'status') {
+        const token = await auth.currentUser?.getIdToken();
+        const response = await fetch(`/api/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: value })
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to update order');
+        }
+      } else {
+        // For other fields, update directly
+        const orderRef = doc(db, 'orders', orderId);
+        await updateDoc(orderRef, { [field]: value });
+      }
       
       // Update local state
       setOrders(prev => prev.map(order => 
@@ -341,11 +360,13 @@ export default function AdminPage() {
                         bg-transparent text-sm font-medium rounded px-2 py-1 border border-transparent hover:border-slate-700 focus:border-blue-500 focus:bg-slate-800 outline-none cursor-pointer
                         ${order.status === 'completed' ? 'text-green-400' : 
                           order.status === 'shipped' ? 'text-blue-400' :
+                          order.status === 'ready_for_pickup' ? 'text-purple-400' :
                           order.status === 'printing' ? 'text-yellow-400' : 'text-slate-400'}
                       `}
                     >
                       <option value="pending">Pending</option>
                       <option value="printing">Printing</option>
+                      <option value="ready_for_pickup">Ready for Pickup</option>
                       <option value="shipped">Shipped</option>
                       <option value="completed">Completed</option>
                     </select>

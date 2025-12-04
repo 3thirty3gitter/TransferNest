@@ -40,7 +40,7 @@ export interface Order {
   id?: string;
   userId: string;
   paymentId: string;
-  status: 'pending' | 'paid' | 'processing' | 'printed' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'paid' | 'processing' | 'printing' | 'printed' | 'ready_for_pickup' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
   
   // Customer Information
   customerInfo: {
@@ -90,6 +90,11 @@ export interface Order {
   notes?: string;
   trackingNumber?: string;
   estimatedDelivery?: Timestamp;
+  shippingInfo?: {
+    trackingNumber?: string;
+    carrier?: string;
+    labelUrl?: string;
+  };
 }
 
 export class OrderManager {
