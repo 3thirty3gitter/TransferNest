@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required fields
-    if (!sourceId || !amount || !userId) {
+    if (!sourceId || amount === undefined || amount === null || !userId) {
       return NextResponse.json(
         { success: false, error: 'Missing required payment information' },
         { status: 400 }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Validate amount is a valid number
     const amountNum = Number(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
+    if (isNaN(amountNum) || amountNum < 0) {
       console.error('[PAYMENT] Invalid amount:', amount, 'Type:', typeof amount);
       return NextResponse.json(
         { success: false, error: 'Invalid payment amount' },
@@ -71,34 +71,51 @@ export async function POST(request: NextRequest) {
       amount: amountNum,
       currency: currency || 'CAD',
       locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-      itemCount: cartItems.length
+      itemCount: cartItems.length,
+      isDiscounted: amountNum === 0
     });
 
-    // Create the payment request
-    const requestBody = {
-      sourceId,
-      amountMoney: {
-        amount: BigInt(Math.round(amountNum)),
-        currency: currency || 'CAD',
-      },
-      locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-      idempotencyKey: randomUUID(),
-      note: `DTF Print Order - ${cartItems.length} item(s)`,
-      buyerEmailAddress: customerInfo.email,
-    };
+    let paymentResult;
 
-    // Process the payment
-    const result = await client.payments.create(requestBody);
+    // Handle 100% discount case (amount is 0)
+    if (amountNum === 0 && sourceId === '100-PERCENT-DISCOUNT') {
+      console.log('[PAYMENT] Processing 100% discount order - skipping Square payment');
+      paymentResult = {
+        payment: {
+          id: `DISCOUNT-100-${randomUUID()}`,
+          totalMoney: { amount: BigInt(0), currency: currency || 'CAD' },
+          status: 'COMPLETED',
+          createdAt: new Date().toISOString(),
+          receiptUrl: null
+        }
+      };
+    } else {
+      // Create the payment request for normal orders
+      const requestBody = {
+        sourceId,
+        amountMoney: {
+          amount: BigInt(Math.round(amountNum)),
+          currency: currency || 'CAD',
+        },
+        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+        idempotencyKey: randomUUID(),
+        note: `DTF Print Order - ${cartItems.length} item(s)`,
+        buyerEmailAddress: customerInfo.email,
+      };
 
-    if (result.payment) {
-      console.log('[PAYMENT] Square payment successful:', {
-        paymentId: result.payment.id,
-        amountCharged: result.payment.totalMoney,
-        status: result.payment.status
+      // Process the payment
+      paymentResult = await client.payments.create(requestBody);
+    }
+
+    if (paymentResult.payment) {
+      console.log('[PAYMENT] Payment successful:', {
+        paymentId: paymentResult.payment.id,
+        amountCharged: paymentResult.payment.totalMoney,
+        status: paymentResult.payment.status
       });
 
       // Get the ACTUAL amount charged by Square (in cents)
-      const actualAmountCents = Number(result.payment.totalMoney?.amount || amount);
+      const actualAmountCents = Number(paymentResult.payment.totalMoney?.amount || amount);
       const actualAmountDollars = actualAmountCents / 100;
       
       console.log('[PAYMENT] Using actual amount from Square:', {
@@ -109,7 +126,7 @@ export async function POST(request: NextRequest) {
       
       // First, save the order without print files
       const orderId = await saveOrder({
-        paymentId: result.payment.id,
+        paymentId: paymentResult.payment.id,
         amount: actualAmountDollars, // Use ACTUAL amount charged by Square
         currency,
         customerInfo,
@@ -175,7 +192,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        paymentId: result.payment.id,
+        paymentId: paymentResult.payment.id,
         orderId,
         message: 'Payment processed successfully',
         printFiles: printFiles.map((pf: any) => ({
@@ -185,7 +202,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Payment failed
-      const errorMessages = result.errors?.map((error: any) => error.detail).join(', ') || 'Payment failed';
+      const errorMessages = paymentResult.errors?.map((error: any) => error.detail).join(', ') || 'Payment failed';
       
       return NextResponse.json(
         { success: false, error: errorMessages },
@@ -267,7 +284,26 @@ async function saveOrder(orderData: any) {
       verification: (subtotal - discountAmount + tax + shipping).toFixed(2)
     });
 
-    const order = {
+    // Helper to sanitize object for Firestore (remove undefined)
+    const sanitizeForFirestore = (obj: any): any => {
+      if (obj === null || obj === undefined) return null;
+      if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
+      if (typeof obj === 'object') {
+        const newObj: any = {};
+        for (const key in obj) {
+          const val = sanitizeForFirestore(obj[key]);
+          if (val !== undefined) {
+            newObj[key] = val;
+          } else {
+            newObj[key] = null;
+          }
+        }
+        return newObj;
+      }
+      return obj;
+    };
+
+    const order = sanitizeForFirestore({
       userId: orderData.userId,
       paymentId: orderData.paymentId,
       status: orderData.status,
@@ -283,9 +319,9 @@ async function saveOrder(orderData: any) {
       printFiles: orderData.printFiles || [],
       shippingAddress: orderData.shippingAddress,
       deliveryMethod: orderData.deliveryMethod,
-      shippingRate: orderData.shippingRate || null,
-      taxBreakdown: orderData.taxBreakdown || null,
-    };
+      shippingRate: orderData.shippingRate,
+      taxBreakdown: orderData.taxBreakdown,
+    });
 
     console.log('[SAVE ORDER] Print files count:', orderData.printFiles?.length || 0);
 

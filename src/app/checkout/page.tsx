@@ -312,7 +312,8 @@ export default function CheckoutPage() {
       return false;
     }
 
-    if (!cardPayment) {
+    // Skip payment validation if order total is 0 (100% discount)
+    if (orderTotal > 0 && !cardPayment) {
       toast({
         title: "Payment Error",
         description: "Payment system not ready. Please try again.",
@@ -325,71 +326,79 @@ export default function CheckoutPage() {
   };
 
   const handlePayment = async () => {
-    if (!validateForm() || !cardPayment || !user) return;
+    // Skip cardPayment check if order total is 0
+    if (!validateForm() || (!cardPayment && orderTotal > 0) || !user) return;
     
     setIsLoading(true);
     
     try {
-      // Tokenize the payment method
-      const result = await cardPayment.tokenize();
+      let token = '100-PERCENT-DISCOUNT';
       
-      if (result.status === 'OK') {
-        const paymentAmount = Math.round(orderTotal * 100);
+      // Only tokenize if there is a payment amount
+      if (orderTotal > 0 && cardPayment) {
+        // Tokenize the payment method
+        const result = await cardPayment.tokenize();
         
-        console.log('[CHECKOUT] Preparing payment:', {
-          amount: paymentAmount,
-          subtotal: totalPrice,
-          tax: taxCalculation.total,
-          orderTotal,
-          currency: 'CAD',
-          itemCount: items.length
-        });
-
-        // Send payment to your backend
-        const response = await fetch('/api/process-payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sourceId: result.token,
-            amount: paymentAmount,
-            currency: 'CAD',
-            customerInfo,
-            shippingAddress: deliveryMethod === 'shipping' && useShippingAddress ? shippingAddress : customerInfo,
-            deliveryMethod,
-            useShippingAddress,
-            cartItems: items,
-            userId: user.uid,
-            taxAmount: taxCalculation.total,
-            taxRate: taxCalculation.rate,
-            taxBreakdown: {
-              gst: taxCalculation.gst,
-              pst: taxCalculation.pst,
-              hst: taxCalculation.hst,
-            },
-            shippingCost,
-            shippingRate: selectedShippingRate,
-            discountPercentage,
-            discountAmount,
-          }),
-        });
-        
-        const paymentResult = await response.json();
-        
-        if (paymentResult.success) {
-          // Clear cart and redirect to success page
-          clearCart();
-          toast({
-            title: "Payment Successful!",
-            description: "Your order has been processed. You'll receive a confirmation email shortly.",
-          });
-          router.push(`/order-confirmation/${paymentResult.orderId}`);
-        } else {
-          throw new Error(paymentResult.error || 'Payment failed');
+        if (result.status !== 'OK') {
+          throw new Error(result.errors?.[0]?.detail || 'Payment failed');
         }
+        token = result.token!;
+      }
+      
+      const paymentAmount = Math.round(orderTotal * 100);
+      
+      console.log('[CHECKOUT] Preparing payment:', {
+        amount: paymentAmount,
+        subtotal: totalPrice,
+        tax: taxCalculation.total,
+        orderTotal,
+        currency: 'CAD',
+        itemCount: items.length,
+        isDiscounted: orderTotal === 0
+      });
+
+      // Send payment to your backend
+      const response = await fetch('/api/process-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sourceId: token,
+          amount: paymentAmount,
+          currency: 'CAD',
+          customerInfo,
+          shippingAddress: deliveryMethod === 'shipping' && useShippingAddress ? shippingAddress : customerInfo,
+          deliveryMethod,
+          useShippingAddress,
+          cartItems: items,
+          userId: user.uid,
+          taxAmount: taxCalculation.total,
+          taxRate: taxCalculation.rate,
+          taxBreakdown: {
+            gst: taxCalculation.gst,
+            pst: taxCalculation.pst,
+            hst: taxCalculation.hst,
+          },
+          shippingCost,
+          shippingRate: selectedShippingRate,
+          discountPercentage,
+          discountAmount,
+        }),
+      });
+      
+      const paymentResult = await response.json();
+      
+      if (paymentResult.success) {
+        // Clear cart and redirect to success page
+        clearCart();
+        toast({
+          title: "Order Successful!",
+          description: "Your order has been processed. You'll receive a confirmation email shortly.",
+        });
+        router.push(`/order-confirmation/${paymentResult.orderId}`);
       } else {
-        throw new Error(result.errors?.[0]?.detail || 'Payment failed');
+        throw new Error(paymentResult.error || 'Payment failed');
       }
       
     } catch (error) {
