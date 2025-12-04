@@ -77,7 +77,7 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
     if (!template) throw new Error('Template not found');
 
     const data = await resend.emails.send({
-      from: 'DTF Wholesale <orders@dtf-wholesale.ca>',
+      from: 'DTF Wholesale <orders@dtf-canada.ca>',
       to: [customerEmail],
       subject: template.subject,
       html: template.html,
@@ -113,7 +113,7 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails) {
     if (!template) throw new Error('Template not found');
 
     const data = await resend.emails.send({
-      from: 'DTF Wholesale System <system@dtf-wholesale.ca>',
+      from: 'DTF Wholesale System <orders@dtf-canada.ca>',
       to: adminEmails,
       subject: template.subject,
       html: template.html,
@@ -170,7 +170,7 @@ export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: s
     if (!template) throw new Error('Template not found');
 
     const data = await resend.emails.send({
-      from: 'DTF Wholesale <orders@dtf-wholesale.ca>',
+      from: 'DTF Wholesale <orders@dtf-canada.ca>',
       to: [customerEmail],
       subject: template.subject,
       html: template.html,
@@ -200,7 +200,7 @@ export async function sendOrderReadyForPickupEmail(details: EmailOrderDetails) {
     if (!template) throw new Error('Template not found');
 
     const data = await resend.emails.send({
-      from: 'DTF Wholesale <orders@dtf-wholesale.ca>',
+      from: 'DTF Wholesale <orders@dtf-canada.ca>',
       to: [customerEmail],
       subject: template.subject,
       html: template.html,
