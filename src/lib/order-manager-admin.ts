@@ -27,7 +27,7 @@ export class OrderManagerAdmin {
         ...orderData,
         createdAt: now,
         updatedAt: now,
-        paidAt: orderData.status === 'paid' ? now : undefined
+        paidAt: orderData.status === 'paid' ? now : null
       };
 
       console.log('[OrderManagerAdmin] Order data prepared, adding to Firestore...');
