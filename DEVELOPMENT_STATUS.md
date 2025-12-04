@@ -1,4 +1,9 @@
-# TransferNest Development Status - October 17, 2025
+# TransferNest Development Status - December 4, 2025
+
+## Current Status: STABLE (v1.1-stable-orders-fixed)
+- **Order Processing**: Fixed and Verified.
+- **100% Discount**: Fully functional.
+- **Firestore Persistence**: Robust against undefined values.
 
 ## Project Overview
 DTF (Direct-to-Film) printing service with image upload, nesting optimization, cart management, and payment processing.
