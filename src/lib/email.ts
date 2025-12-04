@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { getEmailTemplate } from './services/email-template-service';
+import { getEmailTemplateAdmin } from './services/email-template-service-admin';
 
 const getResend = () => {
   if (process.env.RESEND_API_KEY) {
@@ -18,7 +18,7 @@ export interface EmailOrderDetails {
 }
 
 async function getProcessedTemplate(templateId: string, variables: Record<string, any>) {
-  const template = await getEmailTemplate(templateId);
+  const template = await getEmailTemplateAdmin(templateId);
   if (!template) return null;
 
   let html = template.htmlContent;
