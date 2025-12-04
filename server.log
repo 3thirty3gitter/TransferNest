@@ -1,0 +1,36 @@
+nohup: ignoring input
+
+> nextn@0.1.0 dev
+> next dev --turbopack -p 9003 -p 3000
+
+   ▲ Next.js 15.5.7 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://10.0.1.73:3000
+
+ ✓ Starting...
+ ✓ Ready in 1215ms
+ ○ Compiling /api/admin/debug-settings ...
+ ✓ Compiled /api/admin/debug-settings in 4.1s
+ ⨯ ./src/app/api/admin/debug-settings/route.ts:3:1
+Export initAdmin doesn't exist in target module
+[0m [90m 1 |[39m [36mimport[39m { [33mNextResponse[39m } [36mfrom[39m [32m'next/server'[39m[33m;[39m
+ [90m 2 |[39m [36mimport[39m { getFirestore } [36mfrom[39m [32m'firebase-admin/firestore'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { initAdmin } [36mfrom[39m [32m'@/lib/firebase-admin'[39m[33m;[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 4 |[39m
+ [90m 5 |[39m [36mexport[39m [36masync[39m [36mfunction[39m [33mGET[39m() {
+ [90m 6 |[39m   [36mtry[39m {[0m
+
+The export initAdmin was not found in module [project]/src/lib/firebase-admin.ts [app-route] (ecmascript).
+Did you mean to import getAuth?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 2.8s
+ GET /api/admin/debug-settings 500 in 7344ms
+[Firebase Admin] No service account found, attempting default initialization
+[Firebase Admin] Initialized with default credentials
+ GET /api/admin/debug-settings 500 in 11474ms
+ ✓ Compiled /api/admin/restore-justin in 227ms
+ GET /api/admin/restore-justin 500 in 585ms

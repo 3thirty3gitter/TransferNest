@@ -251,21 +251,29 @@ async function saveOrder(orderData: any) {
     const orderManager = new OrderManagerAdmin();
     
     // Transform cart items to order items - preserve ALL data for admin access
-    const orderItems = orderData.cartItems.map((item: any) => ({
-      id: randomUUID(),
-      images: item.images || [],
-      sheetSize: item.sheetSize,
-      quantity: item.quantity || 1,
-      unitPrice: item.unitPrice || 0,
-      totalPrice: item.totalPrice || 0,
-      utilization: item.utilization || 0,
-      // Preserve layout and nesting data for admin
-      layout: item.layout || null,
-      placedItems: item.placedItems || [],
-      sheetWidth: item.sheetWidth,
-      sheetLength: item.sheetLength,
-      pricing: item.pricing || null
-    }));
+    const orderItems = orderData.cartItems.map((item: any) => {
+      // Extract pricing - cart items have pricing.total and pricing.basePrice
+      const itemTotal = item.pricing?.total || item.totalPrice || 0;
+      const itemUnitPrice = item.pricing?.basePrice || item.unitPrice || itemTotal;
+      // Extract utilization from layout or item
+      const itemUtilization = item.layout?.utilization || item.utilization || 0;
+      
+      return {
+        id: randomUUID(),
+        images: item.images || [],
+        sheetSize: item.sheetSize,
+        quantity: item.quantity || 1,
+        unitPrice: itemUnitPrice,
+        totalPrice: itemTotal,
+        utilization: itemUtilization,
+        // Preserve layout and nesting data for admin
+        layout: item.layout || null,
+        placedItems: item.placedItems || [],
+        sheetWidth: item.sheetWidth,
+        sheetLength: item.sheetLength,
+        pricing: item.pricing || null
+      };
+    });
 
     // Calculate subtotal from cart items
     const subtotal = orderItems.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
