@@ -347,14 +347,12 @@ export default function CheckoutPage() {
       
       const paymentAmount = Math.round(orderTotal * 100);
       
-      console.log('[CHECKOUT] Preparing payment:', {
-        amount: paymentAmount,
-        subtotal: totalPrice,
-        tax: taxCalculation.total,
+      console.log('[CHECKOUT] Preparing payment payload:', {
+        token,
+        paymentAmount,
         orderTotal,
-        currency: 'CAD',
-        itemCount: items.length,
-        isDiscounted: orderTotal === 0
+        discountPercentage,
+        discountAmount
       });
 
       // Send payment to your backend

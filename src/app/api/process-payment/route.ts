@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
       discountAmount
     } = await request.json();
 
+    console.log('[PAYMENT API] Received request:', {
+      sourceId,
+      amount,
+      userId,
+      discountPercentage,
+      discountAmount
+    });
+
     // Validate Square configuration
     if (!process.env.SQUARE_ACCESS_TOKEN) {
       console.error('[PAYMENT] Missing SQUARE_ACCESS_TOKEN environment variable');
@@ -326,10 +334,14 @@ async function saveOrder(orderData: any) {
     console.log('[SAVE ORDER] Print files count:', orderData.printFiles?.length || 0);
 
     console.log('[SAVE ORDER] Order object created, calling createOrder...');
-    const orderId = await orderManager.createOrder(order);
-    console.log('[SAVE ORDER] Order saved to Firestore successfully:', orderId);
-    
-    return orderId;
+    try {
+      const orderId = await orderManager.createOrder(order);
+      console.log('[SAVE ORDER] Order saved to Firestore successfully:', orderId);
+      return orderId;
+    } catch (firestoreError) {
+      console.error('[SAVE ORDER] Firestore createOrder failed:', firestoreError);
+      throw firestoreError;
+    }
   } catch (error) {
     console.error('[SAVE ORDER] Error saving order:', error);
     console.error('[SAVE ORDER] Error details:', error instanceof Error ? error.message : 'Unknown error');
