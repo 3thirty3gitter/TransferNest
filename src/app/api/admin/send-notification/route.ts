@@ -5,6 +5,7 @@ import {
   sendOrderConfirmationEmail,
   sendOrderUpdateEmail, 
   sendOrderReadyForPickupEmail,
+  sendAdminNewOrderEmail,
   EmailOrderDetails 
 } from '@/lib/email';
 
@@ -79,6 +80,11 @@ export async function POST(request: NextRequest) {
       case 'update':
         console.log('[SEND NOTIFICATION] Sending status update to:', customerEmail);
         result = await sendOrderUpdateEmail(emailDetails, order.status);
+        break;
+
+      case 'admin':
+        console.log('[SEND NOTIFICATION] Sending internal admin notification');
+        result = await sendAdminNewOrderEmail(emailDetails);
         break;
 
       default:

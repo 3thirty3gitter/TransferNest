@@ -206,7 +206,7 @@ export default function JobDetailsPage() {
     }
   }
 
-  async function sendNotification(type: 'confirmation' | 'shipped' | 'pickup' | 'update') {
+  async function sendNotification(type: 'confirmation' | 'shipped' | 'pickup' | 'update' | 'admin') {
     if (!order) return;
     
     setSendingEmail(type);
@@ -401,8 +401,19 @@ export default function JobDetailsPage() {
                   <Send className="h-4 w-4" />
                   {sendingEmail === 'pickup' ? 'Sending...' : 'Send Ready for Pickup'}
                 </button>
+                <div className="border-t border-white/10 my-3 pt-3">
+                  <button
+                    onClick={() => sendNotification('admin')}
+                    disabled={sendingEmail !== null}
+                    className="w-full py-2 px-3 bg-slate-600/20 hover:bg-slate-600/30 border border-slate-500/30 text-slate-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    <Mail className="h-4 w-4" />
+                    {sendingEmail === 'admin' ? 'Sending...' : 'Send Internal Notification'}
+                  </button>
+                  <p className="text-xs text-slate-500 mt-1">Sends to admin team</p>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 mt-3">Emails sent to: {order.customerInfo?.email || 'N/A'}</p>
+              <p className="text-xs text-slate-500 mt-3">Customer emails sent to: {order.customerInfo?.email || 'N/A'}</p>
             </div>
 
             {/* Shipping Management */}
