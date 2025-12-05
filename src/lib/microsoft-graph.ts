@@ -116,19 +116,22 @@ export async function markEmailAsRead(messageId: string): Promise<void> {
 export async function sendEmail(to: string, subject: string, content: string): Promise<void> {
   console.log('[MS Graph] sendEmail called - To:', to, 'Subject:', subject);
   
-  const settings = await getCompanySettingsAdmin();
-  if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) {
-    console.error('[MS Graph] Email not enabled or not configured');
-    throw new Error('Microsoft 365 integration is not enabled');
-  }
+  try {
+    const settings = await getCompanySettingsAdmin();
+    console.log('[MS Graph] Got settings:', settings ? 'yes' : 'no', 'email enabled:', settings?.email?.enabled);
+    
+    if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) {
+      console.error('[MS Graph] Email not enabled or not configured');
+      throw new Error('Microsoft 365 integration is not enabled');
+    }
 
-  const { userEmail } = settings.email.microsoft365;
-  console.log('[MS Graph] Sending from:', userEmail);
-  
-  const token = await getMicrosoftGraphToken();
-  console.log('[MS Graph] Got token, sending email...');
+    const { userEmail } = settings.email.microsoft365;
+    console.log('[MS Graph] Sending from:', userEmail);
+    
+    const token = await getMicrosoftGraphToken();
+    console.log('[MS Graph] Got token, sending email...');
 
-  const message = {
+    const message = {
     message: {
       subject: subject,
       body: {
@@ -165,4 +168,8 @@ export async function sendEmail(to: string, subject: string, content: string): P
   }
   
   console.log('[MS Graph] Email sent successfully to:', to);
+  } catch (err) {
+    console.error('[MS Graph] sendEmail EXCEPTION:', err);
+    throw err;
+  }
 }
