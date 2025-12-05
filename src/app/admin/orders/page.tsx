@@ -22,6 +22,11 @@ interface Order {
     lastName: string;
     email: string;
   };
+  // Legacy fields - some older orders have these at top level
+  email?: string;
+  name?: string;
+  customerEmail?: string;
+  customerName?: string;
   total: number;
   status: string;
   paymentStatus: string;
@@ -58,9 +63,24 @@ export default function OrdersPage() {
       
       const ordersList = snapshot.docs.map(doc => {
         const data = doc.data();
+        
+        // Normalize customer info - handle legacy order structures
+        let customerInfo = data.customerInfo;
+        if (!customerInfo || (!customerInfo.firstName && !customerInfo.email)) {
+          // Try to build from legacy fields
+          const legacyName = data.customerName || data.name || '';
+          const nameParts = legacyName.split(' ');
+          customerInfo = {
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            email: data.customerEmail || data.email || ''
+          };
+        }
+        
         return {
           id: doc.id,
           ...data,
+          customerInfo,
           createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt) || new Date()
         } as Order;
       });
