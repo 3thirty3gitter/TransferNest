@@ -16,7 +16,6 @@
   "dependencies": {
     "@deepnest/calculate-nfp": "^202503.13.155300",
     "@easypost/api": "^8.4.0",
-    "@genkit-ai/next": "^1.14.1",
     "@google-cloud/vertexai": "^1.10.0",
     "@google/genai": "^1.30.0",
     "@google/generative-ai": "^0.24.1",
