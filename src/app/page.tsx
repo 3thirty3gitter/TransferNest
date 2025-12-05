@@ -96,6 +96,20 @@ export default function Home() {
           </div>
 
           <div className="container relative z-10 text-center px-4">
+            {/* Welcome Banner */}
+            <div className="mb-8 inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full border border-white/10 backdrop-blur-sm">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
+              <span className="text-sm md:text-base text-slate-200">
+                🎉 Welcome to our new website! Questions? Contact us at{' '}
+                <a href="mailto:orders@dtf-wholesale.ca" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
+                  orders@dtf-wholesale.ca
+                </a>
+              </span>
+            </div>
+
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6">
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Transform Your
