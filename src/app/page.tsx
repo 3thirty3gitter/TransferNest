@@ -139,8 +139,9 @@ export default function Home() {
                 <div className="w-12 h-12 mx-auto bg-pink-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                   <Clock className="h-6 w-6 text-pink-400" />
                 </div>
-                <div className="text-2xl font-bold text-white mb-1">Same Day</div>
-                <div className="text-sm text-slate-400">Shipping from Edmonton</div>
+                <div className="text-2xl font-bold text-white mb-1">Fast Shipping</div>
+                <div className="text-sm text-slate-400">Shipped within 24 hours from Edmonton</div>
+                <div className="text-xs text-cyan-400 mt-1">Local pickup available!</div>
               </div>
 
               {/* Stat 2 */}

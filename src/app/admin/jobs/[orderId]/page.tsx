@@ -29,10 +29,13 @@ type Order = {
   createdAt: any;
   status: string;
   paymentStatus: string;
-  total: number;
-  subtotal: number;
-  tax: number;
-  shipping: number;
+  total?: number;
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  discountPercentage?: number;
+  discountAmount?: number;
+  currency?: string;
   printFiles: Array<{
     filename: string;
     url: string;
@@ -47,8 +50,27 @@ type Order = {
     email: string;
     phone: string;
   };
-  shippingAddress?: any;
+  shippingAddress?: {
+    address?: string;
+    line1?: string;
+    address1?: string;
+    line2?: string;
+    address2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    zip?: string;
+    zipCode?: string;
+    country?: string;
+  };
   deliveryMethod?: string;
+  shippingInfo?: {
+    trackingNumber?: string;
+    carrier?: string;
+    labelUrl?: string;
+  };
+  taxBreakdown?: any;
+  shippingRate?: any;
 };
 
 export default function JobDetailsPage() {
@@ -338,19 +360,25 @@ export default function JobDetailsPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-400">Subtotal:</span>
-                  <span className="font-medium">${order.subtotal.toFixed(2)}</span>
+                  <span className="font-medium">${(order.subtotal || 0).toFixed(2)}</span>
                 </div>
+                {(order.discountAmount || 0) > 0 && (
+                  <div className="flex justify-between text-green-400">
+                    <span>Discount ({order.discountPercentage || 0}%):</span>
+                    <span className="font-medium">-${(order.discountAmount || 0).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-slate-400">Tax:</span>
-                  <span className="font-medium">${order.tax.toFixed(2)}</span>
+                  <span className="font-medium">${(order.tax || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Shipping:</span>
-                  <span className="font-medium">${order.shipping.toFixed(2)}</span>
+                  <span className="font-medium">${(order.shipping || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t border-white/10 pt-2 mt-2 text-lg">
                   <span className="font-semibold">Total:</span>
-                  <span className="font-bold text-green-400">${order.total.toFixed(2)}</span>
+                  <span className="font-bold text-green-400">${(order.total || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -377,6 +405,40 @@ export default function JobDetailsPage() {
                 </div>
               </div>
             )}
+
+            {/* Delivery Method & Shipping Address */}
+            <div className="glass-strong rounded-lg border border-white/10 p-6">
+              <h2 className="text-xl font-semibold mb-4">Delivery Details</h2>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="text-slate-400">Method:</span>
+                  <p className="font-medium capitalize">{order.deliveryMethod || 'Not specified'}</p>
+                </div>
+                
+                {order.deliveryMethod === 'shipping' && order.shippingAddress && (
+                  <div>
+                    <span className="text-slate-400">Shipping Address:</span>
+                    <div className="font-medium mt-1 p-3 bg-white/5 rounded-lg">
+                      <p>{order.shippingAddress.address || order.shippingAddress.line1 || order.shippingAddress.address1}</p>
+                      {(order.shippingAddress.line2 || order.shippingAddress.address2) && (
+                        <p>{order.shippingAddress.line2 || order.shippingAddress.address2}</p>
+                      )}
+                      <p>
+                        {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postal_code || order.shippingAddress.zip || order.shippingAddress.zipCode}
+                      </p>
+                      <p>{order.shippingAddress.country || 'Canada'}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {order.deliveryMethod === 'pickup' && (
+                  <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+                    <p className="text-cyan-300 font-medium">🏪 Local Pickup</p>
+                    <p className="text-slate-400 text-xs mt-1">Customer will pick up at your location</p>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Shipping Management */}
             <div className="glass-strong rounded-lg border border-white/10 p-6">
