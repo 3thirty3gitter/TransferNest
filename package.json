@@ -49,6 +49,7 @@
     "any-nest": "^1.0.3",
     "axios": "^1.13.2",
     "canvas": "^3.2.0",
+    "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
