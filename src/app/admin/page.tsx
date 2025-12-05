@@ -56,6 +56,11 @@ type Order = {
   sheetLength: number;
   itemCount?: number;
   trackingNumber?: string;
+  customerInfo?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  };
   shippingAddress?: {
     name: string;
     street: string;
@@ -213,10 +218,14 @@ export default function AdminPage() {
 
   const filteredOrders = orders.filter(order => {
     const matchesFilter = filter === 'all' || order.status === filter;
+    const customerName = order.customerInfo?.firstName && order.customerInfo?.lastName
+      ? `${order.customerInfo.firstName} ${order.customerInfo.lastName}`
+      : order.shippingAddress?.name || '';
+    const customerEmail = order.customerInfo?.email || order.userEmail || '';
     const matchesSearch = 
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.shippingAddress?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -345,8 +354,12 @@ export default function AdminPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex flex-col">
-                      <span className="text-white font-medium">{order.shippingAddress?.name || 'Unknown'}</span>
-                      <span className="text-sm text-slate-400">{order.userEmail}</span>
+                      <span className="text-white font-medium">
+                        {order.customerInfo?.firstName && order.customerInfo?.lastName 
+                          ? `${order.customerInfo.firstName} ${order.customerInfo.lastName}`
+                          : order.shippingAddress?.name || 'Unknown'}
+                      </span>
+                      <span className="text-sm text-slate-400">{order.customerInfo?.email || order.userEmail || ''}</span>
                     </div>
                   </td>
                   <td className="p-4 text-slate-400 text-sm">
@@ -374,9 +387,11 @@ export default function AdminPage() {
                   <td className="p-4">
                     <span className={`
                       inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                      ${order.paymentStatus === 'paid' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}
+                      ${order.paymentStatus === 'paid' ? 'bg-green-500/10 text-green-400' : 
+                        order.paymentStatus === 'refunded' ? 'bg-orange-500/10 text-orange-400' :
+                        'bg-yellow-500/10 text-yellow-400'}
                     `}>
-                      {order.paymentStatus}
+                      {order.paymentStatus || 'pending'}
                     </span>
                   </td>
                   <td className="p-4 text-white font-medium">
