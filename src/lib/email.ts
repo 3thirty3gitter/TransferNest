@@ -1,12 +1,5 @@
-import { Resend } from 'resend';
+import { sendEmail } from './microsoft-graph';
 import { getEmailTemplateAdmin } from './services/email-template-service-admin';
-
-const getResend = () => {
-  if (process.env.RESEND_API_KEY) {
-    return new Resend(process.env.RESEND_API_KEY);
-  }
-  return null;
-};
 
 export interface EmailOrderDetails {
   orderId: string;
@@ -35,12 +28,6 @@ async function getProcessedTemplate(templateId: string, variables: Record<string
 }
 
 export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
-  const resend = getResend();
-  if (!resend) {
-    console.warn('RESEND_API_KEY is not set. Skipping email sending.');
-    return { success: false, error: 'Missing API Key' };
-  }
-
   try {
     const { orderId, customerName, customerEmail, items, total } = details;
 
@@ -56,7 +43,7 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
               ${item.sheetSize}" Gang Sheet (x${item.quantity})
             </td>
             <td style="text-align: right; padding: 8px;">
-              $${item.totalPrice.toFixed(2)}
+              $${(item.totalPrice || item.pricing?.total || 0).toFixed(2)}
             </td>
           </tr>
         `).join('')}
@@ -74,16 +61,22 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
       itemsTable
     });
 
-    if (!template) throw new Error('Template not found');
+    if (!template) {
+      // Fallback HTML if no template
+      const fallbackHtml = `
+        <h1>Thank you for your order!</h1>
+        <p>Hi ${customerName},</p>
+        <p>Your order #${orderId} has been confirmed.</p>
+        ${itemsTable}
+        <p>Thank you for choosing DTF Wholesale!</p>
+      `;
+      await sendEmail(customerEmail, `Order Confirmation - #${orderId}`, fallbackHtml);
+    } else {
+      await sendEmail(customerEmail, template.subject, template.html);
+    }
 
-    const data = await resend.emails.send({
-      from: 'DTF Wholesale <orders@dtf-canada.ca>',
-      to: [customerEmail],
-      subject: template.subject,
-      html: template.html,
-    });
-
-    return { success: true, data };
+    console.log('[EMAIL] Order confirmation sent to:', customerEmail);
+    return { success: true };
   } catch (error) {
     console.error('Error sending confirmation email:', error);
     return { success: false, error };
@@ -91,11 +84,6 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
 }
 
 export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipientOverride?: string) {
-  const resend = getResend();
-  if (!resend) {
-    return { success: false, error: 'Missing API Key' };
-  }
-
   const adminEmails = recipientOverride 
     ? [recipientOverride]
     : (process.env.NEXT_PUBLIC_ADMIN_EMAILS 
@@ -112,16 +100,25 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
       adminUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${orderId}`
     });
 
-    if (!template) throw new Error('Template not found');
+    const fallbackHtml = `
+      <h1>🆕 New Order Received!</h1>
+      <p><strong>Order ID:</strong> #${orderId}</p>
+      <p><strong>Customer:</strong> ${customerName}</p>
+      <p><strong>Total:</strong> $${total.toFixed(2)} CAD</p>
+      <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${orderId}">View Order in Admin</a></p>
+    `;
 
-    const data = await resend.emails.send({
-      from: 'DTF Wholesale System <orders@dtf-canada.ca>',
-      to: adminEmails,
-      subject: template.subject,
-      html: template.html,
-    });
+    // Send to each admin email
+    for (const email of adminEmails) {
+      if (template) {
+        await sendEmail(email.trim(), template.subject, template.html);
+      } else {
+        await sendEmail(email.trim(), `🆕 New Order - #${orderId}`, fallbackHtml);
+      }
+    }
 
-    return { success: true, data };
+    console.log('[EMAIL] Admin notification sent to:', adminEmails.join(', '));
+    return { success: true };
   } catch (error) {
     console.error('Error sending admin email:', error);
     return { success: false, error };
@@ -129,11 +126,6 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
 }
 
 export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: string, trackingNumber?: string) {
-  const resend = getResend();
-  if (!resend) {
-    return { success: false, error: 'Missing API Key' };
-  }
-
   try {
     const { orderId, customerName, customerEmail } = details;
 
@@ -169,16 +161,21 @@ export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: s
       trackingInfo
     });
 
-    if (!template) throw new Error('Template not found');
+    if (!template) {
+      const fallbackHtml = `
+        <h1>Order Update</h1>
+        <p>Hi ${customerName},</p>
+        <p>Your order #${orderId} has been updated.</p>
+        <p>${statusMessage}</p>
+        ${trackingInfo}
+      `;
+      await sendEmail(customerEmail, `Order Update - #${orderId}`, fallbackHtml);
+    } else {
+      await sendEmail(customerEmail, template.subject, template.html);
+    }
 
-    const data = await resend.emails.send({
-      from: 'DTF Wholesale <orders@dtf-canada.ca>',
-      to: [customerEmail],
-      subject: template.subject,
-      html: template.html,
-    });
-
-    return { success: true, data };
+    console.log('[EMAIL] Order update sent to:', customerEmail);
+    return { success: true };
   } catch (error) {
     console.error('Error sending update email:', error);
     return { success: false, error };
@@ -186,11 +183,6 @@ export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: s
 }
 
 export async function sendOrderReadyForPickupEmail(details: EmailOrderDetails) {
-  const resend = getResend();
-  if (!resend) {
-    return { success: false, error: 'Missing API Key' };
-  }
-
   try {
     const { orderId, customerName, customerEmail } = details;
 
@@ -199,16 +191,21 @@ export async function sendOrderReadyForPickupEmail(details: EmailOrderDetails) {
       customerName
     });
 
-    if (!template) throw new Error('Template not found');
+    if (!template) {
+      const fallbackHtml = `
+        <h1>Your Order is Ready for Pickup!</h1>
+        <p>Hi ${customerName},</p>
+        <p>Great news! Your order #${orderId} is ready for pickup.</p>
+        <p><strong>Address:</strong> 201-5415 Calgary Trail NW, Edmonton, AB T6H 4J9</p>
+        <p><strong>Hours:</strong> Monday - Friday: 9am - 5pm</p>
+      `;
+      await sendEmail(customerEmail, `Your Order is Ready! - #${orderId}`, fallbackHtml);
+    } else {
+      await sendEmail(customerEmail, template.subject, template.html);
+    }
 
-    const data = await resend.emails.send({
-      from: 'DTF Wholesale <orders@dtf-canada.ca>',
-      to: [customerEmail],
-      subject: template.subject,
-      html: template.html,
-    });
-
-    return { success: true, data };
+    console.log('[EMAIL] Pickup notification sent to:', customerEmail);
+    return { success: true };
   } catch (error) {
     console.error('Error sending pickup email:', error);
     return { success: false, error };
