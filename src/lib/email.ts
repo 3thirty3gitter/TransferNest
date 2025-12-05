@@ -90,15 +90,17 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
   }
 }
 
-export async function sendAdminNewOrderEmail(details: EmailOrderDetails) {
+export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipientOverride?: string) {
   const resend = getResend();
   if (!resend) {
     return { success: false, error: 'Missing API Key' };
   }
 
-  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS 
-    ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',') 
-    : ['admin@dtfwholesale.ca']; // Fallback
+  const adminEmails = recipientOverride 
+    ? [recipientOverride]
+    : (process.env.NEXT_PUBLIC_ADMIN_EMAILS 
+        ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',') 
+        : ['admin@dtfwholesale.ca']); // Fallback
 
   try {
     const { orderId, customerName, total } = details;
