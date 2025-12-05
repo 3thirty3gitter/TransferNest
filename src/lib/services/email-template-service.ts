@@ -1,5 +1,5 @@
-import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { getFirestore } from '@/lib/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 export interface EmailTemplate {
   id: string;
@@ -16,12 +16,12 @@ const COLLECTION = 'email_templates';
 export const DEFAULT_TEMPLATES: EmailTemplate[] = [
   {
     id: 'order_confirmation',
-    name: 'Order Confirmation',
-    subject: 'Order Confirmation #{{orderId}}',
-    description: 'Sent to customer when order is placed',
+    name: 'Order Confirmation (Shipping)',
+    subject: 'Order Confirmed, thank you! #{{orderId}}',
+    description: 'Sent to customer when order is placed (Shipping)',
     variables: ['customerName', 'orderId', 'total', 'itemsTable', 'shippingAddress'],
     htmlContent: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-  <h1 style="color: #3b82f6;">Order Confirmed!</h1>
+  <h1 style="color: #3b82f6;">Order Confirmed, thank you!</h1>
   <p>Hi {{customerName}},</p>
   <p>Thank you for your business! Your order has been received and is being processed.</p>
   
@@ -35,6 +35,32 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p>We will notify you when your order ships.</p>
+  
+  <p>Best regards,<br/>The DTF Wholesale Team</p>
+</div>`,
+    updatedAt: new Date()
+  },
+  {
+    id: 'order_confirmation_pickup',
+    name: 'Order Confirmation (Pickup)',
+    subject: 'Order Confirmed, thank you! #{{orderId}}',
+    description: 'Sent to customer when order is placed (Pickup)',
+    variables: ['customerName', 'orderId', 'total', 'itemsTable'],
+    htmlContent: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+  <h1 style="color: #3b82f6;">Order Confirmed, thank you!</h1>
+  <p>Hi {{customerName}},</p>
+  <p>Thank you for your business! Your order has been received and is being processed.</p>
+  
+  <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h2 style="margin-top: 0;">Order Summary</h2>
+    <p><strong>Order ID:</strong> {{orderId}}</p>
+    
+    {{itemsTable}}
+    
+    <p style="margin-top: 10px; font-size: 1.1em;"><strong>Total: \${{total}}</strong></p>
+  </div>
+
+  <p>We will notify you when your order is ready for pickup.</p>
   
   <p>Best regards,<br/>The DTF Wholesale Team</p>
 </div>`,
@@ -58,16 +84,17 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
   {
     id: 'order_shipped',
     name: 'Order Shipped',
-    subject: 'Order Shipped #{{orderId}}',
+    subject: 'Your order is shipped #{{orderId}}',
     description: 'Sent when order status changes to shipped',
-    variables: ['customerName', 'orderId', 'trackingNumber'],
+    variables: ['customerName', 'orderId', 'trackingNumber', 'trackingUrl'],
     htmlContent: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-  <h1 style="color: #3b82f6;">Order Shipped!</h1>
+  <h1 style="color: #3b82f6;">Your order is shipped!</h1>
   <p>Hi {{customerName}},</p>
   <p>Great news! Your order #{{orderId}} has been shipped.</p>
   
   <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
     <p><strong>Tracking Number:</strong> {{trackingNumber}}</p>
+    <p><a href="{{trackingUrl}}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Track Your Package</a></p>
   </div>
 
   <p>You can check the status of your order at any time by logging into your account.</p>
@@ -98,11 +125,11 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
   {
     id: 'order_ready_pickup',
     name: 'Ready for Pickup',
-    subject: 'Ready for Pickup: Order #{{orderId}}',
+    subject: 'Your order is ready for pickup: Order #{{orderId}}',
     description: 'Sent when order is marked ready for pickup',
     variables: ['customerName', 'orderId'],
     htmlContent: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-  <h1 style="color: #10b981;">Ready for Pickup!</h1>
+  <h1 style="color: #10b981;">Your order is ready for pickup!</h1>
   <p>Hi {{customerName}},</p>
   <p>Good news! Your order <strong>#{{orderId}}</strong> is ready for pickup.</p>
   
@@ -125,24 +152,31 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
 ];
 
 export async function getEmailTemplates(): Promise<EmailTemplate[]> {
+  const db = getFirestore();
   try {
-    const snapshot = await getDocs(collection(db, COLLECTION));
+    const snapshot = await db.collection(COLLECTION).get();
     if (snapshot.empty) {
       // Seed defaults if empty
-      await Promise.all(DEFAULT_TEMPLATES.map(t => 
-        setDoc(doc(db, COLLECTION, t.id), {
+      const batch = db.batch();
+      DEFAULT_TEMPLATES.forEach(t => {
+        const docRef = db.collection(COLLECTION).doc(t.id);
+        batch.set(docRef, {
           ...t,
           updatedAt: Timestamp.fromDate(t.updatedAt)
-        })
-      ));
+        });
+      });
+      await batch.commit();
       return DEFAULT_TEMPLATES;
     }
     
-    return snapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id,
-      updatedAt: doc.data().updatedAt?.toDate() || new Date()
-    })) as EmailTemplate[];
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        updatedAt: data.updatedAt?.toDate() || new Date()
+      };
+    }) as EmailTemplate[];
   } catch (error) {
     console.error('Error fetching templates:', error);
     return [];
@@ -150,22 +184,35 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
 }
 
 export async function saveEmailTemplate(template: EmailTemplate): Promise<void> {
-  await setDoc(doc(db, COLLECTION, template.id), {
+  const db = getFirestore();
+  await db.collection(COLLECTION).doc(template.id).set({
     ...template,
     updatedAt: Timestamp.now()
   });
 }
 
+export async function resetEmailTemplate(id: string): Promise<void> {
+  const db = getFirestore();
+  const defaultTemplate = DEFAULT_TEMPLATES.find(t => t.id === id);
+  if (!defaultTemplate) throw new Error('Default template not found');
+  
+  await db.collection(COLLECTION).doc(id).set({
+    ...defaultTemplate,
+    updatedAt: Timestamp.now()
+  });
+}
+
 export async function getEmailTemplate(id: string): Promise<EmailTemplate | null> {
+  const db = getFirestore();
   try {
-    const docRef = doc(db, COLLECTION, id);
-    const docSnap = await getDoc(docRef);
+    const docSnap = await db.collection(COLLECTION).doc(id).get();
     
-    if (docSnap.exists()) {
+    if (docSnap.exists) {
+      const data = docSnap.data();
       return {
-        ...docSnap.data(),
+        ...data,
         id: docSnap.id,
-        updatedAt: docSnap.data().updatedAt?.toDate() || new Date()
+        updatedAt: data?.updatedAt?.toDate() || new Date()
       } as EmailTemplate;
     }
     

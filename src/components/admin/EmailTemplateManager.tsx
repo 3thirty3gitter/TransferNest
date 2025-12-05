@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Save, ArrowLeft, Edit2, Copy, Check } from 'lucide-react';
+import { Loader2, Save, ArrowLeft, Edit2, Copy, Check, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getEmailTemplatesAction, saveEmailTemplateAction } from '@/lib/actions/email-template-actions';
+import { getEmailTemplatesAction, saveEmailTemplateAction, resetEmailTemplateAction } from '@/lib/actions/email-template-actions';
 import { EmailTemplate } from '@/lib/services/email-template-service';
 import dynamic from 'next/dynamic';
 import 'react-quill-new/dist/quill.snow.css';
@@ -92,6 +92,21 @@ export default function EmailTemplateManager() {
     setCopiedVar(variable);
     setTimeout(() => setCopiedVar(null), 2000);
     toast({ title: 'Copied to clipboard', description: text });
+  };
+
+  const handleReset = async (e: React.MouseEvent, templateId: string) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to reset this template to default? This cannot be undone.')) return;
+
+    setLoading(true);
+    const result = await resetEmailTemplateAction(templateId);
+    if (result.success) {
+      toast({ title: 'Template reset to default' });
+      await loadTemplates();
+    } else {
+      toast({ title: 'Error resetting template', description: result.error, variant: 'destructive' });
+    }
+    setLoading(false);
   };
 
   if (loading) {
@@ -190,9 +205,20 @@ export default function EmailTemplateManager() {
             <div className="text-sm text-slate-500 mb-4">
               <span className="font-semibold">Subject:</span> {template.subject}
             </div>
-            <Button variant="outline" className="w-full">
-              <Edit2 className="mr-2 h-4 w-4" /> Edit Template
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1">
+                <Edit2 className="mr-2 h-4 w-4" /> Edit
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="text-slate-400 hover:text-red-400 hover:border-red-400"
+                onClick={(e) => handleReset(e, template.id)}
+                title="Reset to Default"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ))}

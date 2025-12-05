@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer, Mail, Send } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer, Mail } from 'lucide-react';
 import Link from 'next/link';
 
 type OrderItem = {
@@ -71,7 +71,7 @@ export default function JobDetailsPage() {
   });
   const [isFetchingRates, setIsFetchingRates] = useState(false);
   const [isBuyingLabel, setIsBuyingLabel] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   useEffect(() => {
     loadOrder();
@@ -143,11 +143,11 @@ export default function JobDetailsPage() {
           orderId: order.id,
           toAddress: {
             name: `${order.customerInfo?.firstName} ${order.customerInfo?.lastName}`,
-            street1: order.shippingAddress.line1 || order.shippingAddress.address1,
-            street2: order.shippingAddress.line2 || order.shippingAddress.address2,
+            street1: order.shippingAddress.line1 || order.shippingAddress.address1 || order.shippingAddress.address,
+            street2: order.shippingAddress.line2 || order.shippingAddress.address2 || '',
             city: order.shippingAddress.city,
             state: order.shippingAddress.state,
-            zip: order.shippingAddress.postal_code || order.shippingAddress.zip,
+            zip: order.shippingAddress.postal_code || order.shippingAddress.zip || order.shippingAddress.zipCode,
             country: order.shippingAddress.country || 'CA',
             phone: order.customerInfo?.phone,
             email: order.customerInfo?.email
@@ -161,11 +161,12 @@ export default function JobDetailsPage() {
         setShippingRates(data.shipment.rates);
         setCurrentShipmentId(data.shipment.id);
       } else {
-        alert('Failed to fetch rates: ' + data.message);
+        console.error('Failed to fetch rates:', data);
+        alert('Failed to fetch rates: ' + (data.message || 'Unknown error'));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching rates:', error);
-      alert('Error fetching rates');
+      alert('Error fetching rates: ' + (error.message || 'Unknown error'));
     } finally {
       setIsFetchingRates(false);
     }
@@ -206,35 +207,37 @@ export default function JobDetailsPage() {
     }
   }
 
-  async function sendNotification(type: 'confirmation' | 'shipped' | 'pickup' | 'update' | 'admin') {
+  async function composeEmail() {
     if (!order) return;
     
-    setSendingEmail(type);
+    setIsResendingEmail(true);
     try {
       const token = await auth.currentUser?.getIdToken();
-      const response = await fetch('/api/admin/send-notification', {
-        method: 'POST',
+      const response = await fetch(`/api/admin/orders/${order.id}/email-content`, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          orderId: order.id,
-          type
-        })
+        }
       });
 
-      const result = await response.json();
-      if (result.success) {
-        alert(`${type.charAt(0).toUpperCase() + type.slice(1)} email sent successfully!`);
+      const data = await response.json();
+      if (data.success) {
+        // Store draft in sessionStorage
+        sessionStorage.setItem('emailDraft', JSON.stringify({
+          to: data.to,
+          subject: data.subject,
+          body: data.html
+        }));
+        
+        // Redirect to email page
+        router.push('/admin/email?compose=true');
       } else {
-        alert('Failed to send email: ' + (result.error || 'Unknown error'));
+        alert('Failed to generate email content: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error sending notification:', error);
-      alert('Error sending notification');
+      console.error('Error generating email:', error);
+      alert('Error generating email');
     } finally {
-      setSendingEmail(null);
+      setIsResendingEmail(false);
     }
   }
 
@@ -282,7 +285,7 @@ export default function JobDetailsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <Link href="/admin" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors">
+            <Link href="/admin/orders" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors">
               <ArrowLeft className="h-4 w-4" />
               Back to Orders
             </Link>
@@ -295,6 +298,19 @@ export default function JobDetailsPage() {
           </div>
           
           <div className="flex gap-3">
+            <button
+              onClick={composeEmail}
+              disabled={isResendingEmail}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {isResendingEmail ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              Compose Email
+            </button>
+
             <span className={`px-4 py-2 rounded-full text-sm font-medium ${
               order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
               order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
@@ -304,11 +320,11 @@ export default function JobDetailsPage() {
               {order.status}
             </span>
             <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-              order.paymentStatus === 'paid' ? 'bg-green-500/20 text-green-300' :
+              (order.paymentStatus === 'paid' || (!order.paymentStatus && order.status !== 'pending')) ? 'bg-green-500/20 text-green-300' :
               order.paymentStatus === 'refunded' ? 'bg-red-500/20 text-red-300' :
               'bg-yellow-500/20 text-yellow-300'
             }`}>
-              {order.paymentStatus}
+              {order.paymentStatus || (order.status !== 'pending' ? 'paid' : 'unpaid')}
             </span>
           </div>
         </div>
@@ -362,68 +378,21 @@ export default function JobDetailsPage() {
               </div>
             )}
 
-            {/* Send Notifications */}
-            <div className="glass-strong rounded-lg border border-white/10 p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Send Notifications
-              </h2>
-              <div className="space-y-2">
-                <button
-                  onClick={() => sendNotification('confirmation')}
-                  disabled={sendingEmail !== null}
-                  className="w-full py-2 px-3 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <Send className="h-4 w-4" />
-                  {sendingEmail === 'confirmation' ? 'Sending...' : 'Send Order Confirmation'}
-                </button>
-                <button
-                  onClick={() => sendNotification('update')}
-                  disabled={sendingEmail !== null}
-                  className="w-full py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <Send className="h-4 w-4" />
-                  {sendingEmail === 'update' ? 'Sending...' : 'Send Status Update'}
-                </button>
-                <button
-                  onClick={() => sendNotification('shipped')}
-                  disabled={sendingEmail !== null}
-                  className="w-full py-2 px-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <Send className="h-4 w-4" />
-                  {sendingEmail === 'shipped' ? 'Sending...' : 'Send Shipped Notification'}
-                </button>
-                <button
-                  onClick={() => sendNotification('pickup')}
-                  disabled={sendingEmail !== null}
-                  className="w-full py-2 px-3 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-500/30 text-yellow-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <Send className="h-4 w-4" />
-                  {sendingEmail === 'pickup' ? 'Sending...' : 'Send Ready for Pickup'}
-                </button>
-                <div className="border-t border-white/10 my-3 pt-3">
-                  <button
-                    onClick={() => sendNotification('admin')}
-                    disabled={sendingEmail !== null}
-                    className="w-full py-2 px-3 bg-slate-600/20 hover:bg-slate-600/30 border border-slate-500/30 text-slate-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                  >
-                    <Mail className="h-4 w-4" />
-                    {sendingEmail === 'admin' ? 'Sending...' : 'Send Internal Notification'}
-                  </button>
-                  <p className="text-xs text-slate-500 mt-1">Sends to admin team</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 mt-3">Customer emails sent to: {order.customerInfo?.email || 'N/A'}</p>
-            </div>
-
             {/* Shipping Management */}
             <div className="glass-strong rounded-lg border border-white/10 p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Truck className="h-5 w-5" />
                 Shipping Management
               </h2>
+
+              {order.deliveryMethod === 'shipping' && order.status !== 'shipped' && (
+                <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-center gap-2 text-yellow-300">
+                  <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
+                  <span className="font-medium">Customer paid for shipping - Label purchase required</span>
+                </div>
+              )}
               
-              {order.status === 'shipped' ? (
+              {((order as any).shippingInfo?.labelUrl || order.status === 'shipped') ? (
                 <div className="space-y-4">
                   <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2 text-green-400 mb-2">

@@ -9,7 +9,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const emails = await getEmails();
+    const { searchParams } = new URL(request.url);
+    const folder = searchParams.get('folder') || 'inbox';
+    const emails = await getEmails(folder);
     return NextResponse.json({ emails });
   } catch (error: any) {
     console.error('Error fetching emails:', error);

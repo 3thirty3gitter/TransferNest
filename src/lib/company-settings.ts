@@ -80,12 +80,24 @@ export interface EmailIntegration {
   lastUpdated?: Date;
 }
 
+export interface NotificationSettings {
+  // Email addresses for different notification types
+  orderNotificationEmail: string;      // For order placed/paid notifications
+  generalInquiryEmail: string;         // For contact form / general inquiries
+  
+  // Toggle notifications on/off
+  notifyOnOrderPlaced: boolean;
+  notifyOnPaymentReceived: boolean;
+  notifyOnGeneralInquiry: boolean;
+}
+
 export interface CompanySettings {
   companyInfo: CompanyInfo;
   socialMedia: SocialMediaLinks;
   payment: PaymentIntegration;
   shipping: ShippingIntegration;
   email: EmailIntegration;
+  notifications?: NotificationSettings;
   updatedAt: Date;
   updatedBy: string;
 }
@@ -221,6 +233,13 @@ export function getDefaultSettings(): CompanySettings {
       provider: 'none',
       enabled: false,
       lastUpdated: new Date(),
+    },
+    notifications: {
+      orderNotificationEmail: '',
+      generalInquiryEmail: '',
+      notifyOnOrderPlaced: true,
+      notifyOnPaymentReceived: true,
+      notifyOnGeneralInquiry: true,
     },
     updatedAt: new Date(),
     updatedBy: 'system',

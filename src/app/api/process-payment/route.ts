@@ -32,14 +32,6 @@ export async function POST(request: NextRequest) {
       discountAmount
     } = await request.json();
 
-    console.log('[PAYMENT API] Received request:', {
-      sourceId,
-      amount,
-      userId,
-      discountPercentage,
-      discountAmount
-    });
-
     // Validate Square configuration
     if (!process.env.SQUARE_ACCESS_TOKEN) {
       console.error('[PAYMENT] Missing SQUARE_ACCESS_TOKEN environment variable');
@@ -58,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required fields
-    if (!sourceId || amount === undefined || amount === null || !userId) {
+    if (!sourceId || !amount || !userId) {
       return NextResponse.json(
         { success: false, error: 'Missing required payment information' },
         { status: 400 }
@@ -75,55 +67,114 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Handle 100% discount orders (free orders)
+    if (sourceId === '100-PERCENT-DISCOUNT' && amountNum === 0) {
+      console.log('[PAYMENT] Processing 100% discount order (free)');
+      
+      // Save the order without payment processing
+      const orderId = await saveOrder({
+        paymentId: `FREE-${randomUUID()}`,
+        amount: 0,
+        currency: currency || 'CAD',
+        customerInfo,
+        cartItems,
+        userId,
+        status: 'pending',
+        paymentStatus: 'paid', // Mark as paid since no payment needed
+        printFiles: [],
+        taxAmount: taxAmount || 0,
+        shippingAddress,
+        deliveryMethod,
+        shippingCost: shippingCost || 0,
+        shippingRate,
+        taxBreakdown,
+        discountPercentage: 100,
+        discountAmount
+      });
+
+      console.log('[PAYMENT] Free order created:', orderId);
+
+      // Link print files
+      const printFiles = await linkPrintFilesToOrder(cartItems, userId, orderId, customerInfo);
+      
+      if (printFiles.length > 0) {
+        await updateOrderPrintFiles(orderId, printFiles);
+        console.log('[PAYMENT] Updated free order with', printFiles.length, 'print files');
+      }
+
+      // Send emails
+      const emailDetails = {
+        orderId,
+        customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
+        customerEmail: customerInfo.email,
+        items: cartItems,
+        total: 0,
+        shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined,
+        deliveryMethod: deliveryMethod as 'shipping' | 'pickup'
+      };
+
+      Promise.all([
+        sendOrderConfirmationEmail(emailDetails),
+        sendAdminNewOrderEmail(emailDetails)
+      ]).then(results => {
+        console.log('[EMAIL] Email sending results for free order:', results);
+      }).catch(err => {
+        console.error('[EMAIL] Failed to send emails for free order:', err);
+      });
+
+      return NextResponse.json({
+        success: true,
+        paymentId: `FREE-${orderId}`,
+        orderId,
+        message: '100% discount order processed successfully',
+        printFiles: printFiles.map((pf: any) => ({
+          filename: pf.filename,
+          dimensions: pf.dimensions
+        }))
+      });
+    }
+
+    // For paid orders, validate amount is greater than 0
+    if (amountNum <= 0) {
+      console.error('[PAYMENT] Invalid amount for paid order:', amount);
+      return NextResponse.json(
+        { success: false, error: 'Invalid payment amount' },
+        { status: 400 }
+      );
+    }
+
     console.log('[PAYMENT] Processing payment:', {
       amount: amountNum,
       currency: currency || 'CAD',
       locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-      itemCount: cartItems.length,
-      isDiscounted: amountNum === 0
+      itemCount: cartItems.length
     });
 
-    let paymentResult;
+    // Create the payment request
+    const requestBody = {
+      sourceId,
+      amountMoney: {
+        amount: BigInt(Math.round(amountNum)),
+        currency: currency || 'CAD',
+      },
+      locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+      idempotencyKey: randomUUID(),
+      note: `DTF Print Order - ${cartItems.length} item(s)`,
+      buyerEmailAddress: customerInfo.email,
+    };
 
-    // Handle 100% discount case (amount is 0)
-    if (amountNum === 0 && sourceId === '100-PERCENT-DISCOUNT') {
-      console.log('[PAYMENT] Processing 100% discount order - skipping Square payment');
-      paymentResult = {
-        payment: {
-          id: `DISCOUNT-100-${randomUUID()}`,
-          totalMoney: { amount: BigInt(0), currency: currency || 'CAD' },
-          status: 'COMPLETED',
-          createdAt: new Date().toISOString(),
-          receiptUrl: null
-        }
-      };
-    } else {
-      // Create the payment request for normal orders
-      const requestBody = {
-        sourceId,
-        amountMoney: {
-          amount: BigInt(Math.round(amountNum)),
-          currency: currency || 'CAD',
-        },
-        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-        idempotencyKey: randomUUID(),
-        note: `DTF Print Order - ${cartItems.length} item(s)`,
-        buyerEmailAddress: customerInfo.email,
-      };
+    // Process the payment
+    const result = await client.payments.create(requestBody);
 
-      // Process the payment
-      paymentResult = await client.payments.create(requestBody);
-    }
-
-    if (paymentResult.payment) {
-      console.log('[PAYMENT] Payment successful:', {
-        paymentId: paymentResult.payment.id,
-        amountCharged: paymentResult.payment.totalMoney,
-        status: paymentResult.payment.status
+    if (result.payment) {
+      console.log('[PAYMENT] Square payment successful:', {
+        paymentId: result.payment.id,
+        amountCharged: result.payment.totalMoney,
+        status: result.payment.status
       });
 
       // Get the ACTUAL amount charged by Square (in cents)
-      const actualAmountCents = Number(paymentResult.payment.totalMoney?.amount || amount);
+      const actualAmountCents = Number(result.payment.totalMoney?.amount || amount);
       const actualAmountDollars = actualAmountCents / 100;
       
       console.log('[PAYMENT] Using actual amount from Square:', {
@@ -134,13 +185,14 @@ export async function POST(request: NextRequest) {
       
       // First, save the order without print files
       const orderId = await saveOrder({
-        paymentId: paymentResult.payment.id,
+        paymentId: result.payment.id,
         amount: actualAmountDollars, // Use ACTUAL amount charged by Square
         currency,
         customerInfo,
         cartItems,
         userId,
-        status: 'paid',
+        status: 'pending', // Initial order status
+        paymentStatus: 'paid', // Payment status
         printFiles: [], // Will be updated after generation
         taxAmount: taxAmount || 0,
         shippingAddress,
@@ -186,7 +238,8 @@ export async function POST(request: NextRequest) {
         customerEmail: customerInfo.email,
         items: cartItems,
         total: actualAmountDollars,
-        shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined
+        shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined,
+        deliveryMethod: deliveryMethod as 'shipping' | 'pickup'
       };
 
       Promise.all([
@@ -200,7 +253,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        paymentId: paymentResult.payment.id,
+        paymentId: result.payment.id,
         orderId,
         message: 'Payment processed successfully',
         printFiles: printFiles.map((pf: any) => ({
@@ -210,7 +263,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Payment failed
-      const errorMessages = paymentResult.errors?.map((error: any) => error.detail).join(', ') || 'Payment failed';
+      const errorMessages = result.errors?.map((error: any) => error.detail).join(', ') || 'Payment failed';
       
       return NextResponse.json(
         { success: false, error: errorMessages },
@@ -251,29 +304,21 @@ async function saveOrder(orderData: any) {
     const orderManager = new OrderManagerAdmin();
     
     // Transform cart items to order items - preserve ALL data for admin access
-    const orderItems = orderData.cartItems.map((item: any) => {
-      // Extract pricing - cart items have pricing.total and pricing.basePrice
-      const itemTotal = item.pricing?.total || item.totalPrice || 0;
-      const itemUnitPrice = item.pricing?.basePrice || item.unitPrice || itemTotal;
-      // Extract utilization from layout or item
-      const itemUtilization = item.layout?.utilization || item.utilization || 0;
-      
-      return {
-        id: randomUUID(),
-        images: item.images || [],
-        sheetSize: item.sheetSize,
-        quantity: item.quantity || 1,
-        unitPrice: itemUnitPrice,
-        totalPrice: itemTotal,
-        utilization: itemUtilization,
-        // Preserve layout and nesting data for admin
-        layout: item.layout || null,
-        placedItems: item.placedItems || [],
-        sheetWidth: item.sheetWidth,
-        sheetLength: item.sheetLength,
-        pricing: item.pricing || null
-      };
-    });
+    const orderItems = orderData.cartItems.map((item: any) => ({
+      id: randomUUID(),
+      images: item.images || [],
+      sheetSize: item.sheetSize,
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || 0,
+      totalPrice: item.totalPrice || 0,
+      utilization: item.utilization || 0,
+      // Preserve layout and nesting data for admin
+      layout: item.layout || null,
+      placedItems: item.placedItems || [],
+      sheetWidth: item.sheetWidth,
+      sheetLength: item.sheetLength,
+      pricing: item.pricing || null
+    }));
 
     // Calculate subtotal from cart items
     const subtotal = orderItems.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
@@ -300,29 +345,11 @@ async function saveOrder(orderData: any) {
       verification: (subtotal - discountAmount + tax + shipping).toFixed(2)
     });
 
-    // Helper to sanitize object for Firestore (remove undefined)
-    const sanitizeForFirestore = (obj: any): any => {
-      if (obj === null || obj === undefined) return null;
-      if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
-      if (typeof obj === 'object') {
-        const newObj: any = {};
-        for (const key in obj) {
-          const val = sanitizeForFirestore(obj[key]);
-          if (val !== undefined) {
-            newObj[key] = val;
-          } else {
-            newObj[key] = null;
-          }
-        }
-        return newObj;
-      }
-      return obj;
-    };
-
-    const order = sanitizeForFirestore({
+    const order = {
       userId: orderData.userId,
       paymentId: orderData.paymentId,
       status: orderData.status,
+      paymentStatus: orderData.paymentStatus || 'paid',
       customerInfo: orderData.customerInfo,
       items: orderItems,
       subtotal,
@@ -335,21 +362,17 @@ async function saveOrder(orderData: any) {
       printFiles: orderData.printFiles || [],
       shippingAddress: orderData.shippingAddress,
       deliveryMethod: orderData.deliveryMethod,
-      shippingRate: orderData.shippingRate,
-      taxBreakdown: orderData.taxBreakdown,
-    });
+      shippingRate: orderData.shippingRate || null,
+      taxBreakdown: orderData.taxBreakdown || null,
+    };
 
     console.log('[SAVE ORDER] Print files count:', orderData.printFiles?.length || 0);
 
     console.log('[SAVE ORDER] Order object created, calling createOrder...');
-    try {
-      const orderId = await orderManager.createOrder(order);
-      console.log('[SAVE ORDER] Order saved to Firestore successfully:', orderId);
-      return orderId;
-    } catch (firestoreError) {
-      console.error('[SAVE ORDER] Firestore createOrder failed:', firestoreError);
-      throw firestoreError;
-    }
+    const orderId = await orderManager.createOrder(order);
+    console.log('[SAVE ORDER] Order saved to Firestore successfully:', orderId);
+    
+    return orderId;
   } catch (error) {
     console.error('[SAVE ORDER] Error saving order:', error);
     console.error('[SAVE ORDER] Error details:', error instanceof Error ? error.message : 'Unknown error');

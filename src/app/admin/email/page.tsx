@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { auth } from '@/lib/firebase';
 import { getCompanySettings, type EmailSignature } from '@/lib/company-settings';
 import SignatureManager from '@/components/admin/SignatureManager';
 import { Mail, RefreshCw, Search, Star, Trash2, Archive, MoreVertical, Reply, Forward, Edit, X, Send, PenTool, Settings } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 interface Email {
   id: string;
@@ -24,12 +25,14 @@ interface Email {
   };
 }
 
-export default function EmailPage() {
+function EmailContent() {
+  const searchParams = useSearchParams();
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [folder, setFolder] = useState<'inbox' | 'sentitems'>('inbox');
 
   // Compose State
   const [isComposeOpen, setIsComposeOpen] = useState(false);
@@ -44,7 +47,53 @@ export default function EmailPage() {
   useEffect(() => {
     fetchEmails();
     loadSignatures();
-  }, []);
+  }, [folder]);
+
+  useEffect(() => {
+    const compose = searchParams.get('compose');
+    if (compose === 'true') {
+      const draftData = sessionStorage.getItem('emailDraft');
+      if (draftData) {
+        try {
+          const { to, subject, body } = JSON.parse(draftData);
+          setComposeTo(to || '');
+          setComposeSubject(subject || '');
+          setComposeBody(body || '');
+          setIsComposeOpen(true);
+          // Clear after loading so it doesn't persist if user navigates away and back
+          sessionStorage.removeItem('emailDraft');
+        } catch (e) {
+          console.error('Error parsing email draft:', e);
+        }
+      } else {
+        // Just open empty compose if no draft data
+        setIsComposeOpen(true);
+      }
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const compose = searchParams.get('compose');
+    if (compose === 'true') {
+      const draftData = sessionStorage.getItem('emailDraft');
+      if (draftData) {
+        try {
+          const { to, subject, body } = JSON.parse(draftData);
+          setComposeTo(to || '');
+          setComposeSubject(subject || '');
+          setComposeBody(body || '');
+          setIsComposeOpen(true);
+          // Clear after loading so it doesn't persist if user navigates away and back
+          sessionStorage.removeItem('emailDraft');
+        } catch (e) {
+          console.error('Error parsing email draft:', e);
+        }
+      } else {
+        // Just open empty compose if no draft data
+        setIsComposeOpen(true);
+      }
+    }
+  }, [searchParams]);
 
   async function loadSignatures() {
     const settings = await getCompanySettings();
@@ -81,7 +130,7 @@ export default function EmailPage() {
       if (!user) return;
 
       const token = await user.getIdToken();
-      const response = await fetch('/api/admin/email', {
+      const response = await fetch(`/api/admin/email?folder=${folder}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -248,7 +297,24 @@ export default function EmailPage() {
       `}>
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">Inbox</h2>
+          <div className="flex gap-2 bg-slate-800 p-1 rounded-lg">
+            <button 
+              onClick={() => setFolder('inbox')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                folder === 'inbox' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Inbox
+            </button>
+            <button 
+              onClick={() => setFolder('sentitems')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                folder === 'sentitems' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Sent
+            </button>
+          </div>
           <div className="flex gap-2">
             <button 
               onClick={handleCompose}
@@ -533,6 +599,14 @@ export default function EmailPage() {
         onUpdate={loadSignatures}
       />
     </div>
+  );
+}
+
+export default function EmailPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen bg-slate-950 text-white">Loading...</div>}>
+      <EmailContent />
+    </Suspense>
   );
 }
 

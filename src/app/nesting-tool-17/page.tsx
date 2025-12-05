@@ -14,7 +14,14 @@ function NestingToolFallback() {
   )
 }
 
-export default function NestingTool17Page() {
+export default async function NestingTool17Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const resolvedSearchParams = await searchParams;
+  const openWizard = resolvedSearchParams.openWizard === 'true';
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
       <Header />
@@ -22,7 +29,7 @@ export default function NestingTool17Page() {
       <div className="h-40"></div>
       <main className="flex-1">
         <Suspense fallback={<NestingToolFallback/>}>
-          <NestingTool sheetWidth={17} />
+          <NestingTool sheetWidth={17} openWizard={openWizard} />
         </Suspense>
       </main>
       <Footer />

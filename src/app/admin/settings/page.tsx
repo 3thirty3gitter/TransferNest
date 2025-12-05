@@ -11,6 +11,7 @@ import {
 } from '@/lib/company-settings';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Save, 
@@ -34,8 +35,9 @@ import Link from 'next/link';
 
 import EmailTemplateManager from '@/components/admin/EmailTemplateManager';
 import SignatureManager from '@/components/admin/SignatureManager';
+import { Bell } from 'lucide-react';
 
-type TabType = 'company' | 'integrations' | 'social' | 'email';
+type TabType = 'company' | 'integrations' | 'social' | 'email' | 'notifications';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -212,6 +214,22 @@ export default function AdminSettingsPage() {
     });
   };
 
+  const updateNotifications = (field: string, value: any) => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      notifications: {
+        orderNotificationEmail: settings.notifications?.orderNotificationEmail || '',
+        generalInquiryEmail: settings.notifications?.generalInquiryEmail || '',
+        notifyOnOrderPlaced: settings.notifications?.notifyOnOrderPlaced ?? true,
+        notifyOnPaymentReceived: settings.notifications?.notifyOnPaymentReceived ?? true,
+        notifyOnGeneralInquiry: settings.notifications?.notifyOnGeneralInquiry ?? true,
+        ...settings.notifications,
+        [field]: value,
+      },
+    });
+  };
+
   if (loading || !settings) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
@@ -292,6 +310,17 @@ export default function AdminSettingsPage() {
           >
             <Mail className="inline h-5 w-5 mr-2" />
             Email Settings
+          </button>
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'notifications'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white/10 text-slate-300 hover:bg-white/20'
+            }`}
+          >
+            <Bell className="inline h-5 w-5 mr-2" />
+            Notifications
           </button>
         </div>
 
@@ -800,6 +829,90 @@ export default function AdminSettingsPage() {
               <p className="text-slate-300">
                 Configure your email signatures for outgoing messages.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <div className="space-y-6">
+            <div className="glass-strong rounded-2xl p-6 border border-white/10">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <Bell className="h-6 w-6" />
+                Internal Notifications
+              </h2>
+              <div className="space-y-6">
+                {/* Order Notifications Email */}
+                <div>
+                  <Label className="text-slate-200">Order Notifications Email</Label>
+                  <p className="text-sm text-slate-400 mb-2">
+                    This email will receive notifications for new orders and payment confirmations.
+                  </p>
+                  <Input
+                    value={settings.notifications?.orderNotificationEmail || ''}
+                    onChange={(e) => updateNotifications('orderNotificationEmail', e.target.value)}
+                    placeholder="orders@example.com"
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+
+                {/* General Inquiry Email */}
+                <div>
+                  <Label className="text-slate-200">General Inquiry Email</Label>
+                  <p className="text-sm text-slate-400 mb-2">
+                    This email will receive contact form submissions and general inquiries.
+                  </p>
+                  <Input
+                    value={settings.notifications?.generalInquiryEmail || ''}
+                    onChange={(e) => updateNotifications('generalInquiryEmail', e.target.value)}
+                    placeholder="info@example.com"
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-white/10">
+                  <h3 className="text-lg font-semibold text-white">Notification Events</h3>
+                  
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div>
+                      <div className="font-medium text-white">Order Placed</div>
+                      <div className="text-sm text-slate-400">
+                        Receive an email when a new order is placed
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.notifications?.notifyOnOrderPlaced ?? true}
+                      onCheckedChange={(checked) => updateNotifications('notifyOnOrderPlaced', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div>
+                      <div className="font-medium text-white">Payment Received</div>
+                      <div className="text-sm text-slate-400">
+                        Receive an email when a payment is successfully processed
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.notifications?.notifyOnPaymentReceived ?? true}
+                      onCheckedChange={(checked) => updateNotifications('notifyOnPaymentReceived', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div>
+                      <div className="font-medium text-white">General Inquiry</div>
+                      <div className="text-sm text-slate-400">
+                        Receive an email when someone submits a contact form
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.notifications?.notifyOnGeneralInquiry ?? true}
+                      onCheckedChange={(checked) => updateNotifications('notifyOnGeneralInquiry', checked)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

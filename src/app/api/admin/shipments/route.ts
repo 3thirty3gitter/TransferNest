@@ -3,6 +3,7 @@ import EasyPost from '@easypost/api';
 import { getFirestore } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { verifyAdminRequest } from '@/lib/admin-auth-server';
+import { sendOrderShippedEmail } from '@/lib/email';
 
 const adminDb = getFirestore();
 
@@ -17,7 +18,7 @@ async function getCompanySettings() {
 async function getOrder(orderId: string) {
   const orderDoc = await adminDb.collection('orders').doc(orderId).get();
   if (!orderDoc.exists) return null;
-  return { id: orderDoc.id, ...orderDoc.data() };
+  return { id: orderDoc.id, ...orderDoc.data() } as any;
 }
 
 export async function POST(request: Request) {
@@ -57,30 +58,41 @@ export async function POST(request: Request) {
     // 3. Handle Actions
     if (action === 'rates') {
       const { toAddress, parcel } = body;
+      
+      console.log('[SHIPMENT] Fetching rates for:', { toAddress, parcel });
 
       // Create Shipment to get rates
-      const shipment = await client.Shipment.create({
-        to_address: {
-          name: toAddress.name,
-          street1: toAddress.street1,
-          street2: toAddress.street2,
-          city: toAddress.city,
-          state: toAddress.state,
-          zip: toAddress.zip,
-          country: toAddress.country || 'CA',
-          phone: toAddress.phone,
-          email: toAddress.email,
-        },
-        from_address: fromAddress,
-        parcel: {
-          length: parseFloat(parcel.length),
-          width: parseFloat(parcel.width),
-          height: parseFloat(parcel.height),
-          weight: parseFloat(parcel.weight), // in oz usually, or defined by carrier. EasyPost defaults to oz.
-        },
-      });
-
-      return NextResponse.json({ success: true, shipment });
+      try {
+        const shipment = await client.Shipment.create({
+          to_address: {
+            name: toAddress.name,
+            street1: toAddress.street1,
+            street2: toAddress.street2,
+            city: toAddress.city,
+            state: toAddress.state,
+            zip: toAddress.zip,
+            country: toAddress.country || 'CA',
+            phone: toAddress.phone,
+            email: toAddress.email,
+          },
+          from_address: fromAddress,
+          parcel: {
+            length: parseFloat(parcel.length),
+            width: parseFloat(parcel.width),
+            height: parseFloat(parcel.height),
+            weight: parseFloat(parcel.weight), // in oz usually, or defined by carrier. EasyPost defaults to oz.
+          },
+        });
+        
+        console.log('[SHIPMENT] Rates fetched successfully:', shipment.id);
+        return NextResponse.json({ success: true, shipment });
+      } catch (easypostError: any) {
+        console.error('[SHIPMENT] EasyPost Error:', JSON.stringify(easypostError, null, 2));
+        return NextResponse.json({ 
+          success: false, 
+          message: `EasyPost Error: ${easypostError.message || JSON.stringify(easypostError)}` 
+        }, { status: 400 });
+      }
     } 
     
     else if (action === 'buy') {
@@ -113,6 +125,28 @@ export async function POST(request: Request) {
         },
         updatedAt: Timestamp.now(),
       });
+
+      // Send Shipped Email
+      try {
+        const orderData = await getOrder(orderId);
+        if (orderData) {
+          const emailDetails = {
+            orderId: orderData.id,
+            customerName: (orderData.customerInfo?.firstName || '') + ' ' + (orderData.customerInfo?.lastName || '') || 'Customer',
+            customerEmail: orderData.userEmail || orderData.customerInfo?.email,
+            items: orderData.items || [],
+            total: orderData.total || 0,
+            shippingAddress: orderData.shippingAddress
+          };
+          
+          const trackingUrl = boughtShipment.tracker?.public_url || boughtShipment.postage_label?.label_url;
+          await sendOrderShippedEmail(emailDetails, trackingNumber, trackingUrl);
+          console.log('[SHIPPING] Shipped email sent for order:', orderId);
+        }
+      } catch (emailError) {
+        console.error('[SHIPPING] Failed to send shipped email:', emailError);
+        // Don't fail the request if email fails
+      }
 
       return NextResponse.json({ 
         success: true, 
