@@ -61,15 +61,17 @@ export default function CheckoutPage() {
   const [isFetchingRates, setIsFetchingRates] = useState(false);
   const [shippingError, setShippingError] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [paymentComplete, setPaymentComplete] = useState(false);
 
-  // Redirect if not authenticated or cart is empty
+  // Redirect if not authenticated or cart is empty (but not after successful payment)
   useEffect(() => {
     if (!user) {
       router.push('/login');
       return;
     }
     
-    if (items.length === 0) {
+    // Don't redirect to cart if payment was just completed (cart is being cleared)
+    if (items.length === 0 && !paymentComplete) {
       router.push('/cart');
       return;
     }
@@ -388,6 +390,9 @@ export default function CheckoutPage() {
       const paymentResult = await response.json();
       
       if (paymentResult.success) {
+        // Mark payment as complete to prevent cart redirect race condition
+        setPaymentComplete(true);
+        
         // Clear cart and redirect to success page
         clearCart();
         toast({

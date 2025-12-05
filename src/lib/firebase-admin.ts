@@ -66,5 +66,25 @@ export function getAuth() {
   return admin.auth(app);
 }
 
+/**
+ * Get company settings from Firestore using Admin SDK (for server-side use)
+ */
+export async function getCompanySettingsAdmin(): Promise<any> {
+  const db = getFirestore();
+  try {
+    const settingsDoc = await db.collection('settings').doc('company-settings').get();
+    
+    if (!settingsDoc.exists) {
+      console.warn('[Firebase Admin] Company settings not found');
+      return null;
+    }
+    
+    return settingsDoc.data();
+  } catch (error) {
+    console.error('[Firebase Admin] Error fetching company settings:', error);
+    return null;
+  }
+}
+
 export default app;
 
