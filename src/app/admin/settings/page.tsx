@@ -803,6 +803,26 @@ export default function AdminSettingsPage() {
         {/* Email Settings Tab */}
         {activeTab === 'email' && (
           <div className="space-y-6">
+            {/* Test Emails Card */}
+            <div className="glass-strong rounded-2xl p-6 border border-white/10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <Mail className="h-6 w-6" />
+                    Test Email Notifications
+                  </h2>
+                  <p className="text-slate-300 mt-2">
+                    Send test emails to verify your templates and email delivery are working correctly.
+                  </p>
+                </div>
+                <Link href="/admin/test-email">
+                  <button className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors font-medium">
+                    Send Test Emails
+                  </button>
+                </Link>
+              </div>
+            </div>
+
             <div className="glass-strong rounded-2xl p-6 border border-white/10">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
