@@ -108,15 +108,25 @@ function executeNesting17Advanced(
     return aspectRatio < 0.95 || aspectRatio > 1.05;
   }
 
+  // Apply 0.5" margin on left and right for 17" sheets (printer guides)
+  const sideMargin = 0.5;
+  const effectiveWidth = sheetWidth - (sideMargin * 2);
+
   // OPTIMIZED: Single strategy with 100 population × 100 generations (~90% faster)
-  console.log(`[17" NESTING] Starting optimized genetic algorithm...`);
-  const result = geneticAlgorithmNesting(images, sheetWidth, 0.10, canRotate, {
+  console.log(`[17" NESTING] Starting optimized genetic algorithm with ${sideMargin}" side margins...`);
+  const result = geneticAlgorithmNesting(images, effectiveWidth, 0.10, canRotate, {
     adaptive: false,
     rotationSteps: 4,
     populationSize: 100,
     generations: 100,
     mutationRate: 0.38
   });
+
+  // Offset all placed items by the left margin
+  result.placedItems = result.placedItems.map(img => ({
+    ...img,
+    x: img.x + sideMargin
+  }));
   
   console.log(`[17" COMPLETE] ${(result.areaUtilizationPct * 100).toFixed(1)}% utilization`);
   return result;
