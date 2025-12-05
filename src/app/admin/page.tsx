@@ -1,351 +1,410 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import Chart from 'chart.js/auto';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
+import { collection, query, orderBy, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { Download, Search, Filter, ChevronDown, CheckSquare, Square } from 'lucide-react';
 import Link from 'next/link';
 
-interface Order {
-    id: string;
-    customer: string;
-    total: number;
-    status: string;
-    createdAt?: any;
-}
+type OrderStatus = 'pending' | 'printing' | 'shipped' | 'completed' | 'ready_for_pickup';
+type PaymentStatus = 'paid' | 'refunded';
+type ShippingStatus = 'pending' | 'processing' | 'shipped' | 'delivered';
 
-export default function DashboardHome() {
-    const salesChartRef = useRef<HTMLCanvasElement>(null);
-    const trafficChartRef = useRef<HTMLCanvasElement>(null);
-    const salesChartInstance = useRef<any>(null);
-    const trafficChartInstance = useRef<any>(null);
+type PrintFile = {
+  filename: string;
+  url: string;
+  path: string;
+  size: number;
+  dimensions: {
+    width: number;
+    height: number;
+    dpi: number;
+  };
+};
 
-    // Data State
-    const [totalRevenue, setTotalRevenue] = useState(405231.89); // Simulated start
-    const [totalOrders, setTotalOrders] = useState(0); // Will fetch real
-    const [newCustomers, setNewCustomers] = useState(1892); // Simulated
-    const [liveVisitors, setLiveVisitors] = useState(128); // Simulated
-    const [revenueData, setRevenueData] = useState([35000, 42000, 68000, 59000, 82000, 75000, 91000, 88000, 110000, 105000, 130000, 125000]);
-    const [trafficData, setTrafficData] = useState([45, 25, 20, 10]);
-    const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+type OrderItem = {
+  id: string;
+  images: any[];
+  sheetSize: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  utilization: number;
+  layout?: any;
+  placedItems?: any[];
+  sheetWidth?: number;
+  sheetLength?: number;
+  pricing?: any;
+};
 
-    // AI Insights State
-    const [aiInsights, setAiInsights] = useState("Click 'Refresh' to get AI-powered insights on your current dashboard data.");
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    
-    const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+type Order = {
+  id: string;
+  userId: string;
+  userEmail: string;
+  createdAt: Date;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  shippingStatus: ShippingStatus;
+  totalAmount?: number; // Legacy field
+  total?: number; // Current field
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  printFiles: PrintFile[];
+  items?: OrderItem[];
+  sheetWidth: number;
+  sheetLength: number;
+  itemCount?: number;
+  trackingNumber?: string;
+  shippingAddress?: {
+    name: string;
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+};
 
-    // Fetch Real Data
-    useEffect(() => {
-        async function fetchRealData() {
-            try {
-                const ordersRef = collection(db, 'orders');
-                const q = query(ordersRef, orderBy('createdAt', 'desc'), limit(5));
-                const snapshot = await getDocs(q);
-                
-                const orders = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        customer: data.customerInfo 
-                            ? `${data.customerInfo.firstName} ${data.customerInfo.lastName}`
-                            : data.shippingAddress?.name || 'Unknown',
-                        total: data.total || data.totalAmount || 0,
-                        status: data.status === 'completed' ? 'Paid' : 
-                                data.status === 'pending' ? 'Pending' : 
-                                data.status === 'cancelled' ? 'Failed' : 'Pending', // Map to UI statuses
-                        createdAt: data.createdAt
-                    };
-                });
-                setRecentOrders(orders);
+export default function AdminPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
-                // For total orders, we'll just use a placeholder + real count of recent fetch for now to avoid reading all docs
-                // In a real app, use a counter document or aggregation query
-                setTotalOrders(21452 + snapshot.size); 
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
-            } catch (err) {
-                console.error("Error fetching real data:", err);
-            }
-        }
-        fetchRealData();
-    }, []);
-
-    // Function to fetch AI insights
-    const generateInsights = async () => {
-        setIsGenerating(true);
-        setError(null);
-        setAiInsights('');
-        try {
-            // Check for API key (simulated check as we might not have it in env yet)
-            // In a real scenario, this would be process.env.NEXT_PUBLIC_GEMINI_API_KEY
-            const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-            
-            if (!apiKey) {
-                throw new Error("API key not configured.");
-            }
-            const ai = new GoogleGenerativeAI(apiKey);
-
-            const currentData = {
-                totalRevenue,
-                totalOrders,
-                newCustomers,
-                liveVisitors,
-                todayRevenue: revenueData[revenueData.length - 1],
-                trafficSources: {
-                    organic: trafficData[0],
-                    social: trafficData[1],
-                    direct: trafficData[2],
-                    referral: trafficData[3],
-                },
-            };
-            
-            const prompt = `You are an expert e-commerce analyst for a platform called TransferNest. Based on the following JSON data for an online store, provide a concise summary and 2-3 actionable recommendations. Use markdown for formatting (e.g., "**Summary**" for headings and "*" for bullet points). The data is: ${JSON.stringify(currentData)}. Keep your response professional, insightful, and brief.`;
-
-            const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            setAiInsights(response.text());
-
-        } catch (err) {
-            console.error("Error fetching AI insights:", err);
-            const errorMessage = (err instanceof Error && err.message.includes("API key"))
-                ? "AI features are unavailable due to a configuration issue (Missing API Key)."
-                : "Failed to generate insights. Please try again later.";
-            setError(errorMessage);
-            setAiInsights('');
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    // Chart Initialization Effect
-    useEffect(() => {
-        const initCharts = () => {
-            if (typeof Chart === 'undefined') return false;
-
-            if (salesChartRef.current && !salesChartInstance.current) {
-                const salesChartCtx = salesChartRef.current.getContext('2d');
-                if (salesChartCtx) {
-                    const salesGradient = salesChartCtx.createLinearGradient(0, 0, 0, 300);
-                    salesGradient.addColorStop(0, 'rgba(167, 139, 250, 0.6)');
-                    salesGradient.addColorStop(1, 'rgba(6, 182, 212, 0.1)');
-                    salesChartInstance.current = new Chart(salesChartCtx, {
-                        type: 'line',
-                        data: {
-                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                            datasets: [{ label: 'Revenue', data: revenueData, backgroundColor: salesGradient, borderColor: '#a78bfa', pointBackgroundColor: '#ffffff', pointBorderColor: '#a78bfa', pointHoverRadius: 7, pointHoverBackgroundColor: '#a78bfa', pointHoverBorderColor: '#ffffff', tension: 0.4, fill: 'start' }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1f2937', titleColor: '#e5e7eb', bodyColor: '#d1d5db', padding: 12, cornerRadius: 6, displayColors: false } }, scales: { y: { beginAtZero: false, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#9ca3af', callback: (value: any) => '$' + value / 1000 + 'k' } }, x: { grid: { display: false }, ticks: { color: '#9ca3af' } } } }
-                    });
-                }
-            }
-
-            if (trafficChartRef.current && !trafficChartInstance.current) {
-                const trafficChartCtx = trafficChartRef.current.getContext('2d');
-                if (trafficChartCtx) {
-                    trafficChartInstance.current = new Chart(trafficChartCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Organic Search', 'Social Media', 'Direct', 'Referral'],
-                            datasets: [{ data: trafficData, backgroundColor: ['#a78bfa', '#06b6d4', '#6366f1', '#374151'], borderColor: '#111827', borderWidth: 3, hoverOffset: 10 }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: '#d1d5db', padding: 20, usePointStyle: true, pointStyle: 'circle' } }, tooltip: { backgroundColor: '#1f2937', titleColor: '#e5e7eb', bodyColor: '#d1d5db', padding: 12, cornerRadius: 6, displayColors: false, callbacks: { label: (context: any) => `${context.label || ''}: ${context.parsed || 0}%` } } } }
-                    });
-                }
-            }
-            return true;
+  async function loadOrders() {
+    try {
+      const ordersRef = collection(db, 'orders');
+      const q = query(ordersRef, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      
+      const ordersData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
         };
+      }) as Order[];
+      
+      setOrders(ordersData);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-        // Small delay to ensure canvas is ready
-        const timeout = setTimeout(initCharts, 100);
-        return () => {
-            clearTimeout(timeout);
-            if (salesChartInstance.current) salesChartInstance.current.destroy();
-            if (trafficChartInstance.current) trafficChartInstance.current.destroy();
-        };
-    }, []);
+  async function updateOrderStatus(orderId: string, field: keyof Order, value: any) {
+    try {
+      // For status changes, use the API to trigger email notifications
+      if (field === 'status') {
+        const token = await auth.currentUser?.getIdToken();
+        const response = await fetch(`/api/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: value })
+        });
 
-    // Data Simulation & Chart Update Effect
-    useEffect(() => {
-        const interval = setInterval(() => {
-            // Simulate metrics
-            setTotalRevenue(prev => prev + Math.random() * 500);
-            // setTotalOrders(prev => prev + Math.floor(Math.random() * 3)); // Keep real orders count stable for now
-            setNewCustomers(prev => (Math.random() > 0.5 ? prev + 1 : prev));
-            setLiveVisitors(prev => Math.max(50, prev + Math.floor(Math.random() * 21) - 10));
-            
-            // Simulate chart data
-            setRevenueData(prev => {
-                const newData = [...prev];
-                newData[newData.length - 1] = prev[prev.length - 1] + Math.random() * 2000;
-                if (salesChartInstance.current) {
-                    salesChartInstance.current.data.datasets[0].data = newData;
-                    salesChartInstance.current.update('none');
-                }
-                return newData;
-            });
-            setTrafficData(prev => {
-                const changes = [Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1];
-                const newRawData = prev.map((val, i) => Math.max(5, val + changes[i]));
-                const total = newRawData.reduce((sum, val) => sum + val, 0);
-                const newData = newRawData.map(val => Math.round((val / total) * 100));
-                 if (trafficChartInstance.current) {
-                    trafficChartInstance.current.data.datasets[0].data = newData;
-                    trafficChartInstance.current.update('none');
-                }
-                return newData;
-            });
-
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, []);
-    
-    // AI Insight renderer
-    const renderInsights = () => {
-        if (isGenerating) {
-            return (
-                <div className="space-y-3 animate-pulse">
-                    <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-700 rounded w-1/2"></div>
-                    <div className="h-4 bg-gray-700 rounded w-5/6 mt-4"></div>
-                    <div className="h-4 bg-gray-700 rounded w-4/6"></div>
-                </div>
-            );
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to update order');
         }
-        if (error) {
-            return <p className="text-red-400">{error}</p>;
-        }
-    
-        const lines = aiInsights.split('\n').filter(line => line.trim() !== '');
-    
-        return (
-            <div className="text-gray-300 space-y-2">
-                {lines.map((line, index) => {
-                    const trimmedLine = line.trim();
-                    if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
-                        return (
-                            <div key={index} className="flex items-start">
-                                <span className="text-cyan-400 mr-2 mt-1">•</span>
-                                <span>{trimmedLine.substring(2)}</span>
-                            </div>
-                        );
-                    }
-                    if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
-                        return <p key={index} className="font-semibold text-white mt-3 first:mt-0">{trimmedLine.slice(2, -2)}</p>;
-                    }
-                    return <p key={index}>{line}</p>;
-                })}
-            </div>
-        );
-    };
+      } else {
+        // For other fields, update directly
+        const orderRef = doc(db, 'orders', orderId);
+        await updateDoc(orderRef, { [field]: value });
+      }
+      
+      // Update local state
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, [field]: value } : order
+      ));
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('Failed to update order');
+    }
+  }
 
+  async function downloadPrintFile(order: Order) {
+    if (!order.printFiles || order.printFiles.length === 0) {
+      alert('No print files available');
+      return;
+    }
+    
+    // If single file, download directly
+    if (order.printFiles.length === 1) {
+      triggerDownload(order.printFiles[0].url, order.printFiles[0].filename);
+      return;
+    }
+    
+    // If multiple files, download all with a short delay between each
+    if (confirm(`Download all ${order.printFiles.length} files?\n\nNote: Your browser may ask for permission to download multiple files.`)) {
+      for (let i = 0; i < order.printFiles.length; i++) {
+        const file = order.printFiles[i];
+        setTimeout(() => {
+          triggerDownload(file.url, file.filename);
+        }, i * 300); // 300ms delay between each download
+      }
+    }
+  }
+
+  function triggerDownload(url: string, filename: string) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function toggleOrderSelection(orderId: string) {
+    const newSelected = new Set(selectedOrders);
+    if (newSelected.has(orderId)) {
+      newSelected.delete(orderId);
+    } else {
+      newSelected.add(orderId);
+    }
+    setSelectedOrders(newSelected);
+  }
+
+  function toggleSelectAll() {
+    if (selectedOrders.size === filteredOrders.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(filteredOrders.map(o => o.id)));
+    }
+  }
+
+  async function bulkUpdateStatus(field: keyof Order, value: any) {
+    if (selectedOrders.size === 0) {
+      alert('No orders selected');
+      return;
+    }
+
+    if (!confirm(`Update ${selectedOrders.size} orders?`)) return;
+
+    try {
+      const batch = writeBatch(db);
+      selectedOrders.forEach(orderId => {
+        const orderRef = doc(db, 'orders', orderId);
+        batch.update(orderRef, { [field]: value });
+      });
+      await batch.commit();
+
+      // Update local state
+      setOrders(prev => prev.map(order => 
+        selectedOrders.has(order.id) ? { ...order, [field]: value } : order
+      ));
+      setSelectedOrders(new Set());
+    } catch (error) {
+      console.error('Error updating orders:', error);
+      alert('Failed to update orders');
+    }
+  }
+
+  const filteredOrders = orders.filter(order => {
+    const matchesFilter = filter === 'all' || order.status === filter;
+    const matchesSearch = 
+      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.shippingAddress?.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  if (loading) {
     return (
-        <>
-            <h1 className="text-3xl font-bold text-white mb-6">Dashboard</h1>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                 <div className="dash-glass-card rounded-2xl p-6 fade-in-widget" style={{animationDelay: '0.1s'}}>
-                    <p className="text-sm text-gray-400 mb-2">Total Revenue</p>
-                    <p className="text-3xl font-bold text-white mb-2">{formatCurrency(totalRevenue)}</p>
-                    <span className="text-sm text-green-400">+12.5% from last month</span>
-                </div>
-                
-                <div className="dash-glass-card rounded-2xl p-6 fade-in-widget" style={{animationDelay: '0.2s'}}>
-                    <p className="text-sm text-gray-400 mb-2">Total Orders</p>
-                    <p className="text-3xl font-bold text-white mb-2">{totalOrders.toLocaleString()}</p>
-                    <span className="text-sm text-green-400">+8.1% from last month</span>
-                </div>
-
-                <div className="dash-glass-card rounded-2xl p-6 fade-in-widget" style={{animationDelay: '0.3s'}}>
-                    <p className="text-sm text-gray-400 mb-2">New Customers</p>
-                    <p className="text-3xl font-bold text-white mb-2">{newCustomers.toLocaleString()}</p>
-                    <span className="text-sm text-red-400">-2.3% from last month</span>
-                </div>
-
-                <div className="lg:col-span-2 dash-glass-card rounded-2xl p-6 fade-in-widget" style={{animationDelay: '0.4s'}}>
-                    <h3 className="text-lg font-semibold text-white mb-4">Revenue Overview</h3>
-                    <div className="h-80">
-                        <canvas ref={salesChartRef}></canvas>
-                    </div>
-                </div>
-
-                <div className="dash-glass-card rounded-2xl p-6 fade-in-widget" style={{animationDelay: '0.5s'}}>
-                    <h3 className="text-lg font-semibold text-white mb-4">Traffic Sources</h3>
-                    <div className="h-80 flex items-center justify-center">
-                        <canvas ref={trafficChartRef}></canvas>
-                    </div>
-                </div>
-                
-                 <div className="lg:col-span-2 dash-glass-card rounded-2xl p-6 fade-in-widget" style={{animationDelay: '0.6s'}}>
-                    <h3 className="text-lg font-semibold text-white mb-4">Recent Orders</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b border-gray-700 text-sm text-gray-400">
-                                    <th className="py-3 pr-3">Order ID</th>
-                                    <th className="py-3 pr-3">Customer</th>
-                                    <th className="py-3 pr-3">Total</th>
-                                    <th className="py-3 pr-3">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recentOrders.map(order => (
-                                    <tr key={order.id} className="border-b border-gray-800 hover:bg-white/5 transition-colors">
-                                        <td className="py-4 pr-3 text-cyan-400 font-mono">
-                                            <Link href={`/admin/jobs/${order.id}`}>
-                                                #{order.id.slice(-6)}
-                                            </Link>
-                                        </td>
-                                        <td className="py-4 pr-3">{order.customer}</td>
-                                        <td className="py-4 pr-3">{formatCurrency(order.total)}</td>
-                                        <td className="py-4 pr-3">
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                order.status === 'Paid' ? 'bg-green-800 text-green-300' :
-                                                order.status === 'Pending' ? 'bg-yellow-800 text-yellow-300' :
-                                                'bg-red-800 text-red-300'
-                                            }`}>{order.status}</span>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {recentOrders.length === 0 && (
-                                    <tr>
-                                        <td colSpan={4} className="py-4 text-center text-gray-500">No recent orders found.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <div className="dash-glass-card rounded-2xl p-6 fade-in-widget" style={{animationDelay: '0.7s'}}>
-                    <h3 className="text-lg font-semibold text-white mb-4">Live Visitors</h3>
-                    <div className="flex flex-col items-center justify-center h-full">
-                        <div className="relative globe mb-4">
-                            <div className="pulse-point" style={{top: '30%', left: '60%', animationDelay: '0.2s'}}></div>
-                            <div className="pulse-point" style={{top: '50%', left: '40%', animationDelay: '0.5s'}}></div>
-                            <div className="pulse-point" style={{top: '65%', left: '70%', animationDelay: '1.1s'}}></div>
-                            <div className="pulse-point" style={{top: '40%', left: '20%'}}></div>
-                        </div>
-                        <p className="text-3xl font-bold text-white">{liveVisitors}</p>
-                        <p className="text-sm text-gray-400">Visitors online now</p>
-                    </div>
-                </div>
-
-                 <div className="lg:col-span-3 dash-glass-card rounded-2xl p-6 fade-in-widget" style={{animationDelay: '0.8s'}}>
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-white flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 mr-2 text-purple-400"><path d="M11.47 1.72a.75.75 0 0 1 1.06 0l3 3a.75.75 0 0 1-1.06 1.06l-1.72-1.72V7.5h-1.5V4.06L9.53 5.78a.75.75 0 0 1-1.06-1.06l3-3ZM11.25 7.5V11.25l2.28 2.28a.75.75 0 0 1-1.06 1.06L11.25 13.062V15a.75.75 0 0 1-1.5 0v-3.75l-2.28 2.28a.75.75 0 1 1-1.06-1.06L8.25 11.25V7.5a.75.75 0 0 1 1.5 0Zm-2.822 8.72a.75.75 0 0 1 1.06 0l1.72 1.72V20.25h1.5v-2.25l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 0 1 0-1.06Z" /></svg>
-                            TransferNest AI Insights
-                        </h3>
-                        <button onClick={generateInsights} disabled={isGenerating} className="text-sm text-cyan-400 hover:text-cyan-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                            Refresh
-                        </button>
-                    </div>
-                    {renderInsights()}
-                </div>
-            </div>
-        </>
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+      </div>
     );
+  }
+
+  return (
+    <div className="p-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Orders</h1>
+          <p className="text-slate-400 mt-1">Manage and track customer orders</p>
+        </div>
+        
+        <div className="flex gap-3">
+          {selectedOrders.size > 0 && (
+            <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
+              <select 
+                className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm"
+                onChange={(e) => bulkUpdateStatus('status', e.target.value)}
+                defaultValue=""
+              >
+                <option value="" disabled>Set Status...</option>
+                <option value="pending">Pending</option>
+                <option value="printing">Printing</option>
+                <option value="shipped">Shipped</option>
+                <option value="completed">Completed</option>
+              </select>
+              <select 
+                className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm"
+                onChange={(e) => bulkUpdateStatus('shippingStatus', e.target.value)}
+                defaultValue=""
+              >
+                <option value="" disabled>Set Shipping...</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Filters & Search */}
+      <div className="bg-slate-900/50 border border-white/10 rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-4 justify-between">
+        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+          {(['all', 'pending', 'printing', 'shipped', 'completed'] as const).map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`
+                px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors
+                ${filter === status 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}
+              `}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search orders..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Orders Table */}
+      <div className="bg-slate-900 border border-white/10 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-800/50 border-b border-white/10">
+                <th className="p-4 w-12">
+                  <button 
+                    onClick={toggleSelectAll}
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    {selectedOrders.size > 0 && selectedOrders.size === filteredOrders.length ? (
+                      <CheckSquare size={20} />
+                    ) : (
+                      <Square size={20} />
+                    )}
+                  </button>
+                </th>
+                <th className="p-4 text-sm font-medium text-slate-400">Order ID</th>
+                <th className="p-4 text-sm font-medium text-slate-400">Customer</th>
+                <th className="p-4 text-sm font-medium text-slate-400">Date</th>
+                <th className="p-4 text-sm font-medium text-slate-400">Status</th>
+                <th className="p-4 text-sm font-medium text-slate-400">Payment</th>
+                <th className="p-4 text-sm font-medium text-slate-400">Total</th>
+                <th className="p-4 text-sm font-medium text-slate-400">Files</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {filteredOrders.map((order) => (
+                <tr key={order.id} className="hover:bg-white/5 transition-colors">
+                  <td className="p-4">
+                    <button 
+                      onClick={() => toggleOrderSelection(order.id)}
+                      className={`transition-colors ${selectedOrders.has(order.id) ? 'text-blue-500' : 'text-slate-600 hover:text-slate-400'}`}
+                    >
+                      {selectedOrders.has(order.id) ? <CheckSquare size={20} /> : <Square size={20} />}
+                    </button>
+                  </td>
+                  <td className="p-4">
+                    <Link 
+                      href={`/admin/jobs/${order.id}`}
+                      className="font-mono text-sm text-white hover:text-blue-400 hover:underline"
+                    >
+                      #{order.id.slice(-6)}
+                    </Link>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex flex-col">
+                      <span className="text-white font-medium">{order.shippingAddress?.name || 'Unknown'}</span>
+                      <span className="text-sm text-slate-400">{order.userEmail}</span>
+                    </div>
+                  </td>
+                  <td className="p-4 text-slate-400 text-sm">
+                    {order.createdAt.toLocaleDateString()}
+                  </td>
+                  <td className="p-4">
+                    <select
+                      value={order.status}
+                      onChange={(e) => updateOrderStatus(order.id, 'status', e.target.value)}
+                      className={`
+                        bg-transparent text-sm font-medium rounded px-2 py-1 border border-transparent hover:border-slate-700 focus:border-blue-500 focus:bg-slate-800 outline-none cursor-pointer
+                        ${order.status === 'completed' ? 'text-green-400' : 
+                          order.status === 'shipped' ? 'text-blue-400' :
+                          order.status === 'ready_for_pickup' ? 'text-purple-400' :
+                          order.status === 'printing' ? 'text-yellow-400' : 'text-slate-400'}
+                      `}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="printing">Printing</option>
+                      <option value="ready_for_pickup">Ready for Pickup</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </td>
+                  <td className="p-4">
+                    <span className={`
+                      inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                      ${order.paymentStatus === 'paid' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}
+                    `}>
+                      {order.paymentStatus}
+                    </span>
+                  </td>
+                  <td className="p-4 text-white font-medium">
+                    ${(order.total || order.totalAmount || 0).toFixed(2)}
+                  </td>
+                  <td className="p-4">
+                    <button
+                      onClick={() => downloadPrintFile(order)}
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                      title="Download Print Files"
+                    >
+                      <Download size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              
+              {filteredOrders.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-slate-400">
+                    No orders found matching your criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -2,9 +2,9 @@
  * @fileOverview Centralized Firebase Admin initialization.
  */
 
-import * as admin from 'firebase-admin';
+const admin = require('firebase-admin');
 
-let app: admin.app.App;
+let app: any;
 
 try {
   if (!admin.apps.length) {
@@ -38,7 +38,7 @@ try {
       console.log('[Firebase Admin] Initialized with default credentials');
     }
   } else {
-    app = admin.apps[0] as admin.app.App;
+    app = admin.apps[0];
   }
 } catch (error) {
   console.error('[Firebase Admin] Initialization error:', error);

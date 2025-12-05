@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer, Mail } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer, Mail, Send } from 'lucide-react';
 import Link from 'next/link';
 
 type OrderItem = {
@@ -29,13 +29,10 @@ type Order = {
   createdAt: any;
   status: string;
   paymentStatus: string;
-  total?: number;
-  subtotal?: number;
-  tax?: number;
-  shipping?: number;
-  discountPercentage?: number;
-  discountAmount?: number;
-  currency?: string;
+  total: number;
+  subtotal: number;
+  tax: number;
+  shipping: number;
   printFiles: Array<{
     filename: string;
     url: string;
@@ -50,27 +47,8 @@ type Order = {
     email: string;
     phone: string;
   };
-  shippingAddress?: {
-    address?: string;
-    line1?: string;
-    address1?: string;
-    line2?: string;
-    address2?: string;
-    city?: string;
-    state?: string;
-    postal_code?: string;
-    zip?: string;
-    zipCode?: string;
-    country?: string;
-  };
+  shippingAddress?: any;
   deliveryMethod?: string;
-  shippingInfo?: {
-    trackingNumber?: string;
-    carrier?: string;
-    labelUrl?: string;
-  };
-  taxBreakdown?: any;
-  shippingRate?: any;
 };
 
 export default function JobDetailsPage() {
@@ -93,7 +71,7 @@ export default function JobDetailsPage() {
   });
   const [isFetchingRates, setIsFetchingRates] = useState(false);
   const [isBuyingLabel, setIsBuyingLabel] = useState(false);
-  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrder();
@@ -165,11 +143,11 @@ export default function JobDetailsPage() {
           orderId: order.id,
           toAddress: {
             name: `${order.customerInfo?.firstName} ${order.customerInfo?.lastName}`,
-            street1: order.shippingAddress.line1 || order.shippingAddress.address1 || order.shippingAddress.address,
-            street2: order.shippingAddress.line2 || order.shippingAddress.address2 || '',
+            street1: order.shippingAddress.line1 || order.shippingAddress.address1,
+            street2: order.shippingAddress.line2 || order.shippingAddress.address2,
             city: order.shippingAddress.city,
             state: order.shippingAddress.state,
-            zip: order.shippingAddress.postal_code || order.shippingAddress.zip || order.shippingAddress.zipCode,
+            zip: order.shippingAddress.postal_code || order.shippingAddress.zip,
             country: order.shippingAddress.country || 'CA',
             phone: order.customerInfo?.phone,
             email: order.customerInfo?.email
@@ -183,12 +161,11 @@ export default function JobDetailsPage() {
         setShippingRates(data.shipment.rates);
         setCurrentShipmentId(data.shipment.id);
       } else {
-        console.error('Failed to fetch rates:', data);
-        alert('Failed to fetch rates: ' + (data.message || 'Unknown error'));
+        alert('Failed to fetch rates: ' + data.message);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching rates:', error);
-      alert('Error fetching rates: ' + (error.message || 'Unknown error'));
+      alert('Error fetching rates');
     } finally {
       setIsFetchingRates(false);
     }
@@ -229,37 +206,35 @@ export default function JobDetailsPage() {
     }
   }
 
-  async function composeEmail() {
+  async function sendNotification(type: 'confirmation' | 'shipped' | 'pickup' | 'update' | 'admin') {
     if (!order) return;
     
-    setIsResendingEmail(true);
+    setSendingEmail(type);
     try {
       const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/admin/orders/${order.id}/email-content`, {
+      const response = await fetch('/api/admin/send-notification', {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          type
+        })
       });
 
-      const data = await response.json();
-      if (data.success) {
-        // Store draft in sessionStorage
-        sessionStorage.setItem('emailDraft', JSON.stringify({
-          to: data.to,
-          subject: data.subject,
-          body: data.html
-        }));
-        
-        // Redirect to email page
-        router.push('/admin/email?compose=true');
+      const result = await response.json();
+      if (result.success) {
+        alert(`${type.charAt(0).toUpperCase() + type.slice(1)} email sent successfully!`);
       } else {
-        alert('Failed to generate email content: ' + (data.message || 'Unknown error'));
+        alert('Failed to send email: ' + (result.error || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error generating email:', error);
-      alert('Error generating email');
+      console.error('Error sending notification:', error);
+      alert('Error sending notification');
     } finally {
-      setIsResendingEmail(false);
+      setSendingEmail(null);
     }
   }
 
@@ -307,7 +282,7 @@ export default function JobDetailsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <Link href="/admin/orders" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors">
+            <Link href="/admin" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors">
               <ArrowLeft className="h-4 w-4" />
               Back to Orders
             </Link>
@@ -320,19 +295,6 @@ export default function JobDetailsPage() {
           </div>
           
           <div className="flex gap-3">
-            <button
-              onClick={composeEmail}
-              disabled={isResendingEmail}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
-            >
-              {isResendingEmail ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Mail className="h-4 w-4" />
-              )}
-              Compose Email
-            </button>
-
             <span className={`px-4 py-2 rounded-full text-sm font-medium ${
               order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
               order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
@@ -342,11 +304,11 @@ export default function JobDetailsPage() {
               {order.status}
             </span>
             <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-              (order.paymentStatus === 'paid' || (!order.paymentStatus && order.status !== 'pending')) ? 'bg-green-500/20 text-green-300' :
+              order.paymentStatus === 'paid' ? 'bg-green-500/20 text-green-300' :
               order.paymentStatus === 'refunded' ? 'bg-red-500/20 text-red-300' :
               'bg-yellow-500/20 text-yellow-300'
             }`}>
-              {order.paymentStatus || (order.status !== 'pending' ? 'paid' : 'unpaid')}
+              {order.paymentStatus}
             </span>
           </div>
         </div>
@@ -358,28 +320,35 @@ export default function JobDetailsPage() {
             <div className="glass-strong rounded-lg border border-white/10 p-6">
               <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Subtotal:</span>
-                  <span className="font-medium">${(order.subtotal || 0).toFixed(2)}</span>
-                </div>
-                {(order.discountAmount || 0) > 0 && (
-                  <div className="flex justify-between text-green-400">
-                    <span>Discount ({order.discountPercentage || 0}%):</span>
-                    <span className="font-medium">-${(order.discountAmount || 0).toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Tax:</span>
-                  <span className="font-medium">${(order.tax || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Shipping:</span>
-                  <span className="font-medium">${(order.shipping || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between border-t border-white/10 pt-2 mt-2 text-lg">
-                  <span className="font-semibold">Total:</span>
-                  <span className="font-bold text-green-400">${(order.total || 0).toFixed(2)}</span>
-                </div>
+                {/* Calculate subtotal from items if stored value is 0 */}
+                {(() => {
+                  const calculatedSubtotal = order.items?.reduce((sum, item) => {
+                    const itemPrice = item.totalPrice || item.pricing?.total || 0;
+                    return sum + (itemPrice * (item.quantity || 1));
+                  }, 0) || 0;
+                  const displaySubtotal = order.subtotal > 0 ? order.subtotal : calculatedSubtotal;
+                  
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Subtotal:</span>
+                        <span className="font-medium">${displaySubtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Tax:</span>
+                        <span className="font-medium">${(order.tax || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Shipping:</span>
+                        <span className="font-medium">${(order.shipping || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-white/10 pt-2 mt-2 text-lg">
+                        <span className="font-semibold">Total:</span>
+                        <span className="font-bold text-green-400">${(order.total || 0).toFixed(2)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -406,38 +375,58 @@ export default function JobDetailsPage() {
               </div>
             )}
 
-            {/* Delivery Method & Shipping Address */}
+            {/* Send Notifications */}
             <div className="glass-strong rounded-lg border border-white/10 p-6">
-              <h2 className="text-xl font-semibold mb-4">Delivery Details</h2>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="text-slate-400">Method:</span>
-                  <p className="font-medium capitalize">{order.deliveryMethod || 'Not specified'}</p>
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Send Notifications
+              </h2>
+              <div className="space-y-2">
+                <button
+                  onClick={() => sendNotification('confirmation')}
+                  disabled={sendingEmail !== null}
+                  className="w-full py-2 px-3 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingEmail === 'confirmation' ? 'Sending...' : 'Send Order Confirmation'}
+                </button>
+                <button
+                  onClick={() => sendNotification('update')}
+                  disabled={sendingEmail !== null}
+                  className="w-full py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingEmail === 'update' ? 'Sending...' : 'Send Status Update'}
+                </button>
+                <button
+                  onClick={() => sendNotification('shipped')}
+                  disabled={sendingEmail !== null}
+                  className="w-full py-2 px-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingEmail === 'shipped' ? 'Sending...' : 'Send Shipped Notification'}
+                </button>
+                <button
+                  onClick={() => sendNotification('pickup')}
+                  disabled={sendingEmail !== null}
+                  className="w-full py-2 px-3 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-500/30 text-yellow-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingEmail === 'pickup' ? 'Sending...' : 'Send Ready for Pickup'}
+                </button>
+                <div className="border-t border-white/10 my-3 pt-3">
+                  <button
+                    onClick={() => sendNotification('admin')}
+                    disabled={sendingEmail !== null}
+                    className="w-full py-2 px-3 bg-slate-600/20 hover:bg-slate-600/30 border border-slate-500/30 text-slate-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    <Mail className="h-4 w-4" />
+                    {sendingEmail === 'admin' ? 'Sending...' : 'Send Internal Notification'}
+                  </button>
+                  <p className="text-xs text-slate-500 mt-1">Sends to admin team</p>
                 </div>
-                
-                {order.deliveryMethod === 'shipping' && order.shippingAddress && (
-                  <div>
-                    <span className="text-slate-400">Shipping Address:</span>
-                    <div className="font-medium mt-1 p-3 bg-white/5 rounded-lg">
-                      <p>{order.shippingAddress.address || order.shippingAddress.line1 || order.shippingAddress.address1}</p>
-                      {(order.shippingAddress.line2 || order.shippingAddress.address2) && (
-                        <p>{order.shippingAddress.line2 || order.shippingAddress.address2}</p>
-                      )}
-                      <p>
-                        {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postal_code || order.shippingAddress.zip || order.shippingAddress.zipCode}
-                      </p>
-                      <p>{order.shippingAddress.country || 'Canada'}</p>
-                    </div>
-                  </div>
-                )}
-                
-                {order.deliveryMethod === 'pickup' && (
-                  <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
-                    <p className="text-cyan-300 font-medium">🏪 Local Pickup</p>
-                    <p className="text-slate-400 text-xs mt-1">Customer will pick up at your location</p>
-                  </div>
-                )}
               </div>
+              <p className="text-xs text-slate-500 mt-3">Customer emails sent to: {order.customerInfo?.email || 'N/A'}</p>
             </div>
 
             {/* Shipping Management */}
@@ -446,15 +435,8 @@ export default function JobDetailsPage() {
                 <Truck className="h-5 w-5" />
                 Shipping Management
               </h2>
-
-              {order.deliveryMethod === 'shipping' && order.status !== 'shipped' && (
-                <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-center gap-2 text-yellow-300">
-                  <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
-                  <span className="font-medium">Customer paid for shipping - Label purchase required</span>
-                </div>
-              )}
               
-              {((order as any).shippingInfo?.labelUrl || order.status === 'shipped') ? (
+              {order.status === 'shipped' ? (
                 <div className="space-y-4">
                   <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2 text-green-400 mb-2">
@@ -593,7 +575,12 @@ export default function JobDetailsPage() {
           <div className="glass-strong rounded-lg border border-white/10 p-6">
             <h2 className="text-xl font-semibold mb-4">Order Items ({order.items?.length || 0})</h2>
             <div className="space-y-3">
-              {order.items?.map((item, idx) => (
+              {order.items?.map((item, idx) => {
+                // Get price from stored value or fallback to pricing object
+                const itemPrice = item.totalPrice > 0 ? item.totalPrice : (item.pricing?.total || 0);
+                const itemUtilization = item.utilization > 0 ? item.utilization : (item.layout?.utilization || 0);
+                
+                return (
                 <div
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
@@ -607,7 +594,7 @@ export default function JobDetailsPage() {
                     <div className="flex-1">
                       <h3 className="font-semibold">{item.sheetSize}" Sheet</h3>
                       <p className="text-sm text-slate-400">
-                        {item.images?.length || 0} images • {item.utilization?.toFixed(1) || 0}% utilization
+                        {item.images?.length || 0} images • {itemUtilization.toFixed(1)}% utilization
                       </p>
                       {item.sheetLength && (
                         <p className="text-xs text-slate-500">
@@ -616,7 +603,7 @@ export default function JobDetailsPage() {
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-green-400">${item.totalPrice.toFixed(2)}</p>
+                      <p className="font-bold text-green-400">${itemPrice.toFixed(2)}</p>
                       <p className="text-xs text-slate-400">Qty: {item.quantity}</p>
                     </div>
                   </div>
@@ -634,7 +621,8 @@ export default function JobDetailsPage() {
                     </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -667,7 +655,7 @@ export default function JobDetailsPage() {
                 </div>
 
                 {/* Layout Info */}
-                {selectedItem.layout && (
+                {(selectedItem.layout || selectedItem.sheetWidth) && (
                   <div className="p-4 glass rounded border border-white/10">
                     <h3 className="font-medium mb-2 text-slate-300">Layout Details</h3>
                     <div className="space-y-1 text-sm">
@@ -677,32 +665,38 @@ export default function JobDetailsPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Utilization:</span>
-                        <span>{selectedItem.layout.utilization?.toFixed(1)}%</span>
+                        <span>{(selectedItem.utilization > 0 ? selectedItem.utilization : selectedItem.layout?.utilization || 0).toFixed(1)}%</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Total Copies:</span>
-                        <span>{selectedItem.layout.totalCopies}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Positions:</span>
-                        <span>{selectedItem.layout.positions?.length || 0}</span>
-                      </div>
+                      {selectedItem.layout?.totalCopies && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Total Copies:</span>
+                          <span>{selectedItem.layout.totalCopies}</span>
+                        </div>
+                      )}
+                      {selectedItem.layout?.positions && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Positions:</span>
+                          <span>{selectedItem.layout.positions?.length || 0}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Pricing Breakdown */}
-                {selectedItem.pricing && (
+                {(selectedItem.pricing || selectedItem.totalPrice > 0) && (
                   <div className="p-4 glass rounded border border-white/10">
                     <h3 className="font-medium mb-2 text-slate-300">Pricing</h3>
                     <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Base Price:</span>
-                        <span>${selectedItem.pricing.basePrice?.toFixed(2)}</span>
-                      </div>
+                      {(selectedItem.pricing?.basePrice || selectedItem.unitPrice) && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Unit Price:</span>
+                          <span>${(selectedItem.pricing?.basePrice || selectedItem.unitPrice || 0).toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between border-t border-white/10 pt-1 mt-1 font-medium">
-                        <span>Total:</span>
-                        <span className="text-green-400">${selectedItem.pricing.total?.toFixed(2)}</span>
+                        <span>Item Total:</span>
+                        <span className="text-green-400">${(selectedItem.totalPrice > 0 ? selectedItem.totalPrice : selectedItem.pricing?.total || 0).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>

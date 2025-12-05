@@ -169,7 +169,7 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
       return DEFAULT_TEMPLATES;
     }
     
-    return snapshot.docs.map(doc => {
+    return snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
       const data = doc.data();
       return {
         ...data,

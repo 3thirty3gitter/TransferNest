@@ -3,7 +3,7 @@ import EasyPost from '@easypost/api';
 import { getFirestore } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { verifyAdminRequest } from '@/lib/admin-auth-server';
-import { sendOrderShippedEmail } from '@/lib/email';
+import { sendOrderUpdateEmail } from '@/lib/email';
 
 const adminDb = getFirestore();
 
@@ -139,8 +139,7 @@ export async function POST(request: Request) {
             shippingAddress: orderData.shippingAddress
           };
           
-          const trackingUrl = boughtShipment.tracker?.public_url || boughtShipment.postage_label?.label_url;
-          await sendOrderShippedEmail(emailDetails, trackingNumber, trackingUrl);
+          await sendOrderUpdateEmail(emailDetails, 'shipped', trackingNumber);
           console.log('[SHIPPING] Shipped email sent for order:', orderId);
         }
       } catch (emailError) {
