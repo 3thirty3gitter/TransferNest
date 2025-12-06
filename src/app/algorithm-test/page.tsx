@@ -6,7 +6,7 @@ export default function AlgorithmTestPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Nesting Algorithm Test Suite</h1>
         <p className="text-muted-foreground mt-2">
-          Compare performance of 13" vs 17" sheet algorithms across different scenarios
+          Test 17" sheet nesting algorithm performance across different scenarios
         </p>
       </div>
       <AlgorithmTester />

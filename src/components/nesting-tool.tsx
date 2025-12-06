@@ -168,11 +168,11 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
     }
 
     const pricing = calculatePricing();
-    const sheetSizeStr = sheetWidth === 17 ? '17' : '13';
+    const sheetSizeStr = '17'; // Only 17" sheets supported
     
     const cartItem = {
       name: `Custom DTF Sheet ${sheetSizeStr}"`,
-      sheetSize: sheetSizeStr as '13' | '17',
+      sheetSize: sheetSizeStr as '17',
       images,
       layout: {
         positions: nestingResult.placedItems.map((item: any) => ({

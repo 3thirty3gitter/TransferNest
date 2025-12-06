@@ -1,6 +1,6 @@
 // column-packing.ts
-// Alternative packing strategy for 13" sheets with many small items
-// Uses a column-based approach that works better for narrow widths
+// Alternative packing strategy for narrow sheets with many small items
+// Uses a column-based approach for optimal width utilization
 
 export type ManagedImage = {
   id: string;

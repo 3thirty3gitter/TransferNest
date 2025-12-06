@@ -4,7 +4,7 @@ import sharp from 'sharp';
 
 export interface PrintExportOptions {
     dpi: number;
-    sheetSize: '13' | '17';
+    sheetSize: '17';
     format: 'png' | 'pdf';
     quality: number;
 }
@@ -25,21 +25,20 @@ export interface PrintExportResult {
 }
 
 const SHEET_DIMENSIONS = {
-    '13': { width: 13, height: 19 },
     '17': { width: 17, height: 22 }
 } as const;
 
 export class PrintExportGenerator {
     private readonly defaultOptions: PrintExportOptions = {
         dpi: 300,
-        sheetSize: '13',
+        sheetSize: '17',
         format: 'png',
         quality: 100
     };
 
     async generatePrintFile(
         images: NestedImage[],
-        sheetSize: '13' | '17',
+        sheetSize: '17',
         options: Partial<PrintExportOptions> = {}
     ): Promise<PrintExportResult> {
         const opts = { ...this.defaultOptions, sheetSize, ...options };
@@ -188,7 +187,7 @@ export class PrintExportGenerator {
 
     async generatePreview(
         images: NestedImage[],
-        sheetSize: '13' | '17',
+        sheetSize: '17',
         previewWidth: number = 800
     ): Promise<{ width: number; height: number; metadata: any }> {
         const sheet = SHEET_DIMENSIONS[sheetSize];
@@ -206,7 +205,7 @@ export class PrintExportGenerator {
         };
     }
 
-    calculatePrintPricing(images: NestedImage[], sheetSize: '13' | '17') {
+    calculatePrintPricing(images: NestedImage[], sheetSize: '17') {
         const sheet = SHEET_DIMENSIONS[sheetSize];
         const totalSheetArea = sheet.width * sheet.height;
 
@@ -217,7 +216,6 @@ export class PrintExportGenerator {
         const utilization = usedArea / totalSheetArea;
 
         const basePricing = {
-            '13': { base: 15.00, perSqIn: 0.75 },
             '17': { base: 25.00, perSqIn: 0.65 }
         };
 

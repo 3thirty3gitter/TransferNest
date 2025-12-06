@@ -16,7 +16,7 @@ interface Product {
   id: string;
   name: string;
   description: string;
-  sheetSize: '13' | '17';
+  sheetSize: '17';
   pricePerInch: number;
   basePrice: number;
   isActive: boolean;
@@ -48,7 +48,7 @@ export default function ProductsManagementPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sheetSize: '13' as '13' | '17',
+    sheetSize: '17' as '17',
     pricePerInch: 0,
     basePrice: 0,
     isActive: true,
@@ -379,10 +379,9 @@ export default function ProductsManagementPage() {
                     <select
                       id="sheetSize"
                       value={formData.sheetSize}
-                      onChange={(e) => setFormData({ ...formData, sheetSize: e.target.value as '13' | '17' })}
+                      onChange={(e) => setFormData({ ...formData, sheetSize: e.target.value as '17' })}
                       className="w-full h-10 px-3 rounded-md glass border border-white/20 text-white"
                     >
-                      <option value="13">13 inches</option>
                       <option value="17">17 inches</option>
                     </select>
                   </div>

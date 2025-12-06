@@ -30,11 +30,11 @@ export async function generateProductMetadata(): Promise<Metadata> {
     
     return {
       title: 'DTF Wholesale - Premium DTF Transfers & Gang Sheets | AI-Powered Nesting',
-      description: 'Professional DTF transfers with 90%+ sheet utilization. 13" & 17" gang sheets, fast turnaround, premium quality. Order custom Direct-to-Film transfers for your business today.',
+      description: 'Professional DTF transfers with 90%+ sheet utilization. 17" gang sheets, fast turnaround, premium quality. Order custom Direct-to-Film transfers for your business today.',
       keywords: Array.from(allKeywords).join(', '),
       openGraph: {
         title: 'DTF Wholesale - Premium DTF Transfers & Gang Sheets',
-        description: 'Professional DTF transfers with AI-powered nesting technology. 13" & 17" gang sheets available.',
+        description: 'Professional DTF transfers with AI-powered nesting technology. 17" gang sheets available.',
         type: 'website',
       },
       twitter: {

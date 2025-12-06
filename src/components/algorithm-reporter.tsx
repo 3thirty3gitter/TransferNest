@@ -11,7 +11,7 @@ import { Download, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown } from 
 
 interface DetailedTestResult {
   testName: string;
-  sheetWidth: 13 | 17;
+  sheetWidth: 17;
   result: NestingResult;
   images: ManagedImage[];
   timestamp: string;
@@ -31,7 +31,7 @@ interface DetailedTestResult {
 interface ComparisonMetrics {
   utilizationDiff: number;
   lengthDiff: number;
-  better: 13 | 17 | 'tie';
+  better: 17 | 'tie';
   recommendation: string;
 }
 
@@ -188,35 +188,33 @@ export default function AlgorithmReporter() {
     console.log(`🧪 DETAILED TEST: ${testName}`);
     console.log(`${'='.repeat(60)}`);
     
-    // Test both sizes
-    const sizes: (13 | 17)[] = [13, 17];
+    // Test 17" sheets only
+    const size = 17;
     const newResults: DetailedTestResult[] = [];
     
-    for (const size of sizes) {
-      console.log(`\n--- Testing ${size}" Sheet ---`);
-      const result = await executeNesting(images, size);
-      const metrics = calculateMetrics(images, result);
-      
-      newResults.push({
-        testName,
-        sheetWidth: size,
-        result,
-        images,
-        timestamp: new Date().toISOString(),
-        performanceMetrics: metrics
-      });
-      
-      // Detailed console output
-      console.log(`📊 ${size}" Results:`);
-      console.log(`  Utilization: ${(result.areaUtilizationPct * 100).toFixed(2)}%`);
-      console.log(`  Sheet Length: ${result.sheetLength.toFixed(2)}"`);
-      console.log(`  Placed/Total: ${result.placedItems.length}/${result.totalCount}`);
-      console.log(`  Failed: ${result.failedCount}`);
-      console.log(`  Strategy: ${result.sortStrategy}`);
-      console.log(`  Rotation Rate: ${(metrics.rotationRate * 100).toFixed(1)}%`);
-      console.log(`  Wasted Area: ${metrics.wastedArea.toFixed(2)} sq in`);
-      console.log(`  Avg Item Size: ${metrics.averageItemSize.toFixed(2)} sq in`);
-    }
+    console.log(`\n--- Testing ${size}" Sheet ---`);
+    const result = await executeNesting(images, size);
+    const metrics = calculateMetrics(images, result);
+    
+    newResults.push({
+      testName,
+      sheetWidth: size,
+      result,
+      images,
+      timestamp: new Date().toISOString(),
+      performanceMetrics: metrics
+    });
+    
+    // Detailed console output
+    console.log(`📊 ${size}" Results:`);
+    console.log(`  Utilization: ${(result.areaUtilizationPct * 100).toFixed(2)}%`);
+    console.log(`  Sheet Length: ${result.sheetLength.toFixed(2)}"`);
+    console.log(`  Placed/Total: ${result.placedItems.length}/${result.totalCount}`);
+    console.log(`  Failed: ${result.failedCount}`);
+    console.log(`  Strategy: ${result.sortStrategy}`);
+    console.log(`  Rotation Rate: ${(metrics.rotationRate * 100).toFixed(1)}%`);
+    console.log(`  Wasted Area: ${metrics.wastedArea.toFixed(2)} sq in`);
+    console.log(`  Avg Item Size: ${metrics.averageItemSize.toFixed(2)} sq in`);
     
     setResults(prev => [...prev, ...newResults]);
     setIsRunning(false);
@@ -234,31 +232,18 @@ export default function AlgorithmReporter() {
     await runDetailedTest('Edge Case: Very Tall Items', 'edge-case-tall');
   };
 
-  // Compare 13" vs 17" for each test
+  // Get metrics for 17" test
   const getComparison = (testName: string): ComparisonMetrics | null => {
-    const test13 = results.find(r => r.testName === testName && r.sheetWidth === 13);
     const test17 = results.find(r => r.testName === testName && r.sheetWidth === 17);
     
-    if (!test13 || !test17) return null;
+    if (!test17) return null;
     
-    const utilDiff = (test13.result.areaUtilizationPct - test17.result.areaUtilizationPct) * 100;
-    const lengthDiff = test13.result.sheetLength - test17.result.sheetLength;
-    
-    let better: 13 | 17 | 'tie';
-    let recommendation = '';
-    
-    if (Math.abs(utilDiff) < 2) {
-      better = 'tie';
-      recommendation = 'Both sizes perform similarly';
-    } else if (utilDiff > 0) {
-      better = 13;
-      recommendation = `13" is ${utilDiff.toFixed(1)}% more efficient`;
-    } else {
-      better = 17;
-      recommendation = `17" is ${Math.abs(utilDiff).toFixed(1)}% more efficient`;
-    }
-    
-    return { utilizationDiff: utilDiff, lengthDiff, better, recommendation };
+    return { 
+      utilizationDiff: 0, 
+      lengthDiff: 0, 
+      better: 17, 
+      recommendation: `17" sheet utilization: ${(test17.result.areaUtilizationPct * 100).toFixed(1)}%`
+    };
   };
 
   // Export detailed report
@@ -269,15 +254,10 @@ export default function AlgorithmReporter() {
     report += `Generated: ${new Date().toLocaleString()}\n\n`;
     report += `## Executive Summary\n\n`;
     
-    const avg13 = results.filter(r => r.sheetWidth === 13)
-      .reduce((sum, r) => sum + r.result.areaUtilizationPct, 0) / 
-      results.filter(r => r.sheetWidth === 13).length;
-    
     const avg17 = results.filter(r => r.sheetWidth === 17)
       .reduce((sum, r) => sum + r.result.areaUtilizationPct, 0) / 
       results.filter(r => r.sheetWidth === 17).length;
     
-    report += `- **13" Average Utilization:** ${(avg13 * 100).toFixed(2)}%\n`;
     report += `- **17" Average Utilization:** ${(avg17 * 100).toFixed(2)}%\n`;
     report += `- **Total Tests Run:** ${uniqueTests.length}\n\n`;
     
@@ -285,21 +265,9 @@ export default function AlgorithmReporter() {
     
     uniqueTests.forEach(testName => {
       const comparison = getComparison(testName);
-      const test13 = results.find(r => r.testName === testName && r.sheetWidth === 13);
       const test17 = results.find(r => r.testName === testName && r.sheetWidth === 17);
       
       report += `### ${testName}\n\n`;
-      
-      if (test13) {
-        report += `#### 13" Sheet\n`;
-        report += `- Utilization: ${(test13.result.areaUtilizationPct * 100).toFixed(2)}%\n`;
-        report += `- Sheet Length: ${test13.result.sheetLength.toFixed(2)}"\n`;
-        report += `- Placed Items: ${test13.result.placedItems.length}/${test13.result.totalCount}\n`;
-        report += `- Failed: ${test13.result.failedCount}\n`;
-        report += `- Strategy: ${test13.result.sortStrategy}\n`;
-        report += `- Rotation Rate: ${(test13.performanceMetrics.rotationRate * 100).toFixed(1)}%\n`;
-        report += `- Wasted Area: ${test13.performanceMetrics.wastedArea.toFixed(2)} sq in\n\n`;
-      }
       
       if (test17) {
         report += `#### 17" Sheet\n`;
@@ -313,10 +281,8 @@ export default function AlgorithmReporter() {
       }
       
       if (comparison) {
-        report += `#### Comparison\n`;
-        report += `- ${comparison.recommendation}\n`;
-        report += `- Utilization Difference: ${comparison.utilizationDiff > 0 ? '+' : ''}${comparison.utilizationDiff.toFixed(2)}%\n`;
-        report += `- Length Difference: ${comparison.lengthDiff > 0 ? '+' : ''}${comparison.lengthDiff.toFixed(2)}"\n\n`;
+        report += `#### Summary\n`;
+        report += `- ${comparison.recommendation}\n\n`;
       }
       
       report += `---\n\n`;
@@ -324,16 +290,7 @@ export default function AlgorithmReporter() {
     
     report += `## Recommendations\n\n`;
     
-    const failures13 = results.filter(r => r.sheetWidth === 13 && r.result.failedCount > 0);
     const failures17 = results.filter(r => r.sheetWidth === 17 && r.result.failedCount > 0);
-    
-    if (failures13.length > 0) {
-      report += `### 13" Sheet Issues\n`;
-      failures13.forEach(f => {
-        report += `- **${f.testName}:** ${f.result.failedCount} items failed to place\n`;
-      });
-      report += '\n';
-    }
     
     if (failures17.length > 0) {
       report += `### 17" Sheet Issues\n`;
@@ -343,9 +300,6 @@ export default function AlgorithmReporter() {
       report += '\n';
     }
     
-    if (avg13 < 0.85) {
-      report += `- ⚠️ 13" algorithm averaging below 85% - consider optimizing rotation thresholds\n`;
-    }
     if (avg17 < 0.85) {
       report += `- ⚠️ 17" algorithm averaging below 85% - consider optimizing rotation thresholds\n`;
     }
@@ -410,16 +364,7 @@ export default function AlgorithmReporter() {
                 <CardTitle>Performance Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="p-4 border rounded-lg">
-                    <h3 className="font-semibold mb-2">13" Sheet Performance</h3>
-                    <div className="text-3xl font-bold">
-                      {(results.filter(r => r.sheetWidth === 13)
-                        .reduce((sum, r) => sum + r.result.areaUtilizationPct, 0) / 
-                        results.filter(r => r.sheetWidth === 13).length * 100).toFixed(1)}%
-                    </div>
-                    <p className="text-sm text-muted-foreground">Average Utilization</p>
-                  </div>
+                <div className="grid grid-cols-1 gap-4 mb-6">
                   <div className="p-4 border rounded-lg">
                     <h3 className="font-semibold mb-2">17" Sheet Performance</h3>
                     <div className="text-3xl font-bold">
@@ -435,34 +380,18 @@ export default function AlgorithmReporter() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Test Scenario</TableHead>
-                      <TableHead>13" Util</TableHead>
                       <TableHead>17" Util</TableHead>
-                      <TableHead>Winner</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {uniqueTests.map(testName => {
-                      const test13 = results.find(r => r.testName === testName && r.sheetWidth === 13);
                       const test17 = results.find(r => r.testName === testName && r.sheetWidth === 17);
                       const comparison = getComparison(testName);
                       
                       return (
                         <TableRow key={testName}>
                           <TableCell className="font-medium">{testName}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {test13 && (
-                                <>
-                                  <span className="font-mono">{(test13.result.areaUtilizationPct * 100).toFixed(1)}%</span>
-                                  {test13.result.failedCount > 0 && (
-                                    <Badge variant="destructive" className="text-xs">
-                                      {test13.result.failedCount} failed
-                                    </Badge>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {test17 && (
@@ -480,18 +409,9 @@ export default function AlgorithmReporter() {
                           <TableCell>
                             {comparison && (
                               <div className="flex items-center gap-2">
-                                {comparison.better === 'tie' ? (
-                                  <Badge variant="outline">Tie</Badge>
-                                ) : (
-                                  <Badge variant={comparison.better === 13 ? 'default' : 'secondary'}>
-                                    {comparison.better}"
-                                    {comparison.better === 13 ? (
-                                      <TrendingUp className="ml-1 h-3 w-3" />
-                                    ) : (
-                                      <TrendingUp className="ml-1 h-3 w-3" />
-                                    )}
-                                  </Badge>
-                                )}
+                                <Badge variant="secondary">
+                                  {comparison.recommendation}
+                                </Badge>
                               </div>
                             )}
                           </TableCell>
@@ -528,7 +448,7 @@ export default function AlgorithmReporter() {
                       <TableRow key={idx}>
                         <TableCell className="font-medium">{result.testName}</TableCell>
                         <TableCell>
-                          <Badge variant={result.sheetWidth === 13 ? 'default' : 'secondary'}>
+                          <Badge variant="secondary">
                             {result.sheetWidth}"
                           </Badge>
                         </TableCell>
@@ -559,25 +479,19 @@ export default function AlgorithmReporter() {
           <TabsContent value="comparison">
             <Card>
               <CardHeader>
-                <CardTitle>13" vs 17" Comparison</CardTitle>
+                <CardTitle>17" Sheet Results</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {uniqueTests.map(testName => {
                   const comparison = getComparison(testName);
-                  const test13 = results.find(r => r.testName === testName && r.sheetWidth === 13);
                   const test17 = results.find(r => r.testName === testName && r.sheetWidth === 17);
                   
-                  if (!comparison || !test13 || !test17) return null;
+                  if (!comparison || !test17) return null;
                   
                   return (
                     <div key={testName} className="p-4 border rounded-lg">
                       <h3 className="font-semibold mb-3">{testName}</h3>
-                      <div className="grid grid-cols-2 gap-4 mb-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground">13" Sheet</p>
-                          <p className="text-2xl font-bold">{(test13.result.areaUtilizationPct * 100).toFixed(1)}%</p>
-                          <p className="text-xs text-muted-foreground">{test13.result.sheetLength.toFixed(2)}" length</p>
-                        </div>
+                      <div className="grid grid-cols-1 gap-4 mb-3">
                         <div>
                           <p className="text-sm text-muted-foreground">17" Sheet</p>
                           <p className="text-2xl font-bold">{(test17.result.areaUtilizationPct * 100).toFixed(1)}%</p>
@@ -585,11 +499,7 @@ export default function AlgorithmReporter() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {comparison.better !== 'tie' && comparison.utilizationDiff > 0 ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : comparison.better !== 'tie' ? (
-                          <TrendingDown className="h-4 w-4 text-yellow-500" />
-                        ) : null}
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
                         <p className="text-sm font-medium">{comparison.recommendation}</p>
                       </div>
                     </div>
@@ -682,7 +592,7 @@ export default function AlgorithmReporter() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="font-mono text-primary">2.</span>
-                      <span>Consider trying WIDTH_DESC first for narrow (13") sheets with wide items</span>
+                      <span>Consider trying WIDTH_DESC first for sheets with wide items</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="font-mono text-primary">3.</span>

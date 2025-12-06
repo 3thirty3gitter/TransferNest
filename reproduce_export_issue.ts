@@ -62,7 +62,7 @@ async function runTest() {
     ];
 
     console.log('Generating print file...');
-    const result = await generator.generatePrintFile(images as any, '13', { dpi: 300 }); // 300 DPI
+    const result = await generator.generatePrintFile(images as any, '17', { dpi: 300 }); // 300 DPI
 
     const outPath = path.join(process.cwd(), 'reproduce_output.png');
     fs.writeFileSync(outPath, result.buffer);
