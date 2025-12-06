@@ -131,43 +131,43 @@ export async function sendEmail(to: string, subject: string, content: string): P
     const token = await getMicrosoftGraphToken();
     console.log('[MS Graph] Got token, sending email...');
 
-    const message = {
-    message: {
-      subject: subject,
-      body: {
-        contentType: 'HTML',
-        content: content,
-      },
-      toRecipients: [
-        {
-          emailAddress: {
-            address: to,
-          },
+    const requestBody = {
+      message: {
+        subject: subject,
+        body: {
+          contentType: 'HTML',
+          content: content,
         },
-      ],
-    },
-    saveToSentItems: 'true',
-  };
-
-  const response = await fetch(
-    `https://graph.microsoft.com/v1.0/users/${userEmail}/sendMail`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        toRecipients: [
+          {
+            emailAddress: {
+              address: to,
+            },
+          },
+        ],
       },
-      body: JSON.stringify(message),
-    }
-  );
+      saveToSentItems: true,
+    };
 
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('[MS Graph] Send Error:', error);
-    throw new Error(`Failed to send email: ${error.error?.message || 'Unknown error'}`);
-  }
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${userEmail}/sendMail`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('[MS Graph] Send Error:', error);
+      throw new Error(`Failed to send email: ${error.error?.message || 'Unknown error'}`);
+    }
   
-  console.log('[MS Graph] Email sent successfully to:', to);
+    console.log('[MS Graph] Email sent successfully to:', to);
   } catch (err) {
     console.error('[MS Graph] sendEmail EXCEPTION:', err);
     throw err;
