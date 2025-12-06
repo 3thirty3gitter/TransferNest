@@ -110,7 +110,7 @@ export default function OrderConfirmationPage() {
               Thank you for your business!
             </p>
             <p className="text-lg text-slate-400 max-w-2xl">
-              We truly appreciate you choosing TransferNest. Your order has been received and we're already getting started on bringing your designs to life!
+              We truly appreciate you choosing DTF Wholesale Canada. Your order has been received and we're already getting started on bringing your designs to life!
             </p>
           </div>
 
