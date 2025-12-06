@@ -7,6 +7,9 @@ const admin = require('firebase-admin');
 let app: any = null;
 let initialized = false;
 
+// Storage bucket name - matches Firebase project
+const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'transfernest-12vn4.firebasestorage.app';
+
 function initializeApp() {
   if (initialized) {
     return app;
@@ -31,8 +34,9 @@ function initializeApp() {
           
           app = admin.initializeApp({
             credential: admin.credential.cert(credentials),
+            storageBucket: STORAGE_BUCKET,
           });
-          console.log('[Firebase Admin] Initialized with service account');
+          console.log('[Firebase Admin] Initialized with service account, bucket:', STORAGE_BUCKET);
         } catch (parseError) {
           console.error('[Firebase Admin] Failed to parse service account credentials:', parseError);
           throw new Error('Invalid service account credentials format');
@@ -40,8 +44,10 @@ function initializeApp() {
       } else {
         // Try default credentials (works in some environments like Cloud Functions)
         console.warn('[Firebase Admin] No service account found, attempting default initialization');
-        app = admin.initializeApp();
-        console.log('[Firebase Admin] Initialized with default credentials');
+        app = admin.initializeApp({
+          storageBucket: STORAGE_BUCKET,
+        });
+        console.log('[Firebase Admin] Initialized with default credentials, bucket:', STORAGE_BUCKET);
       }
     } else {
       app = admin.apps[0];

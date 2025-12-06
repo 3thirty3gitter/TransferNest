@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
         console.warn('[PAYMENT] Cart items structure:', JSON.stringify(cartItems, null, 2));
       }
 
-      // Send emails (fire and forget)
+      // Send emails - await to ensure they complete before function terminates
       const emailDetails = {
         orderId,
         customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
@@ -190,14 +190,17 @@ export async function POST(request: NextRequest) {
         shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined
       };
 
-      Promise.all([
-        sendOrderConfirmationEmail(emailDetails),
-        sendAdminNewOrderEmail(emailDetails)
-      ]).then(results => {
-        console.log('[EMAIL] Email sending results:', results);
-      }).catch(err => {
-        console.error('[EMAIL] Failed to send emails:', err);
-      });
+      console.log('[EMAIL] Starting email sending...');
+      try {
+        const emailResults = await Promise.all([
+          sendOrderConfirmationEmail(emailDetails),
+          sendAdminNewOrderEmail(emailDetails)
+        ]);
+        console.log('[EMAIL] Email sending results:', emailResults);
+      } catch (emailError) {
+        console.error('[EMAIL] Failed to send emails:', emailError);
+        // Don't fail the order if emails fail
+      }
 
       return NextResponse.json({
         success: true,
