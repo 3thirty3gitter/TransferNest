@@ -5,6 +5,7 @@ import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
 import { sendOrderConfirmationEmail, sendAdminNewOrderEmail } from '@/lib/email';
+import { generateGangSheet } from '@/lib/gang-sheet-generator';
 
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
@@ -394,27 +395,23 @@ async function linkPrintFilesToOrder(cartItems: any[], userId: string, orderId: 
         continue;
       }
 
-      // Generate gang sheet PNG in background
+      // Generate gang sheet PNG directly (no HTTP call)
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/generate-gang-sheet`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            placedItems: item.placedItems,
-            sheetWidth: item.sheetWidth,
-            sheetLength: item.sheetLength,
-            userId,
-            orderId,
-            customerInfo
-          })
+        const result = await generateGangSheet({
+          placedItems: item.placedItems,
+          sheetWidth: item.sheetWidth,
+          sheetLength: item.sheetLength,
+          userId,
+          orderId,
+          customerInfo
         });
 
-        if (!response.ok) {
-          console.error('[GENERATE_PRINT] Failed to generate gang sheet:', response.status);
+        if (!result.success) {
+          console.error('[GENERATE_PRINT] Failed to generate gang sheet');
           continue;
         }
 
-        const { pngUrl, dimensions, size } = await response.json();
+        const { pngUrl, dimensions, size } = result;
 
         // Get actual sheet dimensions from cart item
         const sheetWidth = item.sheetWidth;
