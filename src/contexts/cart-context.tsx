@@ -6,7 +6,7 @@ import type { ManagedImage } from '@/lib/nesting-algorithm';
 export interface CartItem {
   id: string;
   name: string;
-  sheetSize: '17';
+  sheetSize: '11' | '13' | '17';
   images: ManagedImage[];
   layout: {
     positions: Array<{ x: number; y: number; width: number; height: number; imageId: string; copyIndex: number; rotated?: boolean }>;

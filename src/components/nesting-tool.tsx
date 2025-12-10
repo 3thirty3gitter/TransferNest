@@ -31,7 +31,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
   const [images, setImages] = useState<ManagedImage[]>([]);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [sheetWidth, setSheetWidth] = useState<13 | 17>(17); // Always 17 now
+  const [sheetWidth, setSheetWidth] = useState<11 | 13 | 17>(initialWidth as 11 | 13 | 17); // Supports 11, 13, or 17 inch sheets
   
   // Progress modal state
   const [modalStage, setModalStage] = useState<'preparing' | 'genetic-algorithm' | 'optimizing' | 'complete'>('preparing');
@@ -168,11 +168,11 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
     }
 
     const pricing = calculatePricing();
-    const sheetSizeStr = '17'; // Only 17" sheets supported
+    const sheetSizeStr = String(sheetWidth) as '11' | '13' | '17'; // Use actual sheet width
     
     const cartItem = {
       name: `Custom DTF Sheet ${sheetSizeStr}"`,
-      sheetSize: sheetSizeStr as '17',
+      sheetSize: sheetSizeStr,
       images,
       layout: {
         positions: nestingResult.placedItems.map((item: any) => ({

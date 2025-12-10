@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!sheetSize || sheetSize !== '17') {
+    if (!sheetSize || !['11', '13', '17'].includes(sheetSize)) {
       return NextResponse.json(
-        { error: 'Valid sheet size (17) is required' },
+        { error: 'Valid sheet size (11, 13, or 17) is required' },
         { status: 400 }
       );
     }

@@ -50,37 +50,39 @@ export type PackingMethod = 'bottom-left-fill' | 'maxrects' | 'BottomLeft' | 'ma
 
 export const VIRTUAL_SHEET_HEIGHT = 10000; // Virtual height for calculations
 
-// Main function signature - 17" sheets only
+// Main function signature - supports 11", 13", and 17" sheets
+// All sizes use 0.5" margins on left and right for printer guides
 export function executeNesting(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.125,  // REDUCED: Test with tighter spacing for 90%+ target
   targetUtilization: number = 0.95  // INCREASED: Push algorithm harder
 ): NestingResult {
-  // All sheets use the 17" advanced algorithm with adaptive genetic algorithm
-  return executeNesting17Advanced(images, sheetWidth, padding, targetUtilization);
+  // All sheets use the advanced algorithm with adaptive genetic algorithm
+  return executeNestingAdvanced(images, sheetWidth, padding, targetUtilization);
 }
 
-// ADVANCED algorithm for 17" sheets using adaptive genetic algorithm
+// ADVANCED algorithm for all sheet sizes using adaptive genetic algorithm
 // Replaces shelf-packing to achieve consistent 85-90%+ utilization
-function executeNesting17Advanced(
+// Supports 11", 13", and 17" widths with 0.5" left/right margins
+function executeNestingAdvanced(
   images: ManagedImage[],
   sheetWidth: number,
   padding: number = 0.05,
   targetUtilization: number = 0.9
 ): NestingResult {
-  // Rotation function for 17" sheets
+  // Rotation function - allow rotation for non-square images
   function canRotate(img: ManagedImage): boolean {
     const aspectRatio = img.width / img.height;
     return aspectRatio < 0.95 || aspectRatio > 1.05;
   }
 
-  // Apply 0.5" margin on left and right for 17" sheets (printer guides)
+  // Apply 0.5" margin on left and right for all sheet sizes (printer guides)
   const sideMargin = 0.5;
   const effectiveWidth = sheetWidth - (sideMargin * 2);
 
   // OPTIMIZED: Single strategy with 100 population × 100 generations (~90% faster)
-  console.log(`[17" NESTING] Starting optimized genetic algorithm with ${sideMargin}" side margins...`);
+  console.log(`[${sheetWidth}" NESTING] Starting optimized genetic algorithm with ${sideMargin}" side margins...`);
   const result = geneticAlgorithmNesting(images, effectiveWidth, 0.10, canRotate, {
     adaptive: false,
     rotationSteps: 4,
@@ -95,7 +97,7 @@ function executeNesting17Advanced(
     x: img.x + sideMargin
   }));
   
-  console.log(`[17" COMPLETE] ${(result.areaUtilizationPct * 100).toFixed(1)}% utilization`);
+  console.log(`[${sheetWidth}" COMPLETE] ${(result.areaUtilizationPct * 100).toFixed(1)}% utilization`);
   return result;
 }
 
