@@ -16,27 +16,6 @@ export class OrderManagerAdmin {
   }
   
   /**
-   * Check if an order with this paymentId already exists
-   */
-  async getOrderByPaymentId(paymentId: string): Promise<Order | null> {
-    try {
-      const snapshot = await this.ordersCollection
-        .where('paymentId', '==', paymentId)
-        .limit(1)
-        .get();
-      
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        return { id: doc.id, ...doc.data() } as Order;
-      }
-      return null;
-    } catch (error) {
-      console.error('[OrderManagerAdmin] Error checking for existing order:', error);
-      return null;
-    }
-  }
-
-  /**
    * Create a new order
    */
   async createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
