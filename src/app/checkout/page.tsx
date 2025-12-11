@@ -328,6 +328,12 @@ export default function CheckoutPage() {
   };
 
   const handlePayment = async () => {
+    // Prevent double-click race condition
+    if (isLoading) {
+      console.log('[CHECKOUT] Payment already in progress, ignoring duplicate click');
+      return;
+    }
+    
     // Skip cardPayment check if order total is 0
     if (!validateForm() || (!cardPayment && orderTotal > 0) || !user) return;
     

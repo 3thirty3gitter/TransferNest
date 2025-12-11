@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SquareClient, SquareEnvironment } from 'square';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
@@ -99,6 +99,13 @@ export async function POST(request: NextRequest) {
         }
       };
     } else {
+      // Generate deterministic idempotency key from userId + sourceId + amount
+      // This ensures the same payment attempt gets the same key, preventing duplicates
+      const idempotencyData = `${userId}-${sourceId}-${amountNum}-${customerInfo.email}`;
+      const idempotencyKey = createHash('sha256').update(idempotencyData).digest('hex').substring(0, 45);
+      
+      console.log('[PAYMENT] Using idempotency key:', idempotencyKey.substring(0, 20) + '...');
+      
       // Create the payment request for normal orders
       const requestBody = {
         sourceId,
@@ -107,7 +114,7 @@ export async function POST(request: NextRequest) {
           currency: currency || 'CAD',
         },
         locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-        idempotencyKey: randomUUID(),
+        idempotencyKey,
         note: `DTF Print Order - ${cartItems.length} item(s)`,
         buyerEmailAddress: customerInfo.email,
       };
