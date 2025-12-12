@@ -5,7 +5,7 @@ import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Header from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp, Clock, Eraser, Crop } from 'lucide-react';
+import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp, Clock, Eraser, Crop, UserPlus, Gift } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/layout/footer';
@@ -153,6 +153,56 @@ export default function Home() {
                 </div>
                 <div className="text-2xl font-bold text-white mb-1">Guaranteed</div>
                 <div className="text-sm text-slate-400">100% Satisfaction</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Create Account CTA */}
+        <section className="py-16 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 via-pink-600/20 to-purple-600/20"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(251,146,60,0.15),transparent_50%)]"></div>
+          
+          <div className="container relative z-10">
+            <div className="max-w-4xl mx-auto text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500/20 to-pink-500/20 border border-orange-500/30 mb-6 animate-pulse">
+                <Gift className="h-5 w-5 text-orange-400" />
+                <span className="text-sm font-bold text-orange-300">FREE TO JOIN!</span>
+              </div>
+              
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                <span className="text-white">Don't Have an Account?</span>
+              </h2>
+              
+              <p className="text-xl md:text-2xl mb-8">
+                <span className="bg-gradient-to-r from-orange-400 via-pink-400 to-purple-400 bg-clip-text text-transparent font-bold">
+                  Create one now and start building your gang sheets! 🚀
+                </span>
+              </p>
+              
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button asChild size="lg" className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 hover:from-orange-600 hover:via-pink-600 hover:to-purple-600 text-white border-0 px-10 py-7 text-xl font-bold shadow-2xl shadow-orange-500/25 glow group">
+                  <Link href="/login" className="flex items-center gap-3">
+                    <UserPlus className="h-6 w-6" />
+                    Create Free Account
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
+              
+              <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm text-slate-300">
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  No credit card required
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  Start in 30 seconds
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  Track all your orders
+                </span>
               </div>
             </div>
           </div>
