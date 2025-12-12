@@ -70,7 +70,7 @@ The image should feel premium and trustworthy, suitable for a Canadian B2B DTF p
     let mimeType: string = 'image/png';
 
     for (const part of parts) {
-      if (part.inlineData) {
+      if (part.inlineData && part.inlineData.data) {
         imageData = part.inlineData.data;
         mimeType = part.inlineData.mimeType || 'image/png';
         break;
