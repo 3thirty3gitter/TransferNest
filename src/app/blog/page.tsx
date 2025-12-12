@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { getAllPosts } from '@/lib/blog';
@@ -30,8 +31,17 @@ export default function BlogPage() {
               key={post.slug}
               className="glass-strong rounded-2xl overflow-hidden border border-white/10 hover:border-blue-500/30 transition-all group flex flex-col"
             >
-              {/* Image Placeholder - In a real app, use Next.js Image */}
+              {/* Cover Image */}
               <div className="h-48 bg-slate-800/50 relative overflow-hidden">
+                {post.coverImage && (
+                  <Image
+                    src={post.coverImage}
+                    alt={post.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
                 <div className="absolute bottom-4 left-4 right-4">
                   <div className="flex flex-wrap gap-2 mb-2">

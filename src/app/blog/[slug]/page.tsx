@@ -2,6 +2,7 @@
 
 import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { getPostBySlug } from '@/lib/blog';
@@ -33,6 +34,21 @@ export default function BlogPostPage() {
           </Link>
 
           <article className="glass-strong rounded-3xl overflow-hidden border border-white/10">
+            {/* Cover Image */}
+            {post.coverImage && (
+              <div className="relative h-64 md:h-96 w-full">
+                <Image
+                  src={post.coverImage}
+                  alt={post.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 896px"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent"></div>
+              </div>
+            )}
+            
             {/* Header Section */}
             <div className="p-8 md:p-12 border-b border-white/10 bg-slate-900/50">
               <div className="flex flex-wrap gap-2 mb-6">

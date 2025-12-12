@@ -83,7 +83,7 @@ export const blogPosts: BlogPost[] = [
     date: '2025-12-01',
     author: 'The DTF Wholesale Team',
     tags: ['DTF Printing', 'Beginner Guide', 'Custom Apparel', 'Canadian Business'],
-    coverImage: '/images/blog/welcome.jpg'
+    coverImage: '/images/blog/dtf-printing-guide.jpg'
   },
   {
     slug: 'gang-sheet-guide-save-money-dtf-printing',
@@ -193,6 +193,7 @@ export const blogPosts: BlogPost[] = [
     date: '2025-12-05',
     author: 'The DTF Wholesale Team',
     tags: ['Gang Sheets', 'Money Saving Tips', 'DTF Printing', 'How-To Guide'],
+    coverImage: '/images/blog/gang-sheet-guide.jpg'
   }
 ];
 
