@@ -5,7 +5,7 @@ import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Header from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp, Clock } from 'lucide-react';
+import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp, Clock, Eraser, Crop } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/layout/footer';
@@ -289,7 +289,108 @@ export default function Home() {
           </div>
         </section>
 
+        {/* NEW: Image Editing Tools Section */}
+        <section className="py-24 md:py-32 relative overflow-hidden">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/40 via-teal-950/40 to-transparent"></div>
+          <div className="absolute top-1/4 left-10 w-64 h-64 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-10 w-64 h-64 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse"></div>
 
+          <div className="container relative z-10">
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-4">
+                <Sparkles className="h-4 w-4 text-emerald-400" />
+                <span className="text-sm font-medium">Built-in Image Tools</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                  Edit Your Images
+                </span>
+                <br />
+                <span className="text-white">Right in Your Browser</span>
+              </h2>
+              <p className="max-w-3xl mx-auto text-slate-300 text-lg">
+                No Photoshop needed. Our powerful built-in tools make image editing effortless.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              {/* Background Removal Card */}
+              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Eraser className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">Remove Background</h3>
+                      <div className="inline-flex items-center gap-1 text-emerald-400 text-sm font-medium mt-1">
+                        <Sparkles className="h-3 w-3" />
+                        AI-Powered
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-slate-300 leading-relaxed mb-6">
+                    One-click background removal powered by AI. Perfect for logos, photos, and graphics. 
+                    Get clean, professional cutouts instantly — completely free and unlimited!
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-sm">100% Free</span>
+                    <span className="px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-sm">Unlimited Use</span>
+                    <span className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-sm">Instant Results</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trim Card */}
+              <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-300 group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-teal-500/20 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Crop className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">Smart Trim</h3>
+                      <div className="inline-flex items-center gap-1 text-teal-400 text-sm font-medium mt-1">
+                        <Scissors className="h-3 w-3" />
+                        Auto-Crop
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-slate-300 leading-relaxed mb-6">
+                    Automatically remove excess transparent borders from your images. 
+                    Get perfectly cropped designs that maximize your gang sheet space and save you money.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-sm">One-Click</span>
+                    <span className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-sm">Save Space</span>
+                    <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-sm">Save Money</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Call to action */}
+            <div className="text-center mt-12">
+              <p className="text-slate-400 mb-4">
+                Both tools work seamlessly together — remove background, then trim for the perfect cutout!
+              </p>
+              <Button asChild size="lg" className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border-0 px-8 py-6 text-lg glow group">
+                <Link href="/nesting-tool" className="flex items-center gap-2">
+                  Try It Now <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
 
         {/* Features Section */}
         <section id="features" className="py-24 md:py-32 relative">
