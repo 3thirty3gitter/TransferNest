@@ -169,7 +169,7 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
               
               {/* Left Column: Size Wizard */}
-              <div className="glass-strong rounded-3xl p-8 lg:p-10 relative overflow-hidden">
+              <div className="glass-strong rounded-3xl p-8 lg:p-10 relative overflow-hidden bg-slate-900/80">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-purple-500/20 to-transparent rounded-full blur-2xl"></div>
                 
                 <div className="relative">
@@ -234,7 +234,7 @@ export default function Home() {
               </div>
 
               {/* Right Column: Image Editing Tools */}
-              <div className="glass-strong rounded-3xl p-8 lg:p-10 relative overflow-hidden">
+              <div className="glass-strong rounded-3xl p-8 lg:p-10 relative overflow-hidden bg-slate-900/80">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-full blur-2xl"></div>
                 
                 <div className="relative">
