@@ -398,7 +398,7 @@ export default function CustomerDetailPage() {
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <p className="text-white font-semibold mb-1">
-                              Order #{order.id.slice(-8).toUpperCase()}
+                              Order #{order.orderNumber || order.id.slice(-8).toUpperCase()}
                             </p>
                             <p className="text-slate-400 text-sm flex items-center gap-2">
                               <Clock className="h-4 w-4" />

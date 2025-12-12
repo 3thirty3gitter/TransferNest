@@ -287,7 +287,7 @@ export default function JobDetailsPage() {
               Back to Orders
             </Link>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Job Details: {order.id.slice(0, 8)}
+              Job Details: {order.orderNumber || order.id.slice(0, 8)}
             </h1>
             <p className="text-slate-400 mt-1">
               Order placed on {order.createdAt.toLocaleString()}

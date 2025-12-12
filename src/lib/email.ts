@@ -3,6 +3,7 @@ import { getEmailTemplateAdmin } from './services/email-template-service-admin';
 
 export interface EmailOrderDetails {
   orderId: string;
+  orderNumber?: string; // Custom order number (e.g., DTFW-1110)
   customerName: string;
   customerEmail: string;
   items: any[];
@@ -29,7 +30,8 @@ async function getProcessedTemplate(templateId: string, variables: Record<string
 
 export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
   try {
-    const { orderId, customerName, customerEmail, items, total } = details;
+    const { orderId, orderNumber, customerName, customerEmail, items, total } = details;
+    const displayOrderNumber = orderNumber || orderId.slice(-8).toUpperCase();
 
     const itemsTable = `
       <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
@@ -56,6 +58,7 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
 
     const template = await getProcessedTemplate('order_confirmation', {
       orderId,
+      orderNumber: displayOrderNumber,
       customerName,
       total: total.toFixed(2),
       itemsTable
@@ -66,11 +69,11 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
       const fallbackHtml = `
         <h1>Thank you for your order!</h1>
         <p>Hi ${customerName},</p>
-        <p>Your order #${orderId} has been confirmed.</p>
+        <p>Your order #${displayOrderNumber} has been confirmed.</p>
         ${itemsTable}
         <p>Thank you for choosing DTF Wholesale!</p>
       `;
-      await sendEmail(customerEmail, `Order Confirmation - #${orderId}`, fallbackHtml);
+      await sendEmail(customerEmail, `Order Confirmation - #${displayOrderNumber}`, fallbackHtml);
     } else {
       await sendEmail(customerEmail, template.subject, template.html);
     }
@@ -91,10 +94,12 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
         : ['admin@dtfwholesale.ca']); // Fallback
 
   try {
-    const { orderId, customerName, total } = details;
+    const { orderId, orderNumber, customerName, total } = details;
+    const displayOrderNumber = orderNumber || orderId.slice(-8).toUpperCase();
 
     const template = await getProcessedTemplate('admin_new_order', {
       orderId,
+      orderNumber: displayOrderNumber,
       customerName,
       total: total.toFixed(2),
       adminUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${orderId}`
@@ -102,7 +107,7 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
 
     const fallbackHtml = `
       <h1>🆕 New Order Received!</h1>
-      <p><strong>Order ID:</strong> #${orderId}</p>
+      <p><strong>Order:</strong> #${displayOrderNumber}</p>
       <p><strong>Customer:</strong> ${customerName}</p>
       <p><strong>Total:</strong> $${total.toFixed(2)} CAD</p>
       <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${orderId}">View Order in Admin</a></p>
@@ -113,7 +118,7 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
       if (template) {
         await sendEmail(email.trim(), template.subject, template.html);
       } else {
-        await sendEmail(email.trim(), `🆕 New Order - #${orderId}`, fallbackHtml);
+        await sendEmail(email.trim(), `🆕 New Order - #${displayOrderNumber}`, fallbackHtml);
       }
     }
 
@@ -127,7 +132,8 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
 
 export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: string, trackingNumber?: string) {
   try {
-    const { orderId, customerName, customerEmail } = details;
+    const { orderId, orderNumber, customerName, customerEmail } = details;
+    const displayOrderNumber = orderNumber || orderId.slice(-8).toUpperCase();
 
     let templateId = 'order_status_update';
     let statusMessage = '';
@@ -155,6 +161,7 @@ export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: s
 
     const template = await getProcessedTemplate(templateId, {
       orderId,
+      orderNumber: displayOrderNumber,
       customerName,
       statusMessage,
       trackingNumber: trackingNumber || '',
@@ -165,11 +172,11 @@ export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: s
       const fallbackHtml = `
         <h1>Order Update</h1>
         <p>Hi ${customerName},</p>
-        <p>Your order #${orderId} has been updated.</p>
+        <p>Your order #${displayOrderNumber} has been updated.</p>
         <p>${statusMessage}</p>
         ${trackingInfo}
       `;
-      await sendEmail(customerEmail, `Order Update - #${orderId}`, fallbackHtml);
+      await sendEmail(customerEmail, `Order Update - #${displayOrderNumber}`, fallbackHtml);
     } else {
       await sendEmail(customerEmail, template.subject, template.html);
     }
@@ -184,10 +191,12 @@ export async function sendOrderUpdateEmail(details: EmailOrderDetails, status: s
 
 export async function sendOrderReadyForPickupEmail(details: EmailOrderDetails) {
   try {
-    const { orderId, customerName, customerEmail } = details;
+    const { orderId, orderNumber, customerName, customerEmail } = details;
+    const displayOrderNumber = orderNumber || orderId.slice(-8).toUpperCase();
 
     const template = await getProcessedTemplate('order_ready_pickup', {
       orderId,
+      orderNumber: displayOrderNumber,
       customerName
     });
 
@@ -195,11 +204,11 @@ export async function sendOrderReadyForPickupEmail(details: EmailOrderDetails) {
       const fallbackHtml = `
         <h1>Your Order is Ready for Pickup!</h1>
         <p>Hi ${customerName},</p>
-        <p>Great news! Your order #${orderId} is ready for pickup.</p>
+        <p>Great news! Your order #${displayOrderNumber} is ready for pickup.</p>
         <p><strong>Address:</strong> 201-5415 Calgary Trail NW, Edmonton, AB T6H 4J9</p>
         <p><strong>Hours:</strong> Monday - Friday: 9am - 5pm</p>
       `;
-      await sendEmail(customerEmail, `Your Order is Ready! - #${orderId}`, fallbackHtml);
+      await sendEmail(customerEmail, `Your Order is Ready! - #${displayOrderNumber}`, fallbackHtml);
     } else {
       await sendEmail(customerEmail, template.subject, template.html);
     }

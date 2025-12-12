@@ -154,6 +154,12 @@ export async function POST(request: NextRequest) {
 
       console.log('[PAYMENT] Order created:', orderId);
 
+      // Fetch the order to get the generated orderNumber
+      const orderManager = new OrderManagerAdmin();
+      const createdOrder = await orderManager.getOrder(orderId);
+      const orderNumber = createdOrder?.orderNumber;
+      console.log('[PAYMENT] Order number:', orderNumber);
+
       // Now link existing print files to the order
       console.log('[PAYMENT] Cart items for print files:', JSON.stringify(cartItems.map((item: any) => ({
         id: item.id,
@@ -182,6 +188,7 @@ export async function POST(request: NextRequest) {
       // Send emails (fire and forget)
       const emailDetails = {
         orderId,
+        orderNumber, // Include the generated order number
         customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
         customerEmail: customerInfo.email,
         items: cartItems,
@@ -202,6 +209,7 @@ export async function POST(request: NextRequest) {
         success: true,
         paymentId: paymentResult.payment.id,
         orderId,
+        orderNumber, // Include the generated order number
         message: 'Payment processed successfully',
         printFiles: printFiles.map((pf: any) => ({
           filename: pf.filename,

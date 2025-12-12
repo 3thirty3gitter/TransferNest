@@ -225,7 +225,7 @@ export default function OrdersPage() {
                 {filteredOrders.map(order => (
                   <tr key={order.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4">
-                      <span className="font-mono text-cyan-400">#{order.id.slice(-8)}</span>
+                      <span className="font-mono text-cyan-400">#{order.orderNumber || order.id.slice(-8)}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div>

@@ -38,6 +38,7 @@ export interface PrintFile {
 
 export interface Order {
   id?: string;
+  orderNumber?: string; // Custom order number (e.g., DTFW-1110)
   userId: string;
   paymentId: string;
   status: 'pending' | 'paid' | 'processing' | 'printing' | 'printed' | 'ready_for_pickup' | 'shipped' | 'delivered' | 'completed' | 'cancelled';

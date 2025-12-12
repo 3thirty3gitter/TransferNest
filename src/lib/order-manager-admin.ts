@@ -4,7 +4,12 @@
  */
 
 import { getFirestore } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { OrderItem, PrintFile, Order } from '@/lib/order-manager';
+
+// Order number prefix and starting number
+const ORDER_PREFIX = 'DTFW';
+const ORDER_START_NUMBER = 1110;
 
 export class OrderManagerAdmin {
   private db;
@@ -14,6 +19,33 @@ export class OrderManagerAdmin {
     this.db = getFirestore();
     this.ordersCollection = this.db.collection('orders');
   }
+
+  /**
+   * Get the next order number using Firestore transaction
+   * This ensures atomic increments even with concurrent orders
+   */
+  private async getNextOrderNumber(): Promise<string> {
+    const counterRef = this.db.collection('counters').doc('orders');
+    
+    const newNumber = await this.db.runTransaction(async (transaction: any) => {
+      const counterDoc = await transaction.get(counterRef);
+      
+      let nextNumber: number;
+      if (!counterDoc.exists) {
+        // Initialize the counter starting at ORDER_START_NUMBER
+        nextNumber = ORDER_START_NUMBER;
+        transaction.set(counterRef, { currentNumber: nextNumber });
+      } else {
+        const currentNumber = counterDoc.data()?.currentNumber || ORDER_START_NUMBER - 1;
+        nextNumber = currentNumber + 1;
+        transaction.update(counterRef, { currentNumber: nextNumber });
+      }
+      
+      return nextNumber;
+    });
+    
+    return `${ORDER_PREFIX}-${newNumber}`;
+  }
   
   /**
    * Create a new order
@@ -22,9 +54,14 @@ export class OrderManagerAdmin {
     try {
       console.log('[OrderManagerAdmin] Creating order for userId:', orderData.userId);
       
+      // Generate the next order number
+      const orderNumber = await this.getNextOrderNumber();
+      console.log('[OrderManagerAdmin] Generated order number:', orderNumber);
+      
       const now = new Date();
       const order = {
         ...orderData,
+        orderNumber,
         createdAt: now,
         updatedAt: now,
         paidAt: orderData.status === 'paid' ? now : null
@@ -33,7 +70,7 @@ export class OrderManagerAdmin {
       console.log('[OrderManagerAdmin] Order data prepared, adding to Firestore...');
       const docRef = await this.ordersCollection.add(order);
       
-      console.log('[OrderManagerAdmin] Order created successfully with ID:', docRef.id);
+      console.log('[OrderManagerAdmin] Order created successfully with ID:', docRef.id, 'Order Number:', orderNumber);
       return docRef.id;
     } catch (error) {
       console.error('[OrderManagerAdmin] Error creating order:', error);
