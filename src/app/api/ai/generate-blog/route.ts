@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
-
-const apiKey = process.env.GEMINI_API_KEY;
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function POST(request: NextRequest) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  
   if (!apiKey) {
+    console.error('[AI Blog] GEMINI_API_KEY not configured');
     return NextResponse.json(
       { error: 'GEMINI_API_KEY not configured' },
       { status: 500 }
@@ -22,7 +23,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    console.log('[AI Blog] Generating content for topic:', topic);
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     // Determine word count based on target length
     const wordCounts: Record<string, string> = {
@@ -76,13 +79,11 @@ IMPORTANT:
 - Naturally incorporate the company's tools and services where relevant
 - Return ONLY valid JSON, no markdown code blocks`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: prompt,
-    });
-
-    // Extract text from response
-    const text = response.text;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    console.log('[AI Blog] Got response, parsing JSON...');
     
     if (!text) {
       throw new Error('No response from AI');
