@@ -45,6 +45,7 @@ export default function ImageManager({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [oversizedWarning, setOversizedWarning] = useState<{ show: boolean; fileName: string; width: number } | null>(null);
+  const [removingBgId, setRemovingBgId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -179,6 +180,58 @@ export default function ImageManager({
     console.log('Trim image:', id);
   };
 
+  const handleRemoveBackground = async (id: string) => {
+    const image = images.find(img => img.id === id);
+    if (!image) return;
+
+    setRemovingBgId(id);
+    
+    try {
+      // Fetch the image and convert to base64
+      const response = await fetch(image.url);
+      const blob = await response.blob();
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+
+      // Call the background removal API
+      const apiResponse = await fetch('/api/remove-background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64 }),
+      });
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json();
+        throw new Error(errorData.error || 'Failed to remove background');
+      }
+
+      const result = await apiResponse.json();
+      
+      // Update the image with the new URL (base64 data URL)
+      onImagesChange(images.map(img => 
+        img.id === id ? { ...img, url: result.image } : img
+      ));
+
+      toast({
+        title: "Background Removed",
+        description: "The background has been successfully removed from your image.",
+      });
+
+    } catch (error) {
+      console.error('Background removal error:', error);
+      toast({
+        title: "Background Removal Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setRemovingBgId(null);
+    }
+  };
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -265,6 +318,8 @@ export default function ImageManager({
                 onRemove={handleRemoveImage}
                 onDuplicate={handleDuplicateImage}
                 onTrim={handleTrimImage}
+                onRemoveBackground={handleRemoveBackground}
+                isRemovingBg={removingBgId === image.id}
               />
             ))}
           </div>

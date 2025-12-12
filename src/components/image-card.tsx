@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Copy, Minus, Plus, Scissors, AlertTriangle } from 'lucide-react';
+import { Trash2, Copy, Minus, Plus, Scissors, AlertTriangle, Eraser, Loader2 } from 'lucide-react';
 import type { ManagedImage } from '@/lib/nesting-algorithm';
 
 // Maximum usable width for gang sheets (17" - 0.5" margins = 16.5")
@@ -19,9 +19,11 @@ type ImageCardProps = {
   onRemove: (id: string) => void;
   onDuplicate: (id: string) => void;
   onTrim: (id: string) => void;
+  onRemoveBackground: (id: string) => Promise<void>;
+  isRemovingBg?: boolean;
 };
 
-export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: ImageCardProps) {
+export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim, onRemoveBackground, isRemovingBg }: ImageCardProps) {
   const [localWidth, setLocalWidth] = useState(image.width.toFixed(2));
   const [localHeight, setLocalHeight] = useState(image.height.toFixed(2));
   
@@ -155,6 +157,24 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
         <Badge variant="secondary">High quality - DPI: 300</Badge>
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => onRemoveBackground(image.id)}
+            disabled={isRemovingBg}
+          >
+            {isRemovingBg ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Removing...
+              </>
+            ) : (
+              <>
+                <Eraser className="mr-2 h-4 w-4" />
+                Remove BG
+              </>
+            )}
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => onTrim(image.id)}>
             <Scissors className="mr-2 h-4 w-4" />
             Trim
