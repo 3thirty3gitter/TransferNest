@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Loader2 } from 'lucide-react';
+import { Upload, Loader2, AlertTriangle } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { ManagedImage } from '@/lib/nesting-algorithm';
 import { ImageCard } from './image-card';
@@ -11,6 +11,25 @@ import { uploadImage } from '@/services/storage';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import WizardTrigger from './wizard-trigger';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+// Maximum usable width for gang sheets (17" - 0.5" margins = 16.5")
+const MAX_IMAGE_WIDTH_INCHES = 16.5;
+
+// Helper to get ordinal suffix (1st, 2nd, 3rd, etc.)
+const getOrdinal = (n: number): string => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
 
 type ImageManagerProps = {
   images: ManagedImage[];
@@ -25,6 +44,7 @@ export default function ImageManager({
 }: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [oversizedWarning, setOversizedWarning] = useState<{ show: boolean; fileName: string; width: number } | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -81,6 +101,12 @@ export default function ImageManager({
           // This ensures the default size is print-ready, not raw pixels
           const widthInches = parseFloat((width / 300).toFixed(2));
           const heightInches = parseFloat((height / 300).toFixed(2));
+          
+          // Check if image is too wide for the sheet
+          const isOversized = widthInches > MAX_IMAGE_WIDTH_INCHES;
+          if (isOversized) {
+            setOversizedWarning({ show: true, fileName: file.name, width: widthInches });
+          }
           
           // Create ManagedImage object
           const managedImage: ManagedImage = {
@@ -158,12 +184,43 @@ export default function ImageManager({
   };
   
   return (
-    <div className="glass-strong rounded-2xl p-6 shadow-xl border border-white/10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400"></span>
-          Your Images
-        </h2>
+    <>
+      {/* Oversized Image Warning Dialog */}
+      <AlertDialog open={oversizedWarning?.show} onOpenChange={(open) => !open && setOversizedWarning(null)}>
+        <AlertDialogContent className="bg-slate-900 border border-white/10">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-amber-500/20">
+                <AlertTriangle className="h-6 w-6 text-amber-400" />
+              </div>
+              <AlertDialogTitle className="text-white">Image Too Wide</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-slate-300 mt-4">
+              <span className="font-medium text-white">{oversizedWarning?.fileName}</span> is{' '}
+              <span className="font-semibold text-amber-400">{oversizedWarning?.width.toFixed(1)}"</span> wide, 
+              which exceeds the maximum printable width of{' '}
+              <span className="font-semibold text-emerald-400">{MAX_IMAGE_WIDTH_INCHES}"</span>.
+              <br /><br />
+              Please resize this image using the width/height controls below before nesting your layout.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction 
+              onClick={() => setOversizedWarning(null)}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+            >
+              Got it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="glass-strong rounded-2xl p-6 shadow-xl border border-white/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400"></span>
+            Your Images
+          </h2>
         <div className="flex flex-wrap items-center gap-3">
           <WizardTrigger 
             onImagesAdded={(newImages) => onImagesChange([...images, ...newImages])} 
@@ -181,17 +238,18 @@ export default function ImageManager({
           <button 
             onClick={handleUploadClick} 
             disabled={isUploading}
-            className="py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-lg transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2 whitespace-nowrap"
+            className="h-11 px-8 min-w-[265px] w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold rounded-md transition-all hover:shadow-lg disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
           >
             {isUploading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
                 Uploading...
               </>
             ) : (
               <>
-                <Upload className="h-4 w-4" />
-                Upload
+                <Upload className="h-5 w-5" />
+                <span className="hidden sm:inline">Add your {getOrdinal(images.length + 1)} image</span>
+                <span className="sm:hidden">Add Image</span>
               </>
             )}
           </button>
@@ -213,10 +271,11 @@ export default function ImageManager({
         ) : (
           <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-white/20 rounded-xl bg-white/5">
              <p className="text-slate-300">No images uploaded yet.</p>
-            <p className="text-sm text-slate-400 mt-1">Click "Upload" to get started!</p>
+            <p className="text-sm text-slate-400 mt-1">Click "Add your 1st image" to get started!</p>
           </div>
         )}
       </div>
     </div>
+    </>
   );
 }

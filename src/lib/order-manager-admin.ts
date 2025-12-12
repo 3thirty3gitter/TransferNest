@@ -22,13 +22,6 @@ export class OrderManagerAdmin {
     try {
       console.log('[OrderManagerAdmin] Creating order for userId:', orderData.userId);
       
-      // Check for duplicate order by paymentId
-      const existingOrder = await this.getOrderByPaymentId(orderData.paymentId);
-      if (existingOrder) {
-        console.log('[OrderManagerAdmin] Order already exists for paymentId:', orderData.paymentId);
-        return existingOrder.id!;
-      }
-      
       const now = new Date();
       const order = {
         ...orderData,

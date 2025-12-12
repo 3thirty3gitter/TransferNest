@@ -8,11 +8,15 @@ import NestingProgressModal from './nesting-progress-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { ShoppingCart, Download } from 'lucide-react';
+import { ShoppingCart, Download, Info } from 'lucide-react';
 import Link from 'next/link';
+
+// Maximum usable width for gang sheets (17" - 0.5" margins = 16.5")
+const MAX_IMAGE_WIDTH_INCHES = 16.5;
 
 // Development-only logging
 const debugLog = (...args: any[]) => {
@@ -43,8 +47,22 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Check if any images are too wide for the sheet
+  const oversizedImages = images.filter(img => img.width > MAX_IMAGE_WIDTH_INCHES);
+  const hasOversizedImages = oversizedImages.length > 0;
+
   const performNesting = async () => {
     if (images.length === 0) return;
+
+    // Check for oversized images before proceeding
+    if (hasOversizedImages) {
+      toast({
+        title: "Images Too Wide",
+        description: `${oversizedImages.length} image(s) exceed the maximum width of ${MAX_IMAGE_WIDTH_INCHES}". Please resize them before nesting.`,
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Set modal state FIRST - this makes it appear instantly
     setIsProcessing(true);
@@ -226,7 +244,25 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
 
             {/* Sheet Width Selector */}
             <div className="mb-4">
-              <label className="text-sm font-medium mb-2 block">Sheet Width</label>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium">Sheet Width</label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-[280px] p-3">
+                      <p className="font-medium mb-1">📏 FYI: Printable Area</p>
+                      <p className="text-sm text-muted-foreground">
+                        Our 17" sheets have a <span className="text-foreground font-medium">16.5" printable area</span>. 
+                        The extra 0.25" on each side is reserved for printer alignment guides to ensure your prints come out perfectly!
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <div className="flex gap-2">
                 <Button
                   variant="default"
@@ -284,13 +320,31 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
               </div>
             )}
 
-            {/* Manual Re-nest Button */}
+            {/* Oversized Images Warning */}
+            {hasOversizedImages && (
+              <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-400 text-lg">⚠️</span>
+                  <div>
+                    <p className="text-amber-400 font-medium text-sm">
+                      {oversizedImages.length} image{oversizedImages.length > 1 ? 's' : ''} too wide
+                    </p>
+                    <p className="text-amber-300/80 text-xs mt-1">
+                      Resize to {MAX_IMAGE_WIDTH_INCHES}" or less to nest
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Build Gangsheet Button */}
             <Button 
               onClick={performNesting}
-              disabled={images.length === 0 || isProcessing}
+              disabled={images.length === 0 || isProcessing || hasOversizedImages}
               className="w-full mt-4"
+              size="lg"
             >
-              {isProcessing ? 'Processing...' : 'Nest Images'}
+              {isProcessing ? 'Processing...' : hasOversizedImages ? 'Resize Images First' : 'Build My Gangsheet'}
             </Button>
           </div>
 

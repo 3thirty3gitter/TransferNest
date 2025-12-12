@@ -17,7 +17,7 @@ import {
 export interface OrderItem {
   id: string;
   images: any[]; // NestedImage[]
-  sheetSize: '11' | '13' | '17';
+  sheetSize: '13' | '17';
   quantity: number;
   unitPrice: number;
   totalPrice: number;

@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Copy, Minus, Plus, Scissors } from 'lucide-react';
+import { Trash2, Copy, Minus, Plus, Scissors, AlertTriangle } from 'lucide-react';
 import type { ManagedImage } from '@/lib/nesting-algorithm';
+
+// Maximum usable width for gang sheets (17" - 0.5" margins = 16.5")
+const MAX_IMAGE_WIDTH_INCHES = 16.5;
 
 type ImageCardProps = {
   image: ManagedImage;
@@ -21,6 +24,8 @@ type ImageCardProps = {
 export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: ImageCardProps) {
   const [localWidth, setLocalWidth] = useState(image.width.toFixed(2));
   const [localHeight, setLocalHeight] = useState(image.height.toFixed(2));
+  
+  const isOversized = image.width > MAX_IMAGE_WIDTH_INCHES;
 
   useEffect(() => {
     setLocalWidth(image.width.toFixed(2));
@@ -69,7 +74,7 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
   };
   
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className={`border rounded-lg overflow-hidden ${isOversized ? 'border-amber-500/50 ring-2 ring-amber-500/20' : ''}`}>
       <div className="bg-muted p-4 relative aspect-video flex items-center justify-center">
         <Image
           src={image.url}
@@ -79,6 +84,12 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
           sizes="(max-width: 768px) 80vw, (max-width: 1200px) 30vw, 25vw"
           data-ai-hint={image.dataAiHint}
         />
+        {isOversized && (
+          <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            Too Wide
+          </div>
+        )}
       </div>
       <div className="p-4 space-y-4">
         
@@ -105,8 +116,14 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
 
         {/* Dimensions */}
         <div className="space-y-2">
+            {isOversized && (
+              <p className="text-amber-400 text-xs flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Reduce width to {MAX_IMAGE_WIDTH_INCHES}" or less
+              </p>
+            )}
             <div className="flex items-center gap-2">
-                <Label htmlFor={`width-${image.id}`} className="w-16 shrink-0">Width</Label>
+                <Label htmlFor={`width-${image.id}`} className={`w-16 shrink-0 ${isOversized ? 'text-amber-400' : ''}`}>Width</Label>
                 <div className="relative flex-1">
                     <Input
                         id={`width-${image.id}`}
@@ -114,7 +131,7 @@ export function ImageCard({ image, onUpdate, onRemove, onDuplicate, onTrim }: Im
                         value={localWidth}
                         onChange={(e) => handleDimensionChange('width', e.target.value)}
                         onBlur={() => triggerUpdate('width')}
-                        className="h-8 pr-8"
+                        className={`h-8 pr-8 ${isOversized ? 'border-amber-500 focus:border-amber-500 focus:ring-amber-500' : ''}`}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">in</span>
                 </div>

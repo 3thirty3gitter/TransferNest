@@ -61,17 +61,15 @@ export default function CheckoutPage() {
   const [isFetchingRates, setIsFetchingRates] = useState(false);
   const [shippingError, setShippingError] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState(0);
-  const [paymentComplete, setPaymentComplete] = useState(false);
 
-  // Redirect if not authenticated or cart is empty (but not after successful payment)
+  // Redirect if not authenticated or cart is empty
   useEffect(() => {
     if (!user) {
       router.push('/login');
       return;
     }
     
-    // Don't redirect to cart if payment was just completed (cart is being cleared)
-    if (items.length === 0 && !paymentComplete) {
+    if (items.length === 0) {
       router.push('/cart');
       return;
     }
@@ -328,12 +326,6 @@ export default function CheckoutPage() {
   };
 
   const handlePayment = async () => {
-    // Prevent double-click race condition
-    if (isLoading) {
-      console.log('[CHECKOUT] Payment already in progress, ignoring duplicate click');
-      return;
-    }
-    
     // Skip cardPayment check if order total is 0
     if (!validateForm() || (!cardPayment && orderTotal > 0) || !user) return;
     
@@ -396,9 +388,6 @@ export default function CheckoutPage() {
       const paymentResult = await response.json();
       
       if (paymentResult.success) {
-        // Mark payment as complete to prevent cart redirect race condition
-        setPaymentComplete(true);
-        
         // Clear cart and redirect to success page
         clearCart();
         toast({

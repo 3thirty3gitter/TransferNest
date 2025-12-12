@@ -152,7 +152,7 @@ export default function WizardTrigger({ onImagesAdded, autoOpen = false }: Wizar
         onClick={() => setIsWizardOpen(true)}
         variant="outline"
         size="lg"
-        className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600 whitespace-nowrap"
+        className="min-w-[265px] w-full sm:w-auto bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600 whitespace-nowrap"
         disabled={isProcessing}
       >
         <Wand2 className="h-5 w-5 mr-2" />
