@@ -6,7 +6,7 @@ import {
   deleteBlogPost,
   isSlugAvailable,
   type BlogPost 
-} from '@/lib/blog-manager';
+} from '@/lib/blog-manager-admin';
 
 // GET - List all blog posts (admin)
 export async function GET() {

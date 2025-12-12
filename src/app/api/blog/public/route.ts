@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPublishedBlogPosts } from '@/lib/blog-manager';
+import { getPublishedBlogPosts } from '@/lib/blog-manager-admin';
 
 // GET - List all published blog posts (public)
 export async function GET() {

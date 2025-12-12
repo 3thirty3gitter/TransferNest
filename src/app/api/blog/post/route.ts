@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBlogPostBySlug } from '@/lib/blog-manager';
+import { getBlogPostBySlug } from '@/lib/blog-manager-admin';
 
 // GET - Get a single published blog post by slug (public)
 export async function GET(request: NextRequest) {
