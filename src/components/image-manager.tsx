@@ -176,9 +176,121 @@ export default function ImageManager({
     }
   };
 
-  const handleTrimImage = (id: string) => {
-    // Placeholder for trim functionality
-    console.log('Trim image:', id);
+  const handleTrimImage = async (id: string) => {
+    const image = images.find(img => img.id === id);
+    if (!image) return;
+
+    try {
+      // Load the image
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = image.url;
+      });
+
+      // Create canvas and draw image
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+      
+      ctx.drawImage(img, 0, 0);
+      
+      // Get image data to find non-transparent bounds
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const { data, width, height } = imageData;
+      
+      let minX = width, minY = height, maxX = 0, maxY = 0;
+      let hasContent = false;
+      
+      // Scan for non-transparent pixels (alpha > 0)
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const alpha = data[(y * width + x) * 4 + 3];
+          if (alpha > 0) {
+            hasContent = true;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      
+      if (!hasContent) {
+        toast({
+          title: "Nothing to Trim",
+          description: "The image appears to be fully transparent.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Calculate new dimensions
+      const trimmedWidth = maxX - minX + 1;
+      const trimmedHeight = maxY - minY + 1;
+      
+      // Check if there's actually anything to trim
+      if (trimmedWidth === width && trimmedHeight === height) {
+        toast({
+          title: "Already Trimmed",
+          description: "This image has no transparent borders to remove.",
+        });
+        return;
+      }
+      
+      // Create trimmed canvas
+      const trimmedCanvas = document.createElement('canvas');
+      trimmedCanvas.width = trimmedWidth;
+      trimmedCanvas.height = trimmedHeight;
+      const trimmedCtx = trimmedCanvas.getContext('2d');
+      if (!trimmedCtx) throw new Error('Could not get trimmed canvas context');
+      
+      // Draw the trimmed portion
+      trimmedCtx.drawImage(
+        canvas,
+        minX, minY, trimmedWidth, trimmedHeight,
+        0, 0, trimmedWidth, trimmedHeight
+      );
+      
+      // Convert to data URL
+      const trimmedDataUrl = trimmedCanvas.toDataURL('image/png');
+      
+      // Calculate new dimensions in inches (maintaining 300 DPI)
+      const newWidthInches = parseFloat((trimmedWidth / 300).toFixed(2));
+      const newHeightInches = parseFloat((trimmedHeight / 300).toFixed(2));
+      const newAspectRatio = trimmedWidth / trimmedHeight;
+      
+      // Update the image
+      onImagesChange(images.map(img => 
+        img.id === id 
+          ? { 
+              ...img, 
+              url: trimmedDataUrl, 
+              width: newWidthInches, 
+              height: newHeightInches,
+              aspectRatio: newAspectRatio
+            } 
+          : img
+      ));
+      
+      toast({
+        title: "Image Trimmed",
+        description: `Removed transparent borders. New size: ${newWidthInches}" × ${newHeightInches}"`,
+      });
+      
+    } catch (error) {
+      console.error('Trim error:', error);
+      toast({
+        title: "Trim Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRemoveBackground = async (id: string) => {
