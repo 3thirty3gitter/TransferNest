@@ -5,14 +5,54 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import { getPostBySlug } from '@/lib/blog';
-import { Calendar, User, ArrowLeft, Tag, Share2 } from 'lucide-react';
+import { getPostBySlug, BlogPost } from '@/lib/blog';
+import { Calendar, User, ArrowLeft, Tag, Share2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
 
 export default function BlogPostPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const post = getPostBySlug(slug);
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPost() {
+      try {
+        // First try to fetch from API (Firestore)
+        const response = await fetch(`/api/blog/post?slug=${slug}`);
+        const data = await response.json();
+        
+        if (data.post) {
+          setPost(data.post);
+        } else {
+          // Fallback to static posts
+          const staticPost = getPostBySlug(slug);
+          setPost(staticPost || null);
+        }
+      } catch (error) {
+        console.error('Error loading post:', error);
+        // Fallback to static posts
+        const staticPost = getPostBySlug(slug);
+        setPost(staticPost || null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPost();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!post) {
     notFound();

@@ -4,11 +4,44 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import { getAllPosts } from '@/lib/blog';
-import { Calendar, User, ArrowRight, Tag } from 'lucide-react';
+import { getAllPosts, BlogPost } from '@/lib/blog';
+import { Calendar, User, ArrowRight, Tag, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function BlogPage() {
-  const posts = getAllPosts();
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPosts() {
+      try {
+        // Get static posts
+        const staticPosts = getAllPosts();
+        
+        // Get dynamic posts from Firestore
+        const response = await fetch('/api/blog/public');
+        const data = await response.json();
+        
+        // Combine and dedupe by slug (prefer dynamic over static)
+        const dynamicPosts: BlogPost[] = data.posts || [];
+        const dynamicSlugs = new Set(dynamicPosts.map((p: BlogPost) => p.slug));
+        const filteredStaticPosts = staticPosts.filter(p => !dynamicSlugs.has(p.slug));
+        
+        // Merge and sort by date
+        const allPosts = [...dynamicPosts, ...filteredStaticPosts]
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        setPosts(allPosts);
+      } catch (error) {
+        console.error('Error loading posts:', error);
+        // Fallback to static posts only
+        setPosts(getAllPosts());
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPosts();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex flex-col">
@@ -25,6 +58,15 @@ export default function BlogPage() {
           </p>
         </div>
 
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-20 text-slate-400">
+            <p>No blog posts yet. Check back soon!</p>
+          </div>
+        ) : (
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => (
             <article 
@@ -86,6 +128,7 @@ export default function BlogPage() {
             </article>
           ))}
         </div>
+        )}
       </div>
       
       <Footer />

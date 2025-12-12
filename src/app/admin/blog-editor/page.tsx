@@ -18,8 +18,12 @@ import {
   Sparkles,
   Download,
   Copy,
-  RefreshCw
+  RefreshCw,
+  Send,
+  FileEdit,
+  ArrowLeft
 } from 'lucide-react';
+import Link from 'next/link';
 
 type BlogLayout = 'standard' | 'magazine' | 'minimal' | 'featured';
 
@@ -51,6 +55,11 @@ export default function BlogEditorPage() {
   // AI content generation
   const [topicPrompt, setTopicPrompt] = useState('');
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
+  
+  // Save/Publish state
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [postId, setPostId] = useState<string | null>(null);
   
   // Preview
   const [showPreview, setShowPreview] = useState(false);
@@ -168,7 +177,130 @@ export default function BlogEditorPage() {
     }
   };
 
-  // Copy blog code to clipboard
+  // Save as draft
+  const handleSaveDraft = async () => {
+    if (!title || !slug || !content) {
+      toast({
+        title: 'Missing Required Fields',
+        description: 'Please fill in title, slug, and content.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const method = postId ? 'PATCH' : 'POST';
+      const body = {
+        ...(postId && { id: postId }),
+        title,
+        slug,
+        excerpt,
+        content,
+        author,
+        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        coverImageBase64: generatedImage || '',
+        status: 'draft',
+      };
+
+      const response = await fetch('/api/blog', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.id) {
+        setPostId(data.id);
+      }
+
+      toast({
+        title: 'Draft Saved!',
+        description: 'Your blog post has been saved as a draft.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Save Failed',
+        description: error instanceof Error ? error.message : 'Failed to save draft',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Publish blog post
+  const handlePublish = async () => {
+    if (!title || !slug || !content) {
+      toast({
+        title: 'Missing Required Fields',
+        description: 'Please fill in title, slug, and content before publishing.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!excerpt) {
+      toast({
+        title: 'Missing Excerpt',
+        description: 'Please add an excerpt (SEO description) before publishing.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsPublishing(true);
+    try {
+      const method = postId ? 'PATCH' : 'POST';
+      const body = {
+        ...(postId && { id: postId }),
+        title,
+        slug,
+        excerpt,
+        content,
+        author,
+        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        coverImageBase64: generatedImage || '',
+        status: 'published',
+      };
+
+      const response = await fetch('/api/blog', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.id) {
+        setPostId(data.id);
+      }
+
+      toast({
+        title: '🎉 Published!',
+        description: 'Your blog post is now live!',
+      });
+    } catch (error) {
+      toast({
+        title: 'Publish Failed',
+        description: error instanceof Error ? error.message : 'Failed to publish',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  // Copy blog code to clipboard (legacy)
   const handleCopyCode = () => {
     const blogCode = `{
     slug: '${slug}',
@@ -186,7 +318,24 @@ ${content}
     navigator.clipboard.writeText(blogCode);
     toast({
       title: 'Copied!',
-      description: 'Blog code copied to clipboard. Add it to src/lib/blog.ts',
+      description: 'Blog code copied to clipboard.',
+    });
+  };
+
+  // Clear form and start new post
+  const handleNewPost = () => {
+    setTitle('');
+    setSlug('');
+    setExcerpt('');
+    setContent('');
+    setTags('');
+    setTopicPrompt('');
+    setImagePrompt('');
+    setGeneratedImage(null);
+    setPostId(null);
+    toast({
+      title: 'New Post',
+      description: 'Form cleared. Start creating your new blog post!',
     });
   };
 
@@ -203,14 +352,30 @@ ${content}
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Sparkles className="h-8 w-8 text-purple-400" />
-              Blog Editor
-            </h1>
-            <p className="text-slate-400 mt-1">Create and edit blog posts with AI assistance</p>
+          <div className="flex items-center gap-4">
+            <Link href="/admin/settings" className="text-slate-400 hover:text-white transition-colors">
+              <ArrowLeft className="h-6 w-6" />
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-3">
+                <Sparkles className="h-8 w-8 text-purple-400" />
+                Blog Editor
+              </h1>
+              <p className="text-slate-400 mt-1">
+                Create and edit blog posts with AI assistance
+                {postId && <span className="text-emerald-400 ml-2">• Saved</span>}
+              </p>
+            </div>
           </div>
           <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleNewPost}
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              <FileEdit className="h-4 w-4 mr-2" />
+              New Post
+            </Button>
             <Button
               variant="outline"
               onClick={() => setShowPreview(!showPreview)}
@@ -220,11 +385,28 @@ ${content}
               {showPreview ? 'Edit' : 'Preview'}
             </Button>
             <Button
-              onClick={handleCopyCode}
+              onClick={handleSaveDraft}
+              disabled={isSaving}
+              className="bg-slate-700 hover:bg-slate-600 text-white"
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Draft
+            </Button>
+            <Button
+              onClick={handlePublish}
+              disabled={isPublishing}
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
             >
-              <Copy className="h-4 w-4 mr-2" />
-              Copy Code
+              {isPublishing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Publish
             </Button>
           </div>
         </div>
