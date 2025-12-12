@@ -20,5 +20,8 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+    optimizePackageImports: ['@imgly/background-removal'],
+  },
 };
 module.exports = nextConfig;

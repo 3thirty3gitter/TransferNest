@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { removeBackground } from '@imgly/background-removal';
 
 // Maximum usable width for gang sheets (17" - 0.5" margins = 16.5")
 const MAX_IMAGE_WIDTH_INCHES = 16.5;
@@ -187,34 +188,52 @@ export default function ImageManager({
     setRemovingBgId(id);
     
     try {
-      // Fetch the image and convert to base64
-      const response = await fetch(image.url);
-      const blob = await response.blob();
-      const base64 = await new Promise<string>((resolve) => {
+      console.log('🎨 Starting client-side background removal with @imgly/background-removal');
+      
+      // Suppress ONNX Runtime threading warnings (they're expected in browser)
+      const originalError = console.error;
+      console.error = (...args: unknown[]) => {
+        const msg = String(args[0] || '');
+        if (msg.includes('crossOriginIsolated') || msg.includes('multi-threading')) {
+          return; // Suppress these expected warnings
+        }
+        originalError.apply(console, args);
+      };
+      
+      // Use the free, unlimited client-side background removal with BEST quality settings
+      const config = {
+        model: 'isnet' as const,
+        output: {
+          format: 'image/png' as const,
+          quality: 1.0,
+          type: 'foreground' as const,
+        },
+        progress: (key: string, current: number, total: number) => {
+          console.log(`Background removal progress: ${key} ${current}/${total}`);
+        },
+        debug: false,
+      };
+
+      // Remove background using client-side AI
+      const blob = await removeBackground(image.url, config);
+      
+      // Restore console.error
+      console.error = originalError;
+      
+      // Convert blob to data URL
+      const dataUrl = await new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(blob);
       });
-
-      // Call the background removal API
-      const apiResponse = await fetch('/api/remove-background', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64 }),
-      });
-
-      if (!apiResponse.ok) {
-        const errorData = await apiResponse.json();
-        throw new Error(errorData.error || 'Failed to remove background');
-      }
-
-      const result = await apiResponse.json();
       
-      // Update the image with the new URL (base64 data URL)
+      // Update the image with the new URL
       onImagesChange(images.map(img => 
-        img.id === id ? { ...img, url: result.image } : img
+        img.id === id ? { ...img, url: dataUrl } : img
       ));
 
+      console.log('✅ Background removed successfully (100% free, unlimited)');
+      
       toast({
         title: "Background Removed",
         description: "The background has been successfully removed from your image.",
