@@ -19,6 +19,7 @@ const formatCurrency = (amount: number, currency: string = 'CAD') => {
 
 interface Order {
   id: string;
+  orderNumber?: string;
   paymentId: string;
   status: string;
   total: number;

@@ -17,6 +17,7 @@ import {
 
 interface Order {
   id: string;
+  orderNumber?: string;
   customerInfo?: {
     firstName: string;
     lastName: string;

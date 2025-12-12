@@ -39,6 +39,7 @@ type OrderItem = {
 
 type Order = {
   id: string;
+  orderNumber?: string;
   userId: string;
   userEmail: string;
   createdAt: Date;
