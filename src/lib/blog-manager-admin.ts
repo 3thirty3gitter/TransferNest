@@ -4,7 +4,7 @@
  */
 
 import { getFirestore } from '@/lib/firebase-admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, QueryDocumentSnapshot, DocumentData } from 'firebase-admin/firestore';
 
 export interface BlogPost {
   id?: string;
@@ -36,7 +36,7 @@ export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
       .orderBy('publishedAt', 'desc')
       .get();
     
-    return snapshot.docs.map(doc => ({
+    return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
       id: doc.id,
       ...doc.data()
     } as BlogPost));
@@ -56,7 +56,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
       .orderBy('createdAt', 'desc')
       .get();
     
-    return snapshot.docs.map(doc => ({
+    return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
       id: doc.id,
       ...doc.data()
     } as BlogPost));
