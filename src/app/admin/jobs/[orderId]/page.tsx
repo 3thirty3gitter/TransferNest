@@ -128,9 +128,33 @@ export default function JobDetailsPage() {
     }
   }
 
+  // Helper to get shipping address from various order structures
+  function getShippingAddress() {
+    if (!order) return null;
+    
+    // Try shippingAddress at top level
+    const addr = order.shippingAddress || (order as any).customerInfo?.shippingAddress;
+    if (!addr) return null;
+    
+    return {
+      name: `${order.customerInfo?.firstName || ''} ${order.customerInfo?.lastName || ''}`.trim() || 'Customer',
+      street1: addr.line1 || addr.address1 || addr.address || addr.street1 || '',
+      street2: addr.line2 || addr.address2 || addr.street2 || '',
+      city: addr.city || '',
+      state: addr.state || addr.province || '',
+      zip: addr.postal_code || addr.zip || addr.zipCode || addr.postalCode || '',
+      country: addr.country || 'CA',
+      phone: order.customerInfo?.phone || '',
+      email: order.customerInfo?.email || ''
+    };
+  }
+
   async function fetchRates() {
-    if (!order?.shippingAddress) {
-      alert('No shipping address found for this order');
+    const shippingAddr = getShippingAddress();
+    
+    if (!shippingAddr || !shippingAddr.street1) {
+      alert('No shipping address found for this order. Make sure the order has a valid shipping address.');
+      console.log('[SHIPPING] Order data:', order);
       return;
     }
 
@@ -140,6 +164,8 @@ export default function JobDetailsPage() {
     
     try {
       const token = await auth.currentUser?.getIdToken();
+      console.log('[SHIPPING] Fetching rates with address:', shippingAddr);
+      
       const response = await fetch('/api/admin/shipments', {
         method: 'POST',
         headers: { 
@@ -149,31 +175,27 @@ export default function JobDetailsPage() {
         body: JSON.stringify({
           action: 'rates',
           orderId: order.id,
-          toAddress: {
-            name: `${order.customerInfo?.firstName} ${order.customerInfo?.lastName}`,
-            street1: order.shippingAddress.line1 || order.shippingAddress.address1,
-            street2: order.shippingAddress.line2 || order.shippingAddress.address2,
-            city: order.shippingAddress.city,
-            state: order.shippingAddress.state,
-            zip: order.shippingAddress.postal_code || order.shippingAddress.zip,
-            country: order.shippingAddress.country || 'CA',
-            phone: order.customerInfo?.phone,
-            email: order.customerInfo?.email
-          },
+          toAddress: shippingAddr,
           parcel: parcelDetails
         })
       });
 
       const data = await response.json();
+      console.log('[SHIPPING] Response:', data);
+      
       if (data.success) {
-        setShippingRates(data.shipment.rates);
-        setCurrentShipmentId(data.shipment.id);
+        if (data.shipment?.rates && data.shipment.rates.length > 0) {
+          setShippingRates(data.shipment.rates);
+          setCurrentShipmentId(data.shipment.id);
+        } else {
+          alert('No shipping rates available for this address. Check the address details.');
+        }
       } else {
-        alert('Failed to fetch rates: ' + data.message);
+        alert('Failed to fetch rates: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error fetching rates:', error);
-      alert('Error fetching rates');
+      alert('Error fetching rates. Check browser console for details.');
     } finally {
       setIsFetchingRates(false);
     }
@@ -533,6 +555,27 @@ export default function JobDetailsPage() {
                 <Truck className="h-5 w-5" />
                 Shipping Management
               </h2>
+              
+              {/* Show shipping address if available */}
+              {order.deliveryMethod === 'shipping' && getShippingAddress() && (
+                <div className="bg-slate-800/50 rounded-lg p-3 mb-4 text-sm">
+                  <p className="text-slate-400 text-xs mb-1">Ship To:</p>
+                  <p className="text-white">{getShippingAddress()?.name}</p>
+                  <p className="text-slate-300">{getShippingAddress()?.street1}</p>
+                  {getShippingAddress()?.street2 && <p className="text-slate-300">{getShippingAddress()?.street2}</p>}
+                  <p className="text-slate-300">
+                    {getShippingAddress()?.city}, {getShippingAddress()?.state} {getShippingAddress()?.zip}
+                  </p>
+                  <p className="text-slate-300">{getShippingAddress()?.country}</p>
+                </div>
+              )}
+              
+              {order.deliveryMethod === 'pickup' && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                  <p className="text-yellow-300 font-medium">Local Pickup Order</p>
+                  <p className="text-sm text-slate-400 mt-1">This order is for local pickup, no shipping required.</p>
+                </div>
+              )}
               
               {order.status === 'shipped' ? (
                 <div className="space-y-4">
