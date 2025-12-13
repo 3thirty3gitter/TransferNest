@@ -150,6 +150,8 @@ export default function JobDetailsPage() {
   }
 
   async function fetchRates() {
+    if (!order) return;
+    
     const shippingAddr = getShippingAddress();
     
     if (!shippingAddr || !shippingAddr.street1) {
