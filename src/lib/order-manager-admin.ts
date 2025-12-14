@@ -171,6 +171,20 @@ export class OrderManagerAdmin {
   }
 
   /**
+   * Delete an order permanently
+   */
+  async deleteOrder(orderId: string): Promise<void> {
+    try {
+      const docRef = this.ordersCollection.doc(orderId);
+      await docRef.delete();
+      console.log('[OrderManagerAdmin] Order deleted:', orderId);
+    } catch (error) {
+      console.error('[OrderManagerAdmin] Error deleting order:', error);
+      throw new Error('Failed to delete order');
+    }
+  }
+
+  /**
    * Search orders by payment ID
    */
   async getOrderByPaymentId(paymentId: string): Promise<Order | null> {
