@@ -39,7 +39,6 @@ type OrderItem = {
 
 type Order = {
   id: string;
-  orderNumber?: string;
   userId: string;
   userEmail: string;
   createdAt: Date;
@@ -350,7 +349,7 @@ export default function AdminPage() {
                       href={`/admin/jobs/${order.id}`}
                       className="font-mono text-sm text-white hover:text-blue-400 hover:underline"
                     >
-                      #{order.orderNumber || order.id.slice(-6)}
+                      #{order.id.slice(-6)}
                     </Link>
                   </td>
                   <td className="p-4">

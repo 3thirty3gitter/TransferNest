@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer, Mail, Send, XCircle, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, Image as ImageIcon, Truck, Package, Printer, Mail, Send } from 'lucide-react';
 import Link from 'next/link';
 
 type OrderItem = {
@@ -24,7 +24,6 @@ type OrderItem = {
 
 type Order = {
   id: string;
-  orderNumber?: string;
   userId: string;
   userEmail?: string;
   createdAt: any;
@@ -73,13 +72,6 @@ export default function JobDetailsPage() {
   const [isFetchingRates, setIsFetchingRates] = useState(false);
   const [isBuyingLabel, setIsBuyingLabel] = useState(false);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
-  
-  // Cancel/Delete state
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadOrder();
@@ -128,35 +120,9 @@ export default function JobDetailsPage() {
     }
   }
 
-  // Helper to get shipping address from various order structures
-  function getShippingAddress() {
-    if (!order) return null;
-    
-    // Try shippingAddress at top level
-    const addr = order.shippingAddress || (order as any).customerInfo?.shippingAddress;
-    if (!addr) return null;
-    
-    return {
-      name: `${order.customerInfo?.firstName || ''} ${order.customerInfo?.lastName || ''}`.trim() || 'Customer',
-      street1: addr.line1 || addr.address1 || addr.address || addr.street1 || '',
-      street2: addr.line2 || addr.address2 || addr.street2 || '',
-      city: addr.city || '',
-      state: addr.state || addr.province || '',
-      zip: addr.postal_code || addr.zip || addr.zipCode || addr.postalCode || '',
-      country: addr.country || 'CA',
-      phone: order.customerInfo?.phone || '',
-      email: order.customerInfo?.email || ''
-    };
-  }
-
   async function fetchRates() {
-    if (!order) return;
-    
-    const shippingAddr = getShippingAddress();
-    
-    if (!shippingAddr || !shippingAddr.street1) {
-      alert('No shipping address found for this order. Make sure the order has a valid shipping address.');
-      console.log('[SHIPPING] Order data:', order);
+    if (!order?.shippingAddress) {
+      alert('No shipping address found for this order');
       return;
     }
 
@@ -166,8 +132,6 @@ export default function JobDetailsPage() {
     
     try {
       const token = await auth.currentUser?.getIdToken();
-      console.log('[SHIPPING] Fetching rates with address:', shippingAddr);
-      
       const response = await fetch('/api/admin/shipments', {
         method: 'POST',
         headers: { 
@@ -177,27 +141,31 @@ export default function JobDetailsPage() {
         body: JSON.stringify({
           action: 'rates',
           orderId: order.id,
-          toAddress: shippingAddr,
+          toAddress: {
+            name: `${order.customerInfo?.firstName} ${order.customerInfo?.lastName}`,
+            street1: order.shippingAddress.line1 || order.shippingAddress.address1,
+            street2: order.shippingAddress.line2 || order.shippingAddress.address2,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            zip: order.shippingAddress.postal_code || order.shippingAddress.zip,
+            country: order.shippingAddress.country || 'CA',
+            phone: order.customerInfo?.phone,
+            email: order.customerInfo?.email
+          },
           parcel: parcelDetails
         })
       });
 
       const data = await response.json();
-      console.log('[SHIPPING] Response:', data);
-      
       if (data.success) {
-        if (data.shipment?.rates && data.shipment.rates.length > 0) {
-          setShippingRates(data.shipment.rates);
-          setCurrentShipmentId(data.shipment.id);
-        } else {
-          alert('No shipping rates available for this address. Check the address details.');
-        }
+        setShippingRates(data.shipment.rates);
+        setCurrentShipmentId(data.shipment.id);
       } else {
-        alert('Failed to fetch rates: ' + (data.message || 'Unknown error'));
+        alert('Failed to fetch rates: ' + data.message);
       }
     } catch (error) {
       console.error('Error fetching rates:', error);
-      alert('Error fetching rates. Check browser console for details.');
+      alert('Error fetching rates');
     } finally {
       setIsFetchingRates(false);
     }
@@ -270,69 +238,6 @@ export default function JobDetailsPage() {
     }
   }
 
-  async function handleCancelOrder() {
-    if (!order) return;
-    
-    setIsCancelling(true);
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          action: 'cancel',
-          reason: cancelReason || 'Cancelled by admin'
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        alert('Order cancelled successfully');
-        setShowCancelModal(false);
-        setCancelReason('');
-        loadOrder(); // Reload to show updated status
-      } else {
-        alert('Failed to cancel order: ' + (result.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      alert('Error cancelling order');
-    } finally {
-      setIsCancelling(false);
-    }
-  }
-
-  async function handleDeleteOrder() {
-    if (!order) return;
-    
-    setIsDeleting(true);
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/orders/${order.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        alert('Order deleted successfully');
-        router.push('/admin/orders');
-      } else {
-        alert('Failed to delete order: ' + (result.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error deleting order:', error);
-      alert('Error deleting order');
-    } finally {
-      setIsDeleting(false);
-    }
-  }
-
   const openInEditor = (item: OrderItem) => {
     if (!item.placedItems || !item.images) {
       alert('No layout data available for this item');
@@ -382,7 +287,7 @@ export default function JobDetailsPage() {
               Back to Orders
             </Link>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Job Details: {order.orderNumber || order.id.slice(0, 8)}
+              Job Details: {order.id.slice(0, 8)}
             </h1>
             <p className="text-slate-400 mt-1">
               Order placed on {order.createdAt.toLocaleString()}
@@ -524,60 +429,12 @@ export default function JobDetailsPage() {
               <p className="text-xs text-slate-500 mt-3">Customer emails sent to: {order.customerInfo?.email || 'N/A'}</p>
             </div>
 
-            {/* Order Actions */}
-            <div className="glass-strong rounded-lg border border-red-500/20 p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-red-400">
-                <AlertTriangle className="h-5 w-5" />
-                Order Actions
-              </h2>
-              <div className="space-y-3">
-                {order.status !== 'cancelled' && (
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="w-full py-2 px-3 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 text-orange-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Cancel Order
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="w-full py-2 px-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-300 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete Order Permanently
-                </button>
-                <p className="text-xs text-slate-500">These actions cannot be undone.</p>
-              </div>
-            </div>
-
             {/* Shipping Management */}
             <div className="glass-strong rounded-lg border border-white/10 p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Truck className="h-5 w-5" />
                 Shipping Management
               </h2>
-              
-              {/* Show shipping address if available */}
-              {order.deliveryMethod === 'shipping' && getShippingAddress() && (
-                <div className="bg-slate-800/50 rounded-lg p-3 mb-4 text-sm">
-                  <p className="text-slate-400 text-xs mb-1">Ship To:</p>
-                  <p className="text-white">{getShippingAddress()?.name}</p>
-                  <p className="text-slate-300">{getShippingAddress()?.street1}</p>
-                  {getShippingAddress()?.street2 && <p className="text-slate-300">{getShippingAddress()?.street2}</p>}
-                  <p className="text-slate-300">
-                    {getShippingAddress()?.city}, {getShippingAddress()?.state} {getShippingAddress()?.zip}
-                  </p>
-                  <p className="text-slate-300">{getShippingAddress()?.country}</p>
-                </div>
-              )}
-              
-              {order.deliveryMethod === 'pickup' && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
-                  <p className="text-yellow-300 font-medium">Local Pickup Order</p>
-                  <p className="text-sm text-slate-400 mt-1">This order is for local pickup, no shipping required.</p>
-                </div>
-              )}
               
               {order.status === 'shipped' ? (
                 <div className="space-y-4">
@@ -867,98 +724,6 @@ export default function JobDetailsPage() {
           </div>
         </div>
       </div>
-
-      {/* Cancel Order Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-slate-900 rounded-2xl p-6 max-w-md w-full mx-4 border border-orange-500/30">
-            <h3 className="text-xl font-bold text-orange-400 mb-4 flex items-center gap-2">
-              <XCircle className="h-6 w-6" />
-              Cancel Order
-            </h3>
-            <p className="text-slate-300 mb-4">
-              Are you sure you want to cancel order <span className="font-mono text-white">{order.orderNumber || order.id.slice(0, 8)}</span>?
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm text-slate-400 mb-2">Reason (optional)</label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Enter cancellation reason..."
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
-                rows={3}
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowCancelModal(false);
-                  setCancelReason('');
-                }}
-                className="flex-1 py-2 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-              >
-                Keep Order
-              </button>
-              <button
-                onClick={handleCancelOrder}
-                disabled={isCancelling}
-                className="flex-1 py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {isCancelling ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Cancelling...
-                  </>
-                ) : (
-                  'Cancel Order'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Order Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-slate-900 rounded-2xl p-6 max-w-md w-full mx-4 border border-red-500/30">
-            <h3 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
-              <Trash2 className="h-6 w-6" />
-              Delete Order Permanently
-            </h3>
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
-              <p className="text-red-300 text-sm">
-                <strong>Warning:</strong> This action cannot be undone. The order and all associated data will be permanently deleted.
-              </p>
-            </div>
-            <p className="text-slate-300 mb-4">
-              Are you sure you want to delete order <span className="font-mono text-white">{order.orderNumber || order.id.slice(0, 8)}</span>?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-              >
-                Keep Order
-              </button>
-              <button
-                onClick={handleDeleteOrder}
-                disabled={isDeleting}
-                className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Forever'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

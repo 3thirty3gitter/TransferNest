@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SquareClient, SquareEnvironment } from 'square';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
 import { sendOrderConfirmationEmail, sendAdminNewOrderEmail } from '@/lib/email';
+import { generateGangSheet } from '@/lib/gang-sheet-generator';
 
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
@@ -98,6 +99,13 @@ export async function POST(request: NextRequest) {
         }
       };
     } else {
+      // Generate deterministic idempotency key from userId + sourceId + amount
+      // This ensures the same payment attempt gets the same key, preventing duplicates
+      const idempotencyData = `${userId}-${sourceId}-${amountNum}-${customerInfo.email}`;
+      const idempotencyKey = createHash('sha256').update(idempotencyData).digest('hex').substring(0, 45);
+      
+      console.log('[PAYMENT] Using idempotency key:', idempotencyKey.substring(0, 20) + '...');
+      
       // Create the payment request for normal orders
       const requestBody = {
         sourceId,
@@ -106,7 +114,7 @@ export async function POST(request: NextRequest) {
           currency: currency || 'CAD',
         },
         locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-        idempotencyKey: randomUUID(),
+        idempotencyKey,
         note: `DTF Print Order - ${cartItems.length} item(s)`,
         buyerEmailAddress: customerInfo.email,
       };
@@ -154,12 +162,6 @@ export async function POST(request: NextRequest) {
 
       console.log('[PAYMENT] Order created:', orderId);
 
-      // Fetch the order to get the generated orderNumber
-      const orderManager = new OrderManagerAdmin();
-      const createdOrder = await orderManager.getOrder(orderId);
-      const orderNumber = createdOrder?.orderNumber;
-      console.log('[PAYMENT] Order number:', orderNumber);
-
       // Now link existing print files to the order
       console.log('[PAYMENT] Cart items for print files:', JSON.stringify(cartItems.map((item: any) => ({
         id: item.id,
@@ -185,10 +187,9 @@ export async function POST(request: NextRequest) {
         console.warn('[PAYMENT] Cart items structure:', JSON.stringify(cartItems, null, 2));
       }
 
-      // Send emails (fire and forget)
+      // Send emails - await to ensure they complete before function terminates
       const emailDetails = {
         orderId,
-        orderNumber, // Include the generated order number
         customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
         customerEmail: customerInfo.email,
         items: cartItems,
@@ -196,20 +197,22 @@ export async function POST(request: NextRequest) {
         shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined
       };
 
-      Promise.all([
-        sendOrderConfirmationEmail(emailDetails),
-        sendAdminNewOrderEmail(emailDetails)
-      ]).then(results => {
-        console.log('[EMAIL] Email sending results:', results);
-      }).catch(err => {
-        console.error('[EMAIL] Failed to send emails:', err);
-      });
+      console.log('[EMAIL] Starting email sending...');
+      try {
+        const emailResults = await Promise.all([
+          sendOrderConfirmationEmail(emailDetails),
+          sendAdminNewOrderEmail(emailDetails)
+        ]);
+        console.log('[EMAIL] Email sending results:', emailResults);
+      } catch (emailError) {
+        console.error('[EMAIL] Failed to send emails:', emailError);
+        // Don't fail the order if emails fail
+      }
 
       return NextResponse.json({
         success: true,
         paymentId: paymentResult.payment.id,
         orderId,
-        orderNumber, // Include the generated order number
         message: 'Payment processed successfully',
         printFiles: printFiles.map((pf: any) => ({
           filename: pf.filename,
@@ -402,27 +405,23 @@ async function linkPrintFilesToOrder(cartItems: any[], userId: string, orderId: 
         continue;
       }
 
-      // Generate gang sheet PNG in background
+      // Generate gang sheet PNG directly (no HTTP call)
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/generate-gang-sheet`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            placedItems: item.placedItems,
-            sheetWidth: item.sheetWidth,
-            sheetLength: item.sheetLength,
-            userId,
-            orderId,
-            customerInfo
-          })
+        const result = await generateGangSheet({
+          placedItems: item.placedItems,
+          sheetWidth: item.sheetWidth,
+          sheetLength: item.sheetLength,
+          userId,
+          orderId,
+          customerInfo
         });
 
-        if (!response.ok) {
-          console.error('[GENERATE_PRINT] Failed to generate gang sheet:', response.status);
+        if (!result.success) {
+          console.error('[GENERATE_PRINT] Failed to generate gang sheet');
           continue;
         }
 
-        const { pngUrl, dimensions, size } = await response.json();
+        const { pngUrl, dimensions, size } = result;
 
         // Get actual sheet dimensions from cart item
         const sheetWidth = item.sheetWidth;

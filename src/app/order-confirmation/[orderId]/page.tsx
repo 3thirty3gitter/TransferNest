@@ -19,22 +19,9 @@ export default function OrderConfirmationPage() {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
 
   useEffect(() => {
-    // Fetch order details to get the order number
-    async function fetchOrderDetails() {
-      try {
-        const response = await fetch(`/api/orders/${orderId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setOrderDetails(data.order);
-        }
-      } catch (error) {
-        console.error('Error fetching order details:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchOrderDetails();
+    // In a real implementation, you'd fetch order details from your backend
+    // For now, we'll just show the confirmation
+    setLoading(false);
     
     // Hide confetti after animation
     const timer = setTimeout(() => setConfettiVisible(false), 3000);
@@ -138,7 +125,7 @@ export default function OrderConfirmationPage() {
             <CardContent className="space-y-6 pt-6">
               <div className="flex justify-between items-center py-3 px-4 bg-slate-800/50 rounded-lg">
                 <span className="text-slate-300 font-medium">Order Number:</span>
-                <span className="font-mono font-bold text-xl text-purple-400">#{orderDetails?.orderNumber || orderId.slice(-8).toUpperCase()}</span>
+                <span className="font-mono font-bold text-xl text-purple-400">#{orderId}</span>
               </div>
               
               {/* What Happens Next */}
