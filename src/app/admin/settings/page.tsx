@@ -803,6 +803,26 @@ export default function AdminSettingsPage() {
         {/* Email Settings Tab */}
         {activeTab === 'email' && (
           <div className="space-y-6">
+            {/* Blog Editor Card */}
+            <div className="glass-strong rounded-2xl p-6 border border-purple-500/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <PenTool className="h-6 w-6 text-purple-400" />
+                    Blog Editor
+                  </h2>
+                  <p className="text-slate-300 mt-2">
+                    Create and manage blog posts with AI-powered content and image generation.
+                  </p>
+                </div>
+                <Link href="/admin/blog-editor">
+                  <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-colors font-medium">
+                    Open Blog Editor
+                  </button>
+                </Link>
+              </div>
+            </div>
+
             {/* Test Emails Card */}
             <div className="glass-strong rounded-2xl p-6 border border-white/10">
               <div className="flex items-center justify-between">

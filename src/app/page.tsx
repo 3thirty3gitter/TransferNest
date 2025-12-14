@@ -5,7 +5,7 @@ import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Header from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp, Clock } from 'lucide-react';
+import { ArrowRight, CheckCircle, Star, UploadCloud, Wand2, ShoppingCart, Scissors, Sparkles, Zap, TrendingUp, Clock, Eraser, Crop, UserPlus, Gift } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/layout/footer';
@@ -158,138 +158,200 @@ export default function Home() {
           </div>
         </section>
 
-        {/* NEW: Size Wizard Feature Highlight */}
-        <section className="py-24 md:py-32 relative overflow-hidden">
-          {/* Animated Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-950/40 via-blue-950/40 to-transparent"></div>
-          <div className="absolute top-20 right-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-          <div className="absolute bottom-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-
+        {/* Create Account CTA */}
+        <section className="py-16 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 via-pink-600/20 to-purple-600/20"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(251,146,60,0.15),transparent_50%)]"></div>
+          
           <div className="container relative z-10">
-            <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                {/* Left: Content */}
-                <div>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6 animate-bounce">
-                    <Wand2 className="h-4 w-4 text-purple-400" />
-                    <span className="text-sm font-medium">✨ NEW: Size Helper Wizard</span>
-                  </div>
-                  
-                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                    <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-                      Not Sure What Size?
-                    </span>
-                    <br />
-                    <span className="text-white">We'll Help You Choose!</span>
-                  </h2>
-                  
-                  <p className="text-slate-300 text-lg md:text-xl leading-relaxed mb-8">
-                    New to DTF printing? Our friendly wizard walks you through 3 simple steps to determine 
-                    the perfect print sizes for your project. No guesswork needed!
-                  </p>
-
-                  <div className="space-y-4 mb-10">
-                    <div className="glass-strong rounded-2xl p-5 hover:scale-105 transition-transform flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 text-white font-bold">
-                        1
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-lg mb-1">Select Your Garment</h4>
-                        <p className="text-slate-400">T-shirt, hoodie, tote bag, hat, or more</p>
-                      </div>
-                    </div>
-
-                    <div className="glass-strong rounded-2xl p-5 hover:scale-105 transition-transform flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center flex-shrink-0 text-white font-bold">
-                        2
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-lg mb-1">Upload Your Design</h4>
-                        <p className="text-slate-400">See your artwork on an interactive mockup</p>
-                      </div>
-                    </div>
-
-                    <div className="glass-strong rounded-2xl p-5 hover:scale-105 transition-transform flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 text-white font-bold">
-                        3
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-lg mb-1">Pick Locations & Quantities</h4>
-                        <p className="text-slate-400">Front, back, sleeves - we recommend the perfect sizes</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button onClick={handleOpenWizard} size="lg" className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 px-10 py-7 text-lg glow-accent group">
-                    <Wand2 className="h-6 w-6" />
-                    Try the Size Helper
-                    <Sparkles className="h-5 w-5 group-hover:rotate-12 transition-transform" />
-                  </Button>
-
-                  <p className="text-sm text-slate-400 mt-4 flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
-                    Perfect for beginners • Takes less than 2 minutes
-                  </p>
-                </div>
-
-                {/* Right: Visual */}
-                <div className="relative">
-                  <div className="glass-strong rounded-3xl p-8 hover:scale-105 transition-all duration-500">
-                    <div className="space-y-6">
-                      {/* Mock wizard preview */}
-                      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-white/10">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-xl font-bold">What are you printing on?</h3>
-                          <div className="text-sm text-slate-400">Step 1 of 3</div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          {['👕', '🧥', '👜'].map((emoji, i) => (
-                            <div key={i} className="bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl p-4 text-center hover:scale-110 transition-transform cursor-pointer border border-purple-500/30">
-                              <div className="text-4xl mb-2">{emoji}</div>
-                              <div className="text-xs font-medium">{['T-Shirt', 'Hoodie', 'Tote'][i]}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
-                        <div className="flex-1 h-2 bg-slate-700 rounded-full"></div>
-                        <div className="flex-1 h-2 bg-slate-700 rounded-full"></div>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 rounded-2xl p-6 border border-green-500/30">
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-400 flex items-center justify-center flex-shrink-0">
-                            <CheckCircle className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-lg mb-2 text-green-300">Recommended Sizes</h4>
-                            <div className="space-y-1 text-sm text-slate-300">
-                              <div>✓ Front Chest: 12" × 16"</div>
-                              <div>✓ Full Back: 14" × 18"</div>
-                              <div>✓ Sleeves: 3" × 4"</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Floating badge */}
-                  <div className="absolute -top-4 -right-4 glass-strong rounded-2xl p-4 hover:scale-110 transition-transform">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">2min</div>
-                      <div className="text-xs text-slate-400 mt-1">Average Time</div>
-                    </div>
-                  </div>
-                </div>
+            <div className="max-w-4xl mx-auto text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500/20 to-pink-500/20 border border-orange-500/30 mb-6 animate-pulse">
+                <Gift className="h-5 w-5 text-orange-400" />
+                <span className="text-sm font-bold text-orange-300">FREE TO JOIN!</span>
+              </div>
+              
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                <span className="text-white">Don't Have an Account?</span>
+              </h2>
+              
+              <p className="text-xl md:text-2xl mb-8">
+                <span className="bg-gradient-to-r from-orange-400 via-pink-400 to-purple-400 bg-clip-text text-transparent font-bold">
+                  Create one now and start building your gang sheets! 🚀
+                </span>
+              </p>
+              
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button asChild size="lg" className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 hover:from-orange-600 hover:via-pink-600 hover:to-purple-600 text-white border-0 px-10 py-7 text-xl font-bold shadow-2xl shadow-orange-500/25 glow group">
+                  <Link href="/login" className="flex items-center gap-3">
+                    <UserPlus className="h-6 w-6" />
+                    Create Free Account
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
+              
+              <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm text-slate-300">
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  No credit card required
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  Start in 30 seconds
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  Track all your orders
+                </span>
               </div>
             </div>
           </div>
         </section>
 
+        {/* Tools & Features Highlight - 2 Column Layout */}
+        <section className="py-24 md:py-32 relative overflow-hidden">
+          {/* Animated Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-950/40 via-blue-950/40 to-emerald-950/40"></div>
+          <div className="absolute top-20 right-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+          <div className="absolute bottom-20 left-20 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
 
+          <div className="container relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+              
+              {/* Left Column: Size Wizard */}
+              <div className="glass-strong rounded-3xl p-8 lg:p-10 relative overflow-hidden bg-slate-900/30">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-purple-500/20 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/30 mb-6">
+                    <Wand2 className="h-4 w-4 text-purple-400" />
+                    <span className="text-sm font-medium text-purple-300">Size Helper Wizard</span>
+                  </div>
+                  
+                  <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                    <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+                      Not Sure What Size?
+                    </span>
+                  </h2>
+                  
+                  <p className="text-slate-300 leading-relaxed mb-6">
+                    New to DTF? Our wizard walks you through 3 simple steps to find the perfect print sizes.
+                  </p>
+
+                  <div className="space-y-3 mb-8">
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
+                        1
+                      </div>
+                      <div>
+                        <span className="font-medium">Select Your Garment</span>
+                        <span className="text-slate-400 text-sm ml-2">T-shirt, hoodie, tote...</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
+                        2
+                      </div>
+                      <div>
+                        <span className="font-medium">Upload Your Design</span>
+                        <span className="text-slate-400 text-sm ml-2">See it on a mockup</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
+                        3
+                      </div>
+                      <div>
+                        <span className="font-medium">Get Recommendations</span>
+                        <span className="text-slate-400 text-sm ml-2">Perfect sizes instantly</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button onClick={handleOpenWizard} size="lg" className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 py-6 text-lg glow-accent group">
+                    <Wand2 className="h-5 w-5" />
+                    Try the Size Helper
+                    <Sparkles className="h-4 w-4 group-hover:rotate-12 transition-transform" />
+                  </Button>
+
+                  <p className="text-sm text-slate-400 mt-4 text-center flex items-center justify-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    Perfect for beginners • Takes 2 minutes
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Column: Image Editing Tools */}
+              <div className="glass-strong rounded-3xl p-8 lg:p-10 relative overflow-hidden bg-slate-900/30">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/30 mb-6">
+                    <Sparkles className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-300">Built-in Image Tools</span>
+                  </div>
+                  
+                  <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                    <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                      Edit Images Instantly
+                    </span>
+                  </h2>
+                  
+                  <p className="text-slate-300 leading-relaxed mb-6">
+                    No Photoshop needed. Powerful tools built right into your browser.
+                  </p>
+
+                  {/* Background Removal */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 mb-4 hover:scale-[1.02] transition-transform">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0">
+                        <Eraser className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg mb-1">Remove Background</h3>
+                        <p className="text-slate-400 text-sm mb-2">AI-powered one-click background removal. Free & unlimited!</p>
+                        <div className="flex flex-wrap gap-1">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs">Free</span>
+                          <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-xs">Unlimited</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Smart Trim */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500/10 to-cyan-500/10 border border-teal-500/20 mb-8 hover:scale-[1.02] transition-transform">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                        <Crop className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg mb-1">Smart Trim</h3>
+                        <p className="text-slate-400 text-sm mb-2">Auto-crop transparent borders. Save space & money!</p>
+                        <div className="flex flex-wrap gap-1">
+                          <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-xs">One-Click</span>
+                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs">Save $$$</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button asChild size="lg" className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border-0 py-6 text-lg glow group">
+                    <Link href="/nesting-tool" className="flex items-center gap-2">
+                      Start Building <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </Button>
+
+                  <p className="text-sm text-slate-400 mt-4 text-center">
+                    Remove BG → Trim → Perfect cutout ready to nest!
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
 
         {/* Features Section */}
         <section id="features" className="py-24 md:py-32 relative">
