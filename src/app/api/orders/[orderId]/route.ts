@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
-import { verifyAdminRequest } from '@/lib/admin-auth-server';
+import { verifyAdminRequest, verifyUserRequest } from '@/lib/admin-auth-server';
+import { isAdminEmail } from '@/middleware/adminAuth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
-  const authResult = await verifyAdminRequest(request);
-  if (!authResult.authorized) {
-    return NextResponse.json({ error: authResult.message }, { status: 401 });
+  // First try to verify as any authenticated user
+  const userResult = await verifyUserRequest(request);
+  if (!userResult.authorized) {
+    return NextResponse.json({ error: userResult.message }, { status: 401 });
   }
 
   try {
@@ -31,7 +33,18 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(order);
+    // Check if user is admin or the order owner
+    const isAdmin = isAdminEmail(userResult.user?.email);
+    const isOwner = order.userId === userResult.user?.uid;
+    
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json(
+        { error: 'Not authorized to view this order' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({ success: true, order });
   } catch (error) {
     console.error('Error fetching order:', error);
     return NextResponse.json(

@@ -8,6 +8,7 @@ import { CheckCircle2, Mail, Home, Package, Sparkles, Clock, Truck, Heart } from
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { getCompanySettings, type CompanySettings } from '@/lib/company-settings';
+import { auth } from '@/lib/firebase';
 
 export default function OrderConfirmationPage() {
   const params = useParams();
@@ -22,10 +23,17 @@ export default function OrderConfirmationPage() {
     // Fetch order details to get the order number
     async function fetchOrderDetails() {
       try {
-        const response = await fetch(`/api/orders/${orderId}`);
+        // Get auth token for authenticated request
+        const token = await auth.currentUser?.getIdToken();
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(`/api/orders/${orderId}`, { headers });
         if (response.ok) {
           const data = await response.json();
-          setOrderDetails(data.order);
+          setOrderDetails(data.order || data);
         }
       } catch (error) {
         console.error('Error fetching order details:', error);
