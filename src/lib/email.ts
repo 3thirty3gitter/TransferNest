@@ -2,7 +2,7 @@ import { sendEmail } from './microsoft-graph';
 import { getEmailTemplateAdmin } from './services/email-template-service-admin';
 
 // Base URL for email links - fallback to production domain if env var not set
-const getBaseUrl = () => process.env.NEXT_PUBLIC_APP_URL || 'https://www.printpilot.ca';
+const getBaseUrl = () => process.env.NEXT_PUBLIC_APP_URL || 'https://dtf-wholesale.ca';
 
 export interface EmailOrderDetails {
   orderId: string;

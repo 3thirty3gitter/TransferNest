@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
           orderId: orderIdDisplay,
           customerName,
           total: total.toFixed(2),
-          adminUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.printpilot.ca'}/admin/jobs/${orderIdDisplay}`
+          adminUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://dtf-wholesale.ca'}/admin/jobs/${orderIdDisplay}`
         });
         if (!templateResult) {
           emailSubject = `🆕 New Order Received - #${orderIdDisplay}`;
