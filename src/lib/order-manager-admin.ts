@@ -152,6 +152,25 @@ export class OrderManagerAdmin {
   }
 
   /**
+   * Cancel an order
+   */
+  async cancelOrder(orderId: string, reason?: string): Promise<void> {
+    try {
+      const docRef = this.ordersCollection.doc(orderId);
+      await docRef.update({
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        cancellationReason: reason || null,
+        updatedAt: new Date()
+      });
+      console.log('[OrderManagerAdmin] Order cancelled:', orderId);
+    } catch (error) {
+      console.error('[OrderManagerAdmin] Error cancelling order:', error);
+      throw new Error('Failed to cancel order');
+    }
+  }
+
+  /**
    * Search orders by payment ID
    */
   async getOrderByPaymentId(paymentId: string): Promise<Order | null> {
