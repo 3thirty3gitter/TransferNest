@@ -94,8 +94,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!isAdmin) return null;
 
   const navItems = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Orders', href: '/admin', icon: ShoppingCart }, // Dashboard is currently the orders page
+    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Email', href: '/admin/email', icon: Mail },
