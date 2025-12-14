@@ -185,6 +185,20 @@ export async function POST(request: NextRequest) {
         console.warn('[PAYMENT] Cart items structure:', JSON.stringify(cartItems, null, 2));
       }
 
+      // Send to PrintPilot CRM (fire and forget)
+      sendToPrintPilotCRM({
+        orderId,
+        orderNumber: orderNumber || orderId,
+        customerInfo,
+        cartItems,
+        total: actualAmountDollars,
+        shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined,
+        deliveryMethod,
+        printFiles
+      }).catch(err => {
+        console.error('[WEBHOOK] PrintPilot webhook failed:', err);
+      });
+
       // Send emails (fire and forget)
       const emailDetails = {
         orderId,
@@ -565,5 +579,96 @@ async function updateOrderPrintFiles(orderId: string, printFiles: any[]) {
   } catch (error) {
     console.error('[UPDATE] Error updating order print files:', error);
     // Don't throw - order was already saved, print files are a bonus
+  }
+}
+
+// Helper function to send order to PrintPilot CRM webhook
+async function sendToPrintPilotCRM(orderData: {
+  orderId: string;
+  orderNumber: string;
+  customerInfo: any;
+  cartItems: any[];
+  total: number;
+  shippingAddress?: any;
+  deliveryMethod: string;
+  printFiles: any[];
+}) {
+  const webhookUrl = process.env.PRINTPILOT_WEBHOOK_URL;
+  const webhookSecret = process.env.PRINTPILOT_WEBHOOK_SECRET;
+  const tenantId = process.env.PRINTPILOT_TENANT_ID;
+
+  // Skip if webhook is not configured
+  if (!webhookUrl || !webhookSecret) {
+    console.log('[WEBHOOK] PrintPilot webhook not configured, skipping');
+    return;
+  }
+
+  try {
+    console.log('[WEBHOOK] Sending order to PrintPilot CRM...');
+
+    // Build the payload in PrintPilot's expected format
+    const payload = {
+      tenantId: tenantId || 'dtf-wholesale-default',
+      orderId: orderData.orderNumber || orderData.orderId,
+      customer: {
+        name: `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`.trim(),
+        email: orderData.customerInfo.email,
+        phone: orderData.customerInfo.phone || '',
+        company: '' // DTF Wholesale customers are typically individuals
+      },
+      orderDetails: {
+        totalAmount: orderData.total,
+        currency: 'CAD',
+        status: 'paid',
+        createdAt: new Date().toISOString()
+      },
+      items: orderData.cartItems.map((item: any) => ({
+        name: `DTF Gang Sheet ${item.sheetSize || item.sheetWidth}"`,
+        quantity: item.quantity || 1,
+        price: item.totalPrice || item.pricing?.total || 0,
+        description: `${item.sheetWidth || item.sheetSize}" x ${item.sheetLength?.toFixed(1) || '?'}" gang sheet - ${item.placedItems?.length || 0} designs`
+      })),
+      printFiles: orderData.printFiles.map((file: any) => ({
+        name: file.filename,
+        url: file.url,
+        fileType: 'artwork'
+      })),
+      shipping: orderData.deliveryMethod === 'shipping' && orderData.shippingAddress ? {
+        address: orderData.shippingAddress.line1 || orderData.shippingAddress.address1 || '',
+        city: orderData.shippingAddress.city || '',
+        state: orderData.shippingAddress.state || orderData.shippingAddress.province || '',
+        zip: orderData.shippingAddress.postal_code || orderData.shippingAddress.zip || orderData.shippingAddress.postalCode || '',
+        country: orderData.shippingAddress.country || 'CA',
+        method: orderData.deliveryMethod
+      } : {
+        address: 'Local Pickup',
+        city: 'Edmonton',
+        state: 'AB',
+        zip: 'T6H 4J9',
+        country: 'CA',
+        method: 'pickup'
+      },
+      notes: `Source: DTF Wholesale (TransferNest) | Order ID: ${orderData.orderId}`
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-webhook-secret': webhookSecret
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('[WEBHOOK] PrintPilot response:', result);
+    } else {
+      const errorText = await response.text();
+      console.error('[WEBHOOK] PrintPilot error:', response.status, errorText);
+    }
+  } catch (error) {
+    console.error('[WEBHOOK] Error sending to PrintPilot:', error);
+    // Don't throw - webhook failure shouldn't affect the order
   }
 }
