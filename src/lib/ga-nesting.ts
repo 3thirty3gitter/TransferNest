@@ -117,12 +117,16 @@ export function geneticAlgorithmNesting(
     mutationRate?: number;
     rotationSteps?: number;
     adaptive?: boolean; // Enable adaptive parameter tuning
+    maxTimeMs?: number; // Maximum time limit in milliseconds
   } = {}
 ): NestingResult {
   const {
     rotationSteps = 4, // 0°, 90°, 180°, 270°
-    adaptive = true
+    adaptive = true,
+    maxTimeMs = 0 // 0 means no time limit
   } = options;
+  
+  const startTime = Date.now();
 
   // Expand copies
   const expanded: ManagedImage[] = [];
@@ -335,10 +339,10 @@ export function geneticAlgorithmNesting(
     population.sort((a, b) => b.fitness - a.fitness);
 
     debugLog(`[GA GEN ${gen + 1}/${generations}] Best: ${(population[0].fitness * 100).toFixed(1)}%, Diversity: ${analysis.uniqueSizes} sizes`);
-
-    // Early termination if we achieve excellent utilization (>90%) to save time
-    if (population[0].fitness >= 0.90 && gen >= Math.min(20, generations / 2)) {
-      debugLog(`[GA EARLY EXIT] Achieved ${(population[0].fitness * 100).toFixed(1)}% utilization at gen ${gen + 1}`);
+    
+    // Time-based safety exit to prevent timeout (no early utilization exit - always optimize fully)
+    if (maxTimeMs > 0 && (Date.now() - startTime) >= maxTimeMs) {
+      console.log(`[GA TIME LIMIT] Stopping at gen ${gen + 1} after ${maxTimeMs}ms, best: ${(population[0].fitness * 100).toFixed(1)}%`);
       break;
     }
 

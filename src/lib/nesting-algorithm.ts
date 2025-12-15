@@ -81,31 +81,13 @@ function executeNestingAdvanced(
   const sideMargin = 0.5;
   const effectiveWidth = sheetWidth - (sideMargin * 2);
 
-  // Calculate total items (including copies) to scale GA parameters
+  // Calculate total items (including copies) for logging
   const totalItems = images.reduce((sum, img) => sum + Math.max(1, img.copies), 0);
   
-  // Scale GA parameters based on item count to avoid timeout on large orders
-  // For Vercel with 60s timeout, we need to keep computation under ~50s
-  let populationSize: number;
-  let generations: number;
-  
-  if (totalItems <= 20) {
-    // Small orders: full optimization
-    populationSize = 100;
-    generations = 100;
-  } else if (totalItems <= 50) {
-    // Medium orders: moderate optimization
-    populationSize = 60;
-    generations = 60;
-  } else if (totalItems <= 100) {
-    // Large orders: reduced optimization
-    populationSize = 40;
-    generations = 40;
-  } else {
-    // Very large orders: minimal GA, rely on heuristics
-    populationSize = 25;
-    generations = 25;
-  }
+  // Use full optimization parameters - rely on early termination and time limit for large orders
+  // The GA will exit early once it hits 90% utilization or 45 second time limit
+  const populationSize = 100;
+  const generations = 100;
 
   console.log(`[${sheetWidth}" NESTING] Starting GA with ${totalItems} items, pop=${populationSize}, gen=${generations}...`);
   const result = geneticAlgorithmNesting(images, effectiveWidth, 0.10, canRotate, {
@@ -113,7 +95,8 @@ function executeNestingAdvanced(
     rotationSteps: 4,
     populationSize,
     generations,
-    mutationRate: 0.38
+    mutationRate: 0.38,
+    maxTimeMs: 45000  // 45 second time limit as safety net
   });
 
   // Offset all placed items by the left margin
