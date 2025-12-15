@@ -1077,7 +1077,7 @@ export default function CheckoutPage() {
                         <span>Promo: {appliedDiscount.code}</span>
                         <span>
                           {appliedDiscount.type === 'percentage' && `-${appliedDiscount.value}%`}
-                          {appliedDiscount.type === 'fixed' && `-$${appliedDiscount.value.toFixed(2)}`}
+                          {appliedDiscount.type === 'fixed' && `-$${(appliedDiscount.value || 0).toFixed(2)}`}
                         </span>
                       </div>
                     )}
@@ -1086,7 +1086,7 @@ export default function CheckoutPage() {
                       <span className={shippingCost > 0 ? "text-white" : "text-green-400"}>
                         {appliedDiscount?.freeShipping ? (
                           <span className="flex items-center gap-1">
-                            <span className="line-through text-slate-500">${(selectedShippingRate?.rate || 0).toFixed(2)}</span>
+                            <span className="line-through text-slate-500">${parseFloat(selectedShippingRate?.rate || '0').toFixed(2)}</span>
                             Free
                           </span>
                         ) : shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free'}
