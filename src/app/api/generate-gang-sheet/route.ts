@@ -213,14 +213,24 @@ export async function POST(request: NextRequest) {
           })
           .toBuffer();
 
-    // Log metadata to verify transparency
+    // Log metadata to verify transparency and dimensions
     const meta = await sharp(pngBuffer).metadata();
     console.log('[GANG_SHEET] Output metadata:', {
+      width: meta.width,
+      height: meta.height,
       channels: meta.channels,
       hasAlpha: meta.hasAlpha,
       space: meta.space,
       size: pngBuffer.length
     });
+
+    // CRITICAL: Verify the output dimensions are correct (17" = 5100px at 300 DPI)
+    if (meta.width && meta.width > pixelWidth) {
+      console.error(`[GANG_SHEET] WARNING: Output width ${meta.width}px exceeds expected ${pixelWidth}px!`);
+    }
+    if (meta.height && meta.height > pixelHeight) {
+      console.error(`[GANG_SHEET] WARNING: Output height ${meta.height}px exceeds expected ${pixelHeight}px!`);
+    }
 
     console.log('[GANG_SHEET] Generated PNG:', (pngBuffer.length / 1024).toFixed(2), 'KB');
 

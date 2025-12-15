@@ -336,6 +336,12 @@ export function geneticAlgorithmNesting(
 
     debugLog(`[GA GEN ${gen + 1}/${generations}] Best: ${(population[0].fitness * 100).toFixed(1)}%, Diversity: ${analysis.uniqueSizes} sizes`);
 
+    // Early termination if we achieve excellent utilization (>90%) to save time
+    if (population[0].fitness >= 0.90 && gen >= Math.min(20, generations / 2)) {
+      debugLog(`[GA EARLY EXIT] Achieved ${(population[0].fitness * 100).toFixed(1)}% utilization at gen ${gen + 1}`);
+      break;
+    }
+
     if (gen === generations - 1) break;
 
     // Create next generation

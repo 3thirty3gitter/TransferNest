@@ -1,5 +1,11 @@
 {
   "functions": {
+    "src/app/api/nesting/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/generate-gang-sheet/route.ts": {
+      "maxDuration": 60
+    },
     "src/app/api/**/*.ts": {
       "maxDuration": 30
     }
