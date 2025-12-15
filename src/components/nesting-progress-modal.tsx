@@ -103,10 +103,18 @@ export default function NestingProgressModal({
 
           {/* Processing Info */}
           {stage !== 'complete' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <p className="text-xs text-center text-muted-foreground">
                 Creating your optimized gang sheet...
               </p>
+              
+              {/* Warning not to navigate away */}
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-2 text-center">
+                <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                  ⚠️ Please don&apos;t navigate away from this page
+                </p>
+              </div>
+              
               {/* Extended processing message after 30 seconds */}
               {elapsedSeconds >= 30 && (
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center animate-pulse">

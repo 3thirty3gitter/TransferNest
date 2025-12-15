@@ -103,18 +103,22 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       // Brief pause to show stage transition
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Simulate generation progress (in real implementation, this would come from GA callbacks)
+      // Smooth progress animation that continues throughout the whole process
+      // Uses asymptotic approach - progress slows as it approaches 90% but never stops
       const progressInterval = setInterval(() => {
-        setCurrentGeneration(prev => {
-          const next = prev + 1;
-          if (next <= 40) {
-            setModalProgress(20 + (next / 40) * 70); // 20% to 90%
-            setBestUtilization(prev => Math.min(prev + Math.random() * 2, 87));
-            return next;
-          }
-          return prev;
-        });
-      }, 100); // Update every 100ms for smooth progress
+        const elapsed = (Date.now() - startTime) / 1000; // seconds
+        // Asymptotic progress: starts fast, slows down, approaches 90% but never stops moving
+        // Formula: 20 + 70 * (1 - e^(-elapsed/30)) gives smooth curve approaching 90%
+        const asymptotic = 20 + 70 * (1 - Math.exp(-elapsed / 30));
+        // Add small oscillation to show it's still working
+        const wiggle = Math.sin(elapsed * 2) * 0.5;
+        setModalProgress(Math.min(asymptotic + wiggle, 89.9));
+        
+        // Update generation display based on elapsed time
+        setCurrentGeneration(Math.min(Math.floor(elapsed * 2), 100));
+        // Slowly increase utilization estimate
+        setBestUtilization(prev => Math.min(prev + Math.random() * 0.3, 87));
+      }, 250); // Update every 250ms
 
       // Call server-side API to avoid freezing browser
       const response = await fetch('/api/nesting', {
