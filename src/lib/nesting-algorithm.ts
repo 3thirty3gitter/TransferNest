@@ -84,8 +84,7 @@ function executeNestingAdvanced(
   // Calculate total items (including copies) for logging
   const totalItems = images.reduce((sum, img) => sum + Math.max(1, img.copies), 0);
   
-  // Use full optimization parameters - rely on early termination and time limit for large orders
-  // The GA will exit early once it hits 90% utilization or 45 second time limit
+  // Use full optimization parameters - NO time limit, always run to completion for max utilization
   const populationSize = 100;
   const generations = 100;
 
@@ -95,8 +94,8 @@ function executeNestingAdvanced(
     rotationSteps: 4,
     populationSize,
     generations,
-    mutationRate: 0.38,
-    maxTimeMs: 45000  // 45 second time limit as safety net
+    mutationRate: 0.38
+    // No time limit - always optimize fully for maximum utilization
   });
 
   // Offset all placed items by the left margin

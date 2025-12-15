@@ -13,6 +13,7 @@ interface NestingProgressModalProps {
   totalGenerations?: number;
   bestUtilization?: number;
   itemCount?: number;
+  elapsedSeconds?: number;
 }
 
 export default function NestingProgressModal({
@@ -22,7 +23,8 @@ export default function NestingProgressModal({
   currentGeneration = 0,
   totalGenerations = 40,
   bestUtilization = 0,
-  itemCount = 0
+  itemCount = 0,
+  elapsedSeconds = 0
 }: NestingProgressModalProps) {
   
   const getStageInfo = () => {
@@ -101,9 +103,28 @@ export default function NestingProgressModal({
 
           {/* Processing Info */}
           {stage !== 'complete' && (
-            <p className="text-xs text-center text-muted-foreground">
-              Creating your optimized gang sheet...
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-center text-muted-foreground">
+                Creating your optimized gang sheet...
+              </p>
+              {/* Extended processing message after 30 seconds */}
+              {elapsedSeconds >= 30 && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center animate-pulse">
+                  <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                    🎯 Still optimizing - hang tight!
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    We&apos;re maximizing your sheet space for the best value. Won&apos;t be much longer!
+                  </p>
+                </div>
+              )}
+              {/* Extra encouragement after 45 seconds */}
+              {elapsedSeconds >= 45 && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Large orders take a bit longer to optimize perfectly ✨
+                </p>
+              )}
+            </div>
           )}
         </div>
       </DialogContent>

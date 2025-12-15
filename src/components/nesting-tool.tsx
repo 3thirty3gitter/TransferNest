@@ -42,6 +42,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
   const [modalProgress, setModalProgress] = useState(0);
   const [currentGeneration, setCurrentGeneration] = useState(0);
   const [bestUtilization, setBestUtilization] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   
   const { addItem } = useCart();
   const { user } = useAuth();
@@ -70,6 +71,13 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
     setModalProgress(10);
     setBestUtilization(0);
     setCurrentGeneration(0);
+    setElapsedSeconds(0);
+    
+    // Track elapsed time for extended messages
+    const startTime = Date.now();
+    const timeInterval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
 
     // Give UI time to render the modal before starting heavy computation
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -122,6 +130,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       const result = await response.json();
       
       clearInterval(progressInterval);
+      clearInterval(timeInterval);
       
       setModalStage('optimizing');
       setModalProgress(95);
@@ -228,6 +237,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       <NestingProgressModal
         isOpen={isProcessing}
         stage={modalStage}
+        elapsedSeconds={elapsedSeconds}
         progress={modalProgress}
         currentGeneration={currentGeneration}
         totalGenerations={40}
