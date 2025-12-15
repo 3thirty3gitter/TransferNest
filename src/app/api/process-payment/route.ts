@@ -5,6 +5,7 @@ import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
 import { sendOrderConfirmationEmail, sendAdminNewOrderEmail } from '@/lib/email';
+import { recordDiscountUsage } from '@/lib/discounts';
 
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
@@ -29,7 +30,8 @@ export async function POST(request: NextRequest) {
       shippingRate,
       taxBreakdown,
       discountPercentage,
-      discountAmount
+      discountAmount,
+      promoCode
     } = await request.json();
 
     console.log('[PAYMENT API] Received request:', {
@@ -149,7 +151,8 @@ export async function POST(request: NextRequest) {
         shippingRate,
         taxBreakdown,
         discountPercentage,
-        discountAmount
+        discountAmount,
+        promoCode
       });
 
       console.log('[PAYMENT] Order created:', orderId);
@@ -159,6 +162,37 @@ export async function POST(request: NextRequest) {
       const createdOrder = await orderManager.getOrder(orderId);
       const orderNumber = createdOrder?.orderNumber;
       console.log('[PAYMENT] Order number:', orderNumber);
+
+      // Record promo code usage if a discount code was applied
+      if (promoCode && promoCode.discountId) {
+        try {
+          // Calculate the actual discount amount from the promo code
+          let promoDiscountAmount = 0;
+          const cartSubtotal = cartItems.reduce((sum: number, item: any) => 
+            sum + (item.pricing?.total || 0) * item.quantity, 0);
+          
+          if (promoCode.type === 'percentage') {
+            promoDiscountAmount = (cartSubtotal * promoCode.value) / 100;
+          } else if (promoCode.type === 'fixed') {
+            promoDiscountAmount = Math.min(promoCode.value, cartSubtotal);
+          } else if (promoCode.type === 'free_shipping' && shippingRate) {
+            promoDiscountAmount = parseFloat(shippingRate.rate) || 0;
+          }
+          
+          await recordDiscountUsage(
+            promoCode.discountId,
+            orderId,
+            orderNumber || orderId,
+            userId,
+            customerInfo.email,
+            promoDiscountAmount
+          );
+          console.log('[PAYMENT] Recorded promo code usage:', promoCode.code);
+        } catch (discountErr) {
+          console.error('[PAYMENT] Failed to record discount usage:', discountErr);
+          // Don't fail the payment if discount recording fails
+        }
+      }
 
       // Now link existing print files to the order
       console.log('[PAYMENT] Cart items for print files:', JSON.stringify(cartItems.map((item: any) => ({
@@ -359,6 +393,13 @@ async function saveOrder(orderData: any) {
       deliveryMethod: orderData.deliveryMethod,
       shippingRate: orderData.shippingRate,
       taxBreakdown: orderData.taxBreakdown,
+      promoCode: orderData.promoCode ? {
+        code: orderData.promoCode.code,
+        discountId: orderData.promoCode.discountId,
+        type: orderData.promoCode.type,
+        value: orderData.promoCode.value,
+        freeShipping: orderData.promoCode.freeShipping || false
+      } : null,
     });
 
     console.log('[SAVE ORDER] Print files count:', orderData.printFiles?.length || 0);

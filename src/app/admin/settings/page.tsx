@@ -35,9 +35,10 @@ import Link from 'next/link';
 
 import EmailTemplateManager from '@/components/admin/EmailTemplateManager';
 import SignatureManager from '@/components/admin/SignatureManager';
-import { Bell } from 'lucide-react';
+import DiscountManager from '@/components/admin/DiscountManager';
+import { Bell, Tag } from 'lucide-react';
 
-type TabType = 'company' | 'integrations' | 'social' | 'email' | 'notifications';
+type TabType = 'company' | 'integrations' | 'social' | 'email' | 'notifications' | 'discounts';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -321,6 +322,17 @@ export default function AdminSettingsPage() {
           >
             <Bell className="inline h-5 w-5 mr-2" />
             Notifications
+          </button>
+          <button
+            onClick={() => setActiveTab('discounts')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'discounts'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white/10 text-slate-300 hover:bg-white/20'
+            }`}
+          >
+            <Tag className="inline h-5 w-5 mr-2" />
+            Discounts
           </button>
         </div>
 
@@ -955,6 +967,11 @@ export default function AdminSettingsPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Discounts Tab */}
+        {activeTab === 'discounts' && (
+          <DiscountManager adminUserId={auth.currentUser?.uid || 'unknown'} />
         )}
 
         <SignatureManager 
