@@ -6,15 +6,24 @@ import { CartProvider } from '@/contexts/cart-context';
 
 export const metadata: Metadata = {
   title: 'DTF Wholesale Canada | Custom Direct to Film Transfers | Edmonton, Alberta',
-  description: 'Canadian owned and operated. Premium custom DTF transfers printed in Edmonton, Alberta. No minimums, same-day shipping, and 100% satisfaction guaranteed. The best direct to film transfers in Canada.',
+  description: 'Canadian owned and operated. Premium custom DTF transfers printed in Edmonton, Alberta. No minimums, fast turnaround, and 100% satisfaction guaranteed. The best direct to film transfers in Canada.',
   keywords: ['DTF transfers Canada', 'Direct to Film Edmonton', 'Custom DTF transfers', 'Wholesale DTF Canada', 'Edmonton t-shirt printing', 'DTF gang sheets Canada'],
+  metadataBase: new URL('https://dtf-wholesale.ca'),
   openGraph: {
     title: 'DTF Wholesale Canada | Premium Direct to Film Transfers',
     description: 'Canadian owned and operated in Edmonton, Alberta. High-quality DTF transfers with 100% satisfaction guaranteed.',
-    url: 'https://transfernest.ca',
+    url: 'https://dtf-wholesale.ca',
     siteName: 'DTF Wholesale Canada',
     locale: 'en_CA',
     type: 'website',
+    images: [
+      {
+        url: '/dtf-wholesale-candada-proudly-canadian.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'DTF Wholesale Canada - Proudly Canadian',
+      },
+    ],
   },
   icons: {
     icon: [
@@ -25,24 +34,23 @@ export const metadata: Metadata = {
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
-    other: [
-      { rel: 'android-chrome', url: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-      { rel: 'android-chrome', url: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
-    ],
+    shortcut: '/favicon.ico',
   },
+  manifest: '/site.webmanifest',
 };
 
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'LocalBusiness',
   name: 'DTF Wholesale Canada',
-  image: 'https://transfernest.ca/dtf-wholesale-candada-proudly-canadian.jpg',
+  image: 'https://dtf-wholesale.ca/dtf-wholesale-candada-proudly-canadian.jpg',
   description: 'Premium custom DTF transfers printed in Edmonton, Alberta. Canadian owned and operated.',
   address: {
     '@type': 'PostalAddress',
-    streetAddress: 'Edmonton',
+    streetAddress: '201-5415 Calgary Trail NW',
     addressLocality: 'Edmonton',
     addressRegion: 'AB',
+    postalCode: 'T6H 4J9',
     addressCountry: 'CA'
   },
   geo: {
@@ -50,8 +58,8 @@ const jsonLd = {
     latitude: 53.5461,
     longitude: -113.4938
   },
-  url: 'https://transfernest.ca',
-  telephone: '+15555555555', // Placeholder, should be updated if real number exists
+  url: 'https://dtf-wholesale.ca',
+  telephone: '+15874053005',
   priceRange: '$$',
   openingHoursSpecification: [
     {

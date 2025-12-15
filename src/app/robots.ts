@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: '/admin/',
     },
-    sitemap: 'https://transfernest.ca/sitemap.xml',
+    sitemap: 'https://dtf-wholesale.ca/sitemap.xml',
   };
 }
