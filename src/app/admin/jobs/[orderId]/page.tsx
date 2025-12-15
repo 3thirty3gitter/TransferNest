@@ -98,7 +98,15 @@ export default function JobDetailsPage() {
       });
       if (!response.ok) throw new Error('Failed to fetch order');
       
-      const data = await response.json();
+      const responseData = await response.json();
+      
+      // The API returns { success: true, order: {...} } or the order directly
+      const data = responseData.order || responseData;
+      
+      // Ensure the order has an id
+      if (!data.id && orderId) {
+        data.id = orderId;
+      }
       
       // Convert createdAt if it's a timestamp object or string
       if (data.createdAt) {
@@ -382,7 +390,7 @@ export default function JobDetailsPage() {
               Back to Orders
             </Link>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Job Details: {order.orderNumber || order.id.slice(0, 8)}
+              Job Details: {order.orderNumber || order.id?.slice(0, 8) || orderId?.slice(0, 8) || 'Unknown'}
             </h1>
             <p className="text-slate-400 mt-1">
               Order placed on {order.createdAt.toLocaleString()}
@@ -877,7 +885,7 @@ export default function JobDetailsPage() {
               Cancel Order
             </h3>
             <p className="text-slate-300 mb-4">
-              Are you sure you want to cancel order <span className="font-mono text-white">{order.orderNumber || order.id.slice(0, 8)}</span>?
+              Are you sure you want to cancel order <span className="font-mono text-white">{order.orderNumber || order.id?.slice(0, 8) || orderId?.slice(0, 8)}</span>?
             </p>
             <div className="mb-4">
               <label className="block text-sm text-slate-400 mb-2">Reason (optional)</label>
@@ -932,7 +940,7 @@ export default function JobDetailsPage() {
               </p>
             </div>
             <p className="text-slate-300 mb-4">
-              Are you sure you want to delete order <span className="font-mono text-white">{order.orderNumber || order.id.slice(0, 8)}</span>?
+              Are you sure you want to delete order <span className="font-mono text-white">{order.orderNumber || order.id?.slice(0, 8) || orderId?.slice(0, 8)}</span>?
             </p>
             <div className="flex gap-3">
               <button
