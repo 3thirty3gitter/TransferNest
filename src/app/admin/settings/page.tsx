@@ -36,9 +36,9 @@ import Link from 'next/link';
 import EmailTemplateManager from '@/components/admin/EmailTemplateManager';
 import SignatureManager from '@/components/admin/SignatureManager';
 import DiscountManager from '@/components/admin/DiscountManager';
-import { Bell, Tag, Wrench } from 'lucide-react';
+import { Bell, Tag } from 'lucide-react';
 
-type TabType = 'company' | 'integrations' | 'social' | 'email' | 'notifications' | 'discounts' | 'maintenance';
+type TabType = 'company' | 'integrations' | 'social' | 'email' | 'notifications' | 'discounts';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -47,8 +47,6 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [testingShipping, setTestingShipping] = useState(false);
   const [isSignatureManagerOpen, setIsSignatureManagerOpen] = useState(false);
-  const [fixingPaymentStatus, setFixingPaymentStatus] = useState(false);
-  const [paymentStatusResult, setPaymentStatusResult] = useState<{success: boolean; message: string; fixedOrders?: string[]} | null>(null);
   
   const router = useRouter();
   const { toast } = useToast();
@@ -335,17 +333,6 @@ export default function AdminSettingsPage() {
           >
             <Tag className="inline h-5 w-5 mr-2" />
             Discounts
-          </button>
-          <button
-            onClick={() => setActiveTab('maintenance')}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'maintenance'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white/10 text-slate-300 hover:bg-white/20'
-            }`}
-          >
-            <Wrench className="inline h-5 w-5 mr-2" />
-            Maintenance
           </button>
         </div>
 
@@ -985,61 +972,6 @@ export default function AdminSettingsPage() {
         {/* Discounts Tab */}
         {activeTab === 'discounts' && (
           <DiscountManager adminUserId={auth.currentUser?.uid || 'unknown'} />
-        )}
-
-        {/* Maintenance Tab */}
-        {activeTab === 'maintenance' && (
-          <div className="space-y-6">
-            <div className="glass-strong rounded-2xl p-6 border border-white/10">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <Wrench className="h-6 w-6" />
-                Database Maintenance
-              </h2>
-              
-              {/* Fix Payment Status */}
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <h3 className="text-lg font-semibold text-white mb-2">Fix Payment Status</h3>
-                <p className="text-slate-400 text-sm mb-4">
-                  Update all orders with a payment ID to show &quot;paid&quot; status. This fixes orders created before payment status tracking was added.
-                </p>
-                
-                {paymentStatusResult && (
-                  <div className={`mb-4 p-3 rounded-lg ${
-                    paymentStatusResult.success ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
-                  }`}>
-                    <p className="font-medium">{paymentStatusResult.message}</p>
-                    {paymentStatusResult.fixedOrders && paymentStatusResult.fixedOrders.length > 0 && (
-                      <p className="text-sm mt-1">Fixed orders: {paymentStatusResult.fixedOrders.join(', ')}</p>
-                    )}
-                  </div>
-                )}
-                
-                <button
-                  onClick={async () => {
-                    setFixingPaymentStatus(true);
-                    setPaymentStatusResult(null);
-                    try {
-                      const token = await auth.currentUser?.getIdToken();
-                      const response = await fetch('/api/admin/fix-payment-status', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                      });
-                      const result = await response.json();
-                      setPaymentStatusResult(result);
-                    } catch (error) {
-                      setPaymentStatusResult({ success: false, message: 'Failed to fix payment status' });
-                    } finally {
-                      setFixingPaymentStatus(false);
-                    }
-                  }}
-                  disabled={fixingPaymentStatus}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {fixingPaymentStatus ? 'Fixing...' : 'Fix Payment Status'}
-                </button>
-              </div>
-            </div>
-          </div>
         )}
 
         <SignatureManager 
