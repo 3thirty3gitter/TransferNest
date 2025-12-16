@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { verifyAdmin } from '@/lib/auth-admin';
+import { getFirestore } from '@/lib/firebase-admin';
+import { verifyAdminRequest } from '@/lib/admin-auth-server';
 
 /**
  * One-time migration API to fix payment status on existing orders
@@ -9,13 +9,14 @@ import { verifyAdmin } from '@/lib/auth-admin';
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyAdmin(request);
+    const authResult = await verifyAdminRequest(request);
     if (!authResult.authorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const db = getFirestore();
     // Find all orders that have a paymentId but no paymentStatus
-    const ordersRef = adminDb.collection('orders');
+    const ordersRef = db.collection('orders');
     const snapshot = await ordersRef.get();
     
     const ordersToFix: Array<{id: string; orderNumber: string; paymentId: string; currentStatus: string}> = [];
@@ -47,16 +48,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await verifyAdmin(request);
+    const authResult = await verifyAdminRequest(request);
     if (!authResult.authorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const db = getFirestore();
     // Find and fix all orders that have a paymentId but no paymentStatus
-    const ordersRef = adminDb.collection('orders');
+    const ordersRef = db.collection('orders');
     const snapshot = await ordersRef.get();
     
-    const batch = adminDb.batch();
+    const batch = db.batch();
     let fixedCount = 0;
     const fixedOrders: string[] = [];
     
