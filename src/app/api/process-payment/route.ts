@@ -379,6 +379,7 @@ async function saveOrder(orderData: any) {
       userId: orderData.userId,
       paymentId: orderData.paymentId,
       status: orderData.status,
+      paymentStatus: 'paid',  // Order is created after successful payment
       customerInfo: orderData.customerInfo,
       items: orderItems,
       subtotal,
