@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from '@/lib/firebase-admin';
 import { verifyAdminRequest } from '@/lib/admin-auth-server';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 /**
  * One-time migration API to fix payment status on existing orders
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     
     const ordersToFix: Array<{id: string; orderNumber: string; paymentId: string; currentStatus: string}> = [];
     
-    snapshot.forEach((doc) => {
+    snapshot.forEach((doc: QueryDocumentSnapshot) => {
       const data = doc.data();
       // If order has a paymentId but paymentStatus is missing or not 'paid'
       if (data.paymentId && data.paymentStatus !== 'paid' && data.paymentStatus !== 'refunded') {
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     let fixedCount = 0;
     const fixedOrders: string[] = [];
     
-    snapshot.forEach((doc) => {
+    snapshot.forEach((doc: QueryDocumentSnapshot) => {
       const data = doc.data();
       // If order has a paymentId but paymentStatus is missing or not set properly
       if (data.paymentId && data.paymentStatus !== 'paid' && data.paymentStatus !== 'refunded') {
