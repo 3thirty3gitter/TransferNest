@@ -1,16 +1,84 @@
 # Handoff Document - December 17, 2025
 
-## Session Focus: Error Telemetry Implementation
+## Session Summary
 
-### Problem Statement
-Customers were experiencing "failed to generate gangsheet errors" with no visibility into the root cause. Without error telemetry, debugging was impossible.
+This session addressed multiple issues:
+1. Error telemetry system for debugging customer gangsheet failures
+2. Abandoned cart tracking system (completed earlier, now deployed)
+3. Email notification fixes (internal admin emails weren't sending)
+4. UI fixes (header spacer, contact emails, nesting tool helper)
 
-### Investigation Findings
-1. **No error telemetry existed** - Customer errors were invisible to admins
-2. **@imgly/background-removal uses WebAssembly/SharedArrayBuffer** - Known browser compatibility issues (especially Safari/iOS)
-3. **Canvas operations can fail on memory-constrained devices**
-4. **No retry logic or detailed error information for customers**
-5. **Safari and iOS have known WebAssembly limitations**
+**Branch**: `feature/error-telemetry` → merged to `main` ✅  
+**Production Deployment**: ✅ Pushed to production
+
+---
+
+## Issues Fixed Today
+
+### 1. Internal Order Notification Emails Not Sending
+**Problem**: Admin wasn't receiving email notifications when orders were placed, but manual "Send Internal Notification" button worked.
+
+**Root Cause**: Email sending in `process-payment/route.ts` used a "fire and forget" async IIFE pattern:
+```javascript
+// BEFORE - Fire and forget (emails could timeout)
+(async () => {
+  await sendOrderConfirmationEmail(emailDetails);
+  await sendAdminNewOrderEmail(emailDetails);
+})();
+```
+
+**Fix**: Changed to properly awaited calls:
+```javascript
+// AFTER - Properly awaited
+await sendOrderConfirmationEmail(emailDetails);
+await sendAdminNewOrderEmail(emailDetails);
+```
+
+### 2. Admin Email Links Showing `undefined/admin/jobs/...`
+**Problem**: `NEXT_PUBLIC_APP_URL` wasn't available in the server context.
+
+**Fix**: Added fallback chain in `src/lib/email.ts`:
+```javascript
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.dtf-wholesale.ca');
+```
+
+### 3. Wrong Fallback Domain
+**Problem**: Fallback domain was `dtfwhiz.com` (unrelated site).
+
+**Fix**: Changed all fallback URLs to `https://www.dtf-wholesale.ca`.
+
+### 4. Admin Email Address
+**Problem**: Fallback admin email was `admin@dtfwholesale.ca`.
+
+**Fix**: Changed to `orders@dtf-wholesale.ca`.
+
+---
+
+## Features Deployed
+
+### Error Telemetry System
+- Captures customer errors with full browser context
+- Stores in Firestore `errorTelemetry` collection
+- API: `GET/POST /api/error-telemetry`
+
+### Abandoned Cart Tracking
+- Tracks carts with items that weren't checked out
+- Admin dashboard at `/admin/abandoned-carts`
+- Recovery email system (first, second, final reminders)
+- Firestore indexes deployed for queries
+
+### Nesting Tool Helper/Onboarding Wizard
+- 7-step onboarding for new users
+- Auto-shows on first visit
+- "Help Guide" button to reopen
+- localStorage persistence
+
+### UI Fixes
+- Header spacer on order confirmation page (h-20 → h-40)
+- "Made with love" text removed from order confirmation
+- All contact emails updated to `orders@dtf-wholesale.ca`
+- Footer email hardcoded to `orders@dtf-wholesale.ca`
 
 ---
 
@@ -153,24 +221,32 @@ Returns JSON array of errors with full context for debugging.
 2. **Check Firestore**: Verify errors appear in `errorTelemetry` collection
 3. **Test Safari/iOS**: If possible, test on Safari to see browser warnings
 4. **Monitor after deploy**: Watch for incoming errors to identify patterns
+5. **Place test order**: Verify admin receives email notification with correct link
 
 ---
 
-## Branch Status
+## Deployment Status
 
-- **Branch**: `feature/error-telemetry` (temporary)
+- **Branch**: `feature/error-telemetry` → merged to `main`
 - **Build Status**: ✅ Successful
-- **Deployment**: NOT DEPLOYED - Push to temp branch only
+- **Production**: ✅ Deployed (Dec 17, 2025)
+
+---
+
+## Environment Variables to Verify
+
+Ensure these are set in Vercel:
+- `NEXT_PUBLIC_ADMIN_EMAILS=orders@dtf-wholesale.ca`
+- `NEXT_PUBLIC_APP_URL=https://www.dtf-wholesale.ca` (optional, fallback exists)
 
 ---
 
 ## Next Steps
 
-1. **Deploy to staging/production** when ready
-2. **Create admin UI** to view error telemetry (optional)
-3. **Monitor errors** for patterns after deployment
+1. **Monitor errors** in Firestore `errorTelemetry` collection for patterns
+2. **Verify emails** are being received for new orders
+3. **Create admin UI** to view error telemetry (optional future enhancement)
 4. **Consider**: Adding retry logic for transient failures
-5. **Resume**: Abandoned cart system was ~60% complete before this urgent work
 
 ---
 
@@ -182,11 +258,29 @@ New Files:
   src/app/api/error-telemetry/route.ts
   src/components/error-boundary.tsx
   src/components/global-error-handler.tsx
+  src/components/nesting-tool-helper.tsx
+  src/lib/abandoned-carts.ts
+  src/hooks/use-abandoned-cart-tracking.ts
+  src/app/admin/abandoned-carts/page.tsx
+  src/app/api/abandoned-carts/track/route.ts
+  src/app/api/admin/abandoned-carts/*.ts
 
 Modified Files:
-  src/components/nesting-tool.tsx
-  src/components/image-manager.tsx
-  src/app/layout.tsx
-  src/app/nesting-tool-17/page.tsx
-  src/app/admin/nesting-tool/page.tsx
+  src/lib/email.ts (email fixes, fallback domain)
+  src/app/api/process-payment/route.ts (awaited email sending)
+  src/components/nesting-tool.tsx (error telemetry + helper)
+  src/components/image-manager.tsx (error telemetry)
+  src/components/layout/footer.tsx (hardcoded email)
+  src/app/layout.tsx (GlobalErrorHandler)
+  src/app/nesting-tool-17/page.tsx (error boundary + wizard param)
+  src/app/order-confirmation/[orderId]/page.tsx (header spacer, removed "Made with love")
+  firestore.indexes.json (abandoned cart indexes)
 ```
+
+---
+
+## General Inquiry Emails Note
+
+There is no contact form API in the codebase. The site uses direct `mailto:orders@dtf-wholesale.ca` links. If general inquiry emails aren't being received, check:
+1. Microsoft 365 inbox/spam for `orders@dtf-wholesale.ca`
+2. Email forwarding/filtering rules
