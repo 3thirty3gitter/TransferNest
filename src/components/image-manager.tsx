@@ -10,6 +10,7 @@ import { ImageCard } from './image-card';
 import { uploadImage } from '@/services/storage';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { reportError, formatErrorForUser, getBrowserInfo, detectBrowserIssues } from '@/lib/error-telemetry';
 import WizardTrigger from './wizard-trigger';
 import {
   AlertDialog,
@@ -123,9 +124,23 @@ export default function ImageManager({
           newImages.push(managedImage);
         } catch (error) {
           console.error('Error processing file:', file.name, error);
+          
+          // Report error with context
+          reportError(error as Error, {
+            component: 'ImageManager',
+            action: 'upload-single',
+            userId: user?.uid,
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+            },
+          });
+          
+          const userError = formatErrorForUser(error as Error, 'image upload');
           toast({
-            title: "Upload Failed",
-            description: `Failed to upload ${file.name}. Please try again.`,
+            title: userError.title,
+            description: `${file.name}: ${userError.description}`,
             variant: "destructive",
           });
         }
@@ -141,9 +156,19 @@ export default function ImageManager({
       
     } catch (error) {
       console.error('Upload error:', error);
+      
+      // Report error with context
+      reportError(error as Error, {
+        component: 'ImageManager',
+        action: 'upload-batch',
+        userId: user?.uid,
+        imageCount: files?.length || 0,
+      });
+      
+      const userError = formatErrorForUser(error as Error, 'image upload');
       toast({
-        title: "Upload Error",
-        description: "An unexpected error occurred during upload.",
+        title: userError.title,
+        description: userError.description,
         variant: "destructive",
       });
     } finally {
@@ -353,9 +378,38 @@ export default function ImageManager({
 
     } catch (error) {
       console.error('Background removal error:', error);
+      
+      // Report error with browser context - this is often a compatibility issue
+      const browserInfo = getBrowserInfo();
+      const browserIssues = detectBrowserIssues(browserInfo);
+      
+      reportError(error as Error, {
+        component: 'ImageManager',
+        action: 'background-removal',
+        userId: user?.uid,
+        metadata: {
+          imageId: id,
+          browserIssues,
+          webglSupported: !!browserInfo.webgl,
+          memory: browserInfo.memory,
+        },
+      });
+      
+      // Show user-friendly error with browser-specific advice
+      let description = error instanceof Error ? error.message : "An unexpected error occurred.";
+      
+      // Check for common browser compatibility issues
+      if (browserIssues.length > 0) {
+        description = `${browserIssues[0]}. Try using Chrome or Firefox for best results.`;
+      } else if (description.includes('wasm') || description.includes('WebAssembly')) {
+        description = "Your browser doesn't fully support this feature. Try using Chrome or Firefox.";
+      } else if (description.includes('memory') || description.includes('heap')) {
+        description = "Not enough memory. Try closing other tabs or using a smaller image.";
+      }
+      
       toast({
         title: "Background Removal Failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+        description,
         variant: "destructive",
       });
     } finally {

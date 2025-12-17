@@ -23,8 +23,8 @@ export default function Footer() {
     loadSettings();
   }, []);
 
-  // Default values if settings not loaded yet or missing
-  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+  // Always use the official contact email
+  const email = 'orders@dtf-wholesale.ca';
   const phone = settings?.companyInfo?.phone || '587-405-3005';
   const address = settings?.companyInfo?.address ? (
     <>

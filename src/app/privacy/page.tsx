@@ -22,7 +22,7 @@ export default function PrivacyPolicy() {
     loadSettings();
   }, []);
 
-  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+  const email = settings?.companyInfo?.email || 'orders@dtf-wholesale.ca';
 
   return (
     <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">

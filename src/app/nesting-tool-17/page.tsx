@@ -3,6 +3,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import NestingTool from '@/components/nesting-tool';
 import { Suspense } from 'react';
+import { NestingErrorBoundary } from '@/components/error-boundary';
 
 function NestingToolFallback() {
   return (
@@ -28,9 +29,11 @@ export default async function NestingTool17Page({
       {/* Spacer for fixed header */}
       <div className="h-40"></div>
       <main className="flex-1">
-        <Suspense fallback={<NestingToolFallback/>}>
-          <NestingTool sheetWidth={17} openWizard={openWizard} />
-        </Suspense>
+        <NestingErrorBoundary>
+          <Suspense fallback={<NestingToolFallback/>}>
+            <NestingTool sheetWidth={17} openWizard={openWizard} />
+          </Suspense>
+        </NestingErrorBoundary>
       </main>
       <Footer />
     </div>

@@ -22,7 +22,7 @@ export default function TermsOfService() {
     loadSettings();
   }, []);
 
-  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+  const email = settings?.companyInfo?.email || 'orders@dtf-wholesale.ca';
   const phone = settings?.companyInfo?.phone || '587-405-3005';
   const address = settings?.companyInfo?.address ? (
     `${settings.companyInfo.address.street}, ${settings.companyInfo.address.city}, ${settings.companyInfo.address.state}`

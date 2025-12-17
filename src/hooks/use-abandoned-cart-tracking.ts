@@ -1,0 +1,201 @@
+'use client';
+
+import { useEffect, useRef, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { useCart } from '@/contexts/cart-context';
+import type { AbandonmentStage, AbandonedCartItem } from '@/lib/abandoned-carts';
+
+/**
+ * Hook to track user sessions for abandoned cart recovery
+ * 
+ * Automatically tracks:
+ * - Session ID generation
+ * - Cart state changes
+ * - Stage progression through the funnel
+ */
+
+// Generate or retrieve session ID
+function getSessionId(): string {
+  if (typeof window === 'undefined') return '';
+  
+  let sessionId = sessionStorage.getItem('dtf_session_id');
+  if (!sessionId) {
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('dtf_session_id', sessionId);
+  }
+  return sessionId;
+}
+
+export function useAbandonedCartTracking() {
+  const { user } = useAuth();
+  const { items, totalPrice } = useCart();
+  const lastTrackedRef = useRef<string>('');
+  const sessionIdRef = useRef<string>('');
+
+  // Initialize session ID on mount
+  useEffect(() => {
+    sessionIdRef.current = getSessionId();
+  }, []);
+
+  // Track cart state
+  const trackCart = useCallback(async (
+    stage: AbandonmentStage,
+    additionalData?: {
+      email?: string;
+      customerName?: string;
+      phone?: string;
+      stageDetails?: string;
+    }
+  ) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+
+    // Convert cart items to abandoned cart items
+    const abandonedItems: AbandonedCartItem[] = items.map(item => ({
+      name: item.name,
+      sheetSize: item.sheetSize,
+      sheetWidth: item.sheetWidth || parseInt(item.sheetSize),
+      sheetLength: item.sheetLength || item.layout?.sheetHeight || 0,
+      imageCount: item.images?.length || 0,
+      estimatedPrice: item.pricing?.total || 0,
+      thumbnailUrl: item.thumbnailUrl,
+      placedItemsCount: item.placedItems?.length || item.layout?.totalCopies || 0,
+      utilization: item.layout?.utilization,
+    }));
+
+    // Create tracking payload
+    const payload = {
+      action: 'track',
+      sessionId,
+      userId: user?.uid,
+      email: user?.email || additionalData?.email,
+      customerName: additionalData?.customerName,
+      phone: additionalData?.phone,
+      items: abandonedItems,
+      estimatedTotal: totalPrice,
+      stage,
+      stageDetails: additionalData?.stageDetails,
+      referrer: typeof document !== 'undefined' ? document.referrer : undefined,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+    };
+
+    // Avoid duplicate tracking
+    const payloadKey = JSON.stringify({ stage, itemCount: items.length, total: totalPrice });
+    if (payloadKey === lastTrackedRef.current) return;
+    lastTrackedRef.current = payloadKey;
+
+    try {
+      await fetch('/api/abandoned-carts/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.error('[ABANDONED_CART] Tracking failed:', error);
+    }
+  }, [items, totalPrice, user]);
+
+  // Update just the stage
+  const updateStage = useCallback(async (
+    stage: AbandonmentStage,
+    details?: string
+  ) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+
+    try {
+      await fetch('/api/abandoned-carts/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'stage',
+          sessionId,
+          stage,
+          details,
+        }),
+      });
+    } catch (error) {
+      console.error('[ABANDONED_CART] Stage update failed:', error);
+    }
+  }, []);
+
+  // Mark as recovered when order completes
+  const markRecovered = useCallback(async (orderId: string) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+
+    try {
+      await fetch('/api/abandoned-carts/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'recovered',
+          sessionId,
+          orderId,
+        }),
+      });
+    } catch (error) {
+      console.error('[ABANDONED_CART] Recovery marking failed:', error);
+    }
+  }, []);
+
+  // Get current session ID
+  const getSession = useCallback(() => sessionIdRef.current, []);
+
+  return {
+    trackCart,
+    updateStage,
+    markRecovered,
+    getSessionId: getSession,
+  };
+}
+
+/**
+ * Convenience functions for specific tracking points
+ */
+export function useNestingTracking() {
+  const { trackCart, updateStage } = useAbandonedCartTracking();
+
+  // Call when user generates a gang sheet
+  const trackNestingComplete = useCallback(() => {
+    trackCart('nesting');
+  }, [trackCart]);
+
+  return { trackNestingComplete };
+}
+
+export function useCartTracking() {
+  const { trackCart, updateStage } = useAbandonedCartTracking();
+
+  // Call when user adds item to cart
+  const trackAddToCart = useCallback(() => {
+    trackCart('cart');
+  }, [trackCart]);
+
+  return { trackAddToCart };
+}
+
+export function useCheckoutTracking() {
+  const { trackCart, updateStage, markRecovered } = useAbandonedCartTracking();
+
+  // Call when user starts checkout
+  const trackCheckoutStart = useCallback((customerInfo?: {
+    email?: string;
+    customerName?: string;
+    phone?: string;
+  }) => {
+    trackCart('checkout', customerInfo);
+  }, [trackCart]);
+
+  // Call when payment fails
+  const trackPaymentFailed = useCallback((reason?: string) => {
+    updateStage('payment_failed', reason);
+  }, [updateStage]);
+
+  // Call when order completes successfully
+  const trackOrderComplete = useCallback((orderId: string) => {
+    markRecovered(orderId);
+  }, [markRecovered]);
+
+  return { trackCheckoutStart, trackPaymentFailed, trackOrderComplete };
+}

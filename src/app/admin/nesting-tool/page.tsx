@@ -8,6 +8,7 @@ import ImageManager from '@/components/image-manager';
 import NestingProgressModal from '@/components/nesting-progress-modal';
 import { Download, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { reportError, formatErrorForUser } from '@/lib/error-telemetry';
 
 export default function AdminNestingTool() {
   const router = useRouter();
@@ -115,6 +116,17 @@ export default function AdminNestingTool() {
       setNestingResult(result);
     } catch (error) {
       console.error('Nesting failed:', error);
+      // Report error with telemetry
+      reportError(error instanceof Error ? error : new Error(String(error)), {
+        component: 'AdminNestingTool',
+        action: 'performNesting',
+        metadata: {
+          imageCount: images.length,
+          sheetWidth,
+          isAdmin: true
+        }
+      });
+      alert(formatErrorForUser(error instanceof Error ? error : new Error(String(error))));
     } finally {
       setIsProcessing(false);
     }

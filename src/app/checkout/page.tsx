@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { CreditCard, Lock, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useCheckoutTracking } from '@/hooks/use-abandoned-cart-tracking';
 import { initSquarePayments, squareConfig } from '@/lib/square';
 import { calculateTax, formatTaxBreakdown } from '@/lib/tax-calculator';
 import { db } from '@/lib/firebase';
@@ -23,6 +24,7 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { trackCheckoutStart, trackPaymentFailed, trackOrderComplete } = useCheckoutTracking();
   
   const [isLoading, setIsLoading] = useState(false);
   const [cardPayment, setCardPayment] = useState<any>(null);
@@ -87,6 +89,11 @@ export default function CheckoutPage() {
     if (items.length === 0 && !paymentComplete) {
       router.push('/cart');
       return;
+    }
+    
+    // Track checkout start for abandoned cart recovery
+    if (user && items.length > 0 && !paymentComplete) {
+      trackCheckoutStart();
     }
 
     // Load customer profile from Firestore
@@ -227,12 +234,20 @@ export default function CheckoutPage() {
       setSelectedShippingRate(null);
 
       try {
+        // Send only minimal data needed for shipping calculation
+        const shippingItems = items.map(item => ({
+          id: item.id,
+          sheetWidth: item.sheetWidth,
+          sheetLength: item.sheetLength,
+          quantity: item.quantity || 1
+        }));
+        
         const response = await fetch('/api/shipping/rates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             address: addressToUse,
-            items: items
+            items: shippingItems
           })
         });
 
@@ -444,6 +459,30 @@ export default function CheckoutPage() {
         discountAmount
       });
 
+      // Prepare cart items - keep essential data for print generation
+      // placedItems are needed for gang sheet generation (contain image URLs and positions)
+      const cleanedCartItems = items.map(item => ({
+        id: item.id,
+        name: item.name,
+        sheetSize: item.sheetSize,
+        sheetWidth: item.sheetWidth,
+        sheetLength: item.sheetLength,
+        quantity: item.quantity,
+        pricing: item.pricing,
+        layout: item.layout ? {
+          utilization: item.layout.utilization,
+          totalCopies: item.layout.totalCopies,
+          sheetWidth: item.layout.sheetWidth,
+          sheetHeight: item.layout.sheetHeight,
+          positions: item.layout.positions // Keep positions for layout info
+        } : undefined,
+        thumbnailUrl: item.thumbnailUrl,
+        // Keep placedItems - required for print generation!
+        placedItems: item.placedItems,
+        // Strip images array (large ManagedImage objects with potential base64)
+        imageCount: item.images?.length || 0
+      }));
+      
       // Send payment to your backend
       const response = await fetch('/api/process-payment', {
         method: 'POST',
@@ -458,7 +497,7 @@ export default function CheckoutPage() {
           shippingAddress: deliveryMethod === 'shipping' && useShippingAddress ? shippingAddress : customerInfo,
           deliveryMethod,
           useShippingAddress,
-          cartItems: items,
+          cartItems: cleanedCartItems,
           userId: user.uid,
           taxAmount: taxCalculation.total,
           taxRate: taxCalculation.rate,
@@ -488,6 +527,9 @@ export default function CheckoutPage() {
         // Mark payment as complete to prevent cart redirect race condition
         setPaymentComplete(true);
         
+        // Track order completion for abandoned cart recovery
+        trackOrderComplete(paymentResult.orderId);
+        
         // Clear cart and redirect to success page
         clearCart();
         toast({
@@ -502,6 +544,10 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error('Payment error:', error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred processing your payment. Please try again.";
+      
+      // Track payment failure for abandoned cart recovery
+      trackPaymentFailed(errorMessage);
+      
       toast({
         title: "Payment Failed",
         description: errorMessage,

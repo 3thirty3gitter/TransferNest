@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/contexts/auth-context';
 import { CartProvider } from '@/contexts/cart-context';
+import { GlobalErrorHandler } from '@/components/global-error-handler';
 
 export const metadata: Metadata = {
   title: 'DTF Wholesale Canada | Custom Direct to Film Transfers | Edmonton, Alberta',
@@ -107,6 +108,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
+        <GlobalErrorHandler />
         <AuthProvider>
           <CartProvider>
             {children}

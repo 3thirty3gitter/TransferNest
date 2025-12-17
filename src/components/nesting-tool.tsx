@@ -12,8 +12,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { ShoppingCart, Download, Info } from 'lucide-react';
+import { useNestingTracking, useCartTracking } from '@/hooks/use-abandoned-cart-tracking';
+import { reportError, formatErrorForUser, getBrowserInfo, detectBrowserIssues } from '@/lib/error-telemetry';
+import { ShoppingCart, Download, Info, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
+import { NestingToolHelper, NestingToolHelperButton } from './nesting-tool-helper';
 
 // Maximum usable width for gang sheets (17" - 0.5" margins = 16.5")
 const MAX_IMAGE_WIDTH_INCHES = 16.5;
@@ -47,6 +50,11 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
   const { addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { trackNestingComplete } = useNestingTracking();
+  const { trackAddToCart } = useCartTracking();
+  
+  // Helper modal state
+  const [showHelper, setShowHelper] = useState(false);
 
   // Check if any images are too wide for the sheet
   const oversizedImages = images.filter(img => img.width > MAX_IMAGE_WIDTH_INCHES);
@@ -128,10 +136,16 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       });
 
       if (!response.ok) {
-        throw new Error('Nesting API failed');
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Nesting API failed (${response.status}): ${errorText}`);
       }
 
       const result = await response.json();
+      
+      // Validate result has required fields
+      if (!result || !result.placedItems || !Array.isArray(result.placedItems)) {
+        throw new Error('Invalid nesting result - missing placedItems');
+      }
       
       clearInterval(progressInterval);
       clearInterval(timeInterval);
@@ -156,11 +170,37 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       await new Promise(resolve => setTimeout(resolve, 1500)); // Show completion
       
       setNestingResult(result);
+      
+      // Track for abandoned cart recovery
+      trackNestingComplete();
     } catch (error) {
       console.error('Nesting failed:', error);
+      
+      // Report error with full context
+      const totalCopies = images.reduce((sum, img) => sum + img.copies, 0);
+      reportError(error as Error, {
+        component: 'NestingTool',
+        action: 'nesting',
+        userId: user?.uid,
+        imageCount: images.length,
+        sheetWidth,
+        totalCopies,
+        metadata: {
+          imageSizes: images.map(img => `${img.width}x${img.height}`),
+          copies: images.map(img => img.copies),
+        },
+      });
+
+      // Show user-friendly error with browser compatibility warnings
+      const browserInfo = getBrowserInfo();
+      const browserIssues = detectBrowserIssues(browserInfo);
+      const userError = formatErrorForUser(error as Error, 'gang sheet generation');
+      
       toast({
-        title: "Nesting Failed",
-        description: "An error occurred while processing your layout.",
+        title: userError.title,
+        description: browserIssues.length > 0 
+          ? `${userError.description} Note: ${browserIssues[0]}`
+          : userError.description,
         variant: "destructive"
       });
     } finally {
@@ -229,6 +269,9 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
 
     addItem(cartItem);
     
+    // Track cart addition for abandoned cart recovery
+    trackAddToCart();
+    
     toast({
       title: "Added to Cart!",
       description: `Your ${sheetSizeStr}" DTF sheet layout has been added to cart.`,
@@ -237,6 +280,12 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Onboarding Helper */}
+      <NestingToolHelper 
+        forceOpen={showHelper} 
+        onClose={() => setShowHelper(false)} 
+      />
+      
       {/* Progress Modal */}
       <NestingProgressModal
         isOpen={isProcessing}
@@ -254,7 +303,10 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
         {/* Left Panel - Controls (Sticky) */}
         <div className="lg:w-1/3 space-y-6 lg:sticky lg:top-6 lg:h-fit">
           <div className="bg-card p-4 rounded-lg border">
-            <h2 className="text-xl font-semibold mb-4">Nesting Configuration</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Nesting Configuration</h2>
+              <NestingToolHelperButton onClick={() => setShowHelper(true)} />
+            </div>
 
             {/* Sheet Width Selector */}
             <div className="mb-4">

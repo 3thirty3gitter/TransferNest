@@ -6,6 +6,7 @@ import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
 import { sendOrderConfirmationEmail, sendAdminNewOrderEmail } from '@/lib/email';
 import { recordDiscountUsage } from '@/lib/discounts';
+import { markCartAsRecoveredByUser } from '@/lib/abandoned-carts';
 
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
@@ -244,13 +245,30 @@ export async function POST(request: NextRequest) {
         shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined
       };
 
-      Promise.all([
-        sendOrderConfirmationEmail(emailDetails),
-        sendAdminNewOrderEmail(emailDetails)
-      ]).then(results => {
-        console.log('[EMAIL] Email sending results:', results);
+      // Send emails - await them to ensure they complete before response
+      // This ensures any errors are logged properly
+      try {
+        console.log('[EMAIL] Starting to send customer confirmation email...');
+        const customerResult = await sendOrderConfirmationEmail(emailDetails);
+        console.log('[EMAIL] Customer email result:', customerResult);
+      } catch (customerErr) {
+        console.error('[EMAIL] Failed to send customer confirmation:', customerErr);
+      }
+      
+      try {
+        console.log('[EMAIL] Starting to send admin notification email...');
+        console.log('[EMAIL] Admin emails env var:', process.env.NEXT_PUBLIC_ADMIN_EMAILS || '(not set - using fallback)');
+        const adminResult = await sendAdminNewOrderEmail(emailDetails);
+        console.log('[EMAIL] Admin email result:', JSON.stringify(adminResult));
+      } catch (adminErr) {
+        console.error('[EMAIL] Failed to send admin notification:', adminErr);
+      }
+
+      // Mark any abandoned carts as recovered for this user
+      markCartAsRecoveredByUser(userId, orderId).then(() => {
+        console.log('[ABANDONED CART] Marked abandoned cart as recovered for user:', userId);
       }).catch(err => {
-        console.error('[EMAIL] Failed to send emails:', err);
+        console.error('[ABANDONED CART] Failed to mark cart as recovered:', err);
       });
 
       return NextResponse.json({
