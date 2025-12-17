@@ -245,25 +245,24 @@ export async function POST(request: NextRequest) {
         shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined
       };
 
-      // Send emails - process sequentially with better error logging
-      (async () => {
-        try {
-          console.log('[EMAIL] Starting to send customer confirmation email...');
-          const customerResult = await sendOrderConfirmationEmail(emailDetails);
-          console.log('[EMAIL] Customer email result:', customerResult);
-        } catch (customerErr) {
-          console.error('[EMAIL] Failed to send customer confirmation:', customerErr);
-        }
-        
-        try {
-          console.log('[EMAIL] Starting to send admin notification email...');
-          console.log('[EMAIL] Admin emails from env:', process.env.NEXT_PUBLIC_ADMIN_EMAILS);
-          const adminResult = await sendAdminNewOrderEmail(emailDetails);
-          console.log('[EMAIL] Admin email result:', adminResult);
-        } catch (adminErr) {
-          console.error('[EMAIL] Failed to send admin notification:', adminErr);
-        }
-      })();
+      // Send emails - await them to ensure they complete before response
+      // This ensures any errors are logged properly
+      try {
+        console.log('[EMAIL] Starting to send customer confirmation email...');
+        const customerResult = await sendOrderConfirmationEmail(emailDetails);
+        console.log('[EMAIL] Customer email result:', customerResult);
+      } catch (customerErr) {
+        console.error('[EMAIL] Failed to send customer confirmation:', customerErr);
+      }
+      
+      try {
+        console.log('[EMAIL] Starting to send admin notification email...');
+        console.log('[EMAIL] Admin emails env var:', process.env.NEXT_PUBLIC_ADMIN_EMAILS || '(not set - using fallback)');
+        const adminResult = await sendAdminNewOrderEmail(emailDetails);
+        console.log('[EMAIL] Admin email result:', JSON.stringify(adminResult));
+      } catch (adminErr) {
+        console.error('[EMAIL] Failed to send admin notification:', adminErr);
+      }
 
       // Mark any abandoned carts as recovered for this user
       markCartAsRecoveredByUser(userId, orderId).then(() => {

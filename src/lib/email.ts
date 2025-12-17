@@ -98,7 +98,7 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
     ? [recipientOverride]
     : (process.env.NEXT_PUBLIC_ADMIN_EMAILS 
         ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',') 
-        : ['admin@dtfwholesale.ca']); // Fallback
+        : ['orders@dtf-wholesale.ca']); // Fallback
 
   console.log('[EMAIL] Admin emails resolved to:', adminEmails);
 
