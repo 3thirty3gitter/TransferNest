@@ -245,14 +245,25 @@ export async function POST(request: NextRequest) {
         shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined
       };
 
-      Promise.all([
-        sendOrderConfirmationEmail(emailDetails),
-        sendAdminNewOrderEmail(emailDetails)
-      ]).then(results => {
-        console.log('[EMAIL] Email sending results:', results);
-      }).catch(err => {
-        console.error('[EMAIL] Failed to send emails:', err);
-      });
+      // Send emails - process sequentially with better error logging
+      (async () => {
+        try {
+          console.log('[EMAIL] Starting to send customer confirmation email...');
+          const customerResult = await sendOrderConfirmationEmail(emailDetails);
+          console.log('[EMAIL] Customer email result:', customerResult);
+        } catch (customerErr) {
+          console.error('[EMAIL] Failed to send customer confirmation:', customerErr);
+        }
+        
+        try {
+          console.log('[EMAIL] Starting to send admin notification email...');
+          console.log('[EMAIL] Admin emails from env:', process.env.NEXT_PUBLIC_ADMIN_EMAILS);
+          const adminResult = await sendAdminNewOrderEmail(emailDetails);
+          console.log('[EMAIL] Admin email result:', adminResult);
+        } catch (adminErr) {
+          console.error('[EMAIL] Failed to send admin notification:', adminErr);
+        }
+      })();
 
       // Mark any abandoned carts as recovered for this user
       markCartAsRecoveredByUser(userId, orderId).then(() => {

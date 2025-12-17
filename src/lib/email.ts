@@ -87,11 +87,20 @@ export async function sendOrderConfirmationEmail(details: EmailOrderDetails) {
 }
 
 export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipientOverride?: string) {
+  console.log('[EMAIL] sendAdminNewOrderEmail called with:', {
+    orderId: details.orderId,
+    orderNumber: details.orderNumber,
+    customerName: details.customerName,
+    recipientOverride
+  });
+  
   const adminEmails = recipientOverride 
     ? [recipientOverride]
     : (process.env.NEXT_PUBLIC_ADMIN_EMAILS 
         ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',') 
         : ['admin@dtfwholesale.ca']); // Fallback
+
+  console.log('[EMAIL] Admin emails resolved to:', adminEmails);
 
   try {
     const { orderId, orderNumber, customerName, total } = details;
