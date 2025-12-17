@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { CreditCard, Lock, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useCheckoutTracking } from '@/hooks/use-abandoned-cart-tracking';
 import { initSquarePayments, squareConfig } from '@/lib/square';
 import { calculateTax, formatTaxBreakdown } from '@/lib/tax-calculator';
 import { db } from '@/lib/firebase';
@@ -23,6 +24,7 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { trackCheckoutStart, trackPaymentFailed, trackOrderComplete } = useCheckoutTracking();
   
   const [isLoading, setIsLoading] = useState(false);
   const [cardPayment, setCardPayment] = useState<any>(null);
@@ -87,6 +89,11 @@ export default function CheckoutPage() {
     if (items.length === 0 && !paymentComplete) {
       router.push('/cart');
       return;
+    }
+    
+    // Track checkout start for abandoned cart recovery
+    if (user && items.length > 0 && !paymentComplete) {
+      trackCheckoutStart();
     }
 
     // Load customer profile from Firestore
@@ -488,6 +495,9 @@ export default function CheckoutPage() {
         // Mark payment as complete to prevent cart redirect race condition
         setPaymentComplete(true);
         
+        // Track order completion for abandoned cart recovery
+        trackOrderComplete(paymentResult.orderId);
+        
         // Clear cart and redirect to success page
         clearCart();
         toast({
@@ -502,6 +512,10 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error('Payment error:', error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred processing your payment. Please try again.";
+      
+      // Track payment failure for abandoned cart recovery
+      trackPaymentFailed(errorMessage);
+      
       toast({
         title: "Payment Failed",
         description: errorMessage,

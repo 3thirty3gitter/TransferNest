@@ -6,6 +6,7 @@ import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
 import { sendOrderConfirmationEmail, sendAdminNewOrderEmail } from '@/lib/email';
 import { recordDiscountUsage } from '@/lib/discounts';
+import { markCartAsRecoveredByUser } from '@/lib/abandoned-carts';
 
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
@@ -251,6 +252,13 @@ export async function POST(request: NextRequest) {
         console.log('[EMAIL] Email sending results:', results);
       }).catch(err => {
         console.error('[EMAIL] Failed to send emails:', err);
+      });
+
+      // Mark any abandoned carts as recovered for this user
+      markCartAsRecoveredByUser(userId, orderId).then(() => {
+        console.log('[ABANDONED CART] Marked abandoned cart as recovered for user:', userId);
+      }).catch(err => {
+        console.error('[ABANDONED CART] Failed to mark cart as recovered:', err);
       });
 
       return NextResponse.json({

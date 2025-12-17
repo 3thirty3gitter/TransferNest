@@ -220,3 +220,158 @@ export async function sendOrderReadyForPickupEmail(details: EmailOrderDetails) {
     return { success: false, error };
   }
 }
+
+// Abandoned Cart Recovery Email
+export interface AbandonedCartEmailDetails {
+  email: string;
+  customerName?: string;
+  items: any[];
+  estimatedTotal: number;
+  emailType: 'first' | 'second' | 'final';
+  cartId: string;
+}
+
+export async function sendAbandonedCartRecoveryEmail(details: AbandonedCartEmailDetails) {
+  try {
+    const { email, customerName, items, estimatedTotal, emailType, cartId } = details;
+    const name = customerName || 'Valued Customer';
+    
+    // Different messaging based on email type
+    const emailContent = getAbandonedCartEmailContent(emailType, name, items, estimatedTotal);
+    
+    // Try to use template, fallback to built-in
+    const template = await getProcessedTemplate(`abandoned_cart_${emailType}`, {
+      customerName: name,
+      itemCount: items?.length || 0,
+      estimatedTotal: estimatedTotal.toFixed(2),
+      cartId
+    });
+
+    const html = template?.html || emailContent.html;
+    const subject = template?.subject || emailContent.subject;
+
+    await sendEmail(email, subject, html);
+    
+    console.log(`[EMAIL] Abandoned cart ${emailType} email sent to:`, email);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending abandoned cart email:', error);
+    return { success: false, error };
+  }
+}
+
+function getAbandonedCartEmailContent(
+  emailType: 'first' | 'second' | 'final',
+  customerName: string,
+  items: any[],
+  estimatedTotal: number
+) {
+  const itemsHtml = items && items.length > 0 
+    ? `
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        ${items.map(item => `
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 12px;">
+              <strong>${item.name || 'Gang Sheet'}</strong><br/>
+              <span style="color: #6b7280; font-size: 14px;">
+                ${item.sheetSize || ''}" sheet • ${item.placedItemsCount || 0} items
+              </span>
+            </td>
+            <td style="padding: 12px; text-align: right;">
+              $${(item.estimatedPrice || 0).toFixed(2)}
+            </td>
+          </tr>
+        `).join('')}
+        <tr>
+          <td style="padding: 12px; font-weight: bold;">Total</td>
+          <td style="padding: 12px; text-align: right; font-weight: bold;">
+            $${estimatedTotal.toFixed(2)}
+          </td>
+        </tr>
+      </table>
+    `
+    : '';
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://dtfwhiz.com';
+  
+  const contents = {
+    first: {
+      subject: 'Did you forget something? Your gang sheet is waiting!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #1e293b;">Hi ${customerName}! 👋</h1>
+          <p style="font-size: 16px; color: #334155;">
+            We noticed you created an amazing gang sheet but didn't complete your order. 
+            Don't worry - your design is still waiting for you!
+          </p>
+          ${itemsHtml}
+          <p style="font-size: 16px; color: #334155;">
+            Ready to finish your order? Click below to pick up where you left off.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${baseUrl}/cart" style="background-color: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Complete My Order
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #64748b;">
+            Questions? Reply to this email or contact us at support@dtfwhiz.com
+          </p>
+        </div>
+      `
+    },
+    second: {
+      subject: 'Your gang sheet misses you! 🎨',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #1e293b;">Still thinking it over, ${customerName}?</h1>
+          <p style="font-size: 16px; color: #334155;">
+            Your custom gang sheet is still saved and ready to print. 
+            We don't want you to miss out on your awesome design!
+          </p>
+          ${itemsHtml}
+          <p style="font-size: 16px; color: #334155;">
+            <strong>Need help?</strong> Our team is here to answer any questions about 
+            DTF printing, sizing, or anything else.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${baseUrl}/cart" style="background-color: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Return to My Cart
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #64748b;">
+            <strong>Fast Turnaround:</strong> Orders placed by 2pm ship same day!
+          </p>
+        </div>
+      `
+    },
+    final: {
+      subject: 'Last chance! Your gang sheet will expire soon ⏰',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #1e293b;">Final reminder, ${customerName}!</h1>
+          <p style="font-size: 16px; color: #334155;">
+            Your custom gang sheet is about to expire. This is your last chance 
+            to complete your order before we clear it from our system.
+          </p>
+          ${itemsHtml}
+          <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0; color: #92400e;">
+              ⚠️ <strong>Don't lose your work!</strong> Complete your order now to 
+              preserve your gang sheet design.
+            </p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${baseUrl}/cart" style="background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Complete Order Now
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #64748b;">
+            If you have any issues, please reach out to us at support@dtfwhiz.com
+          </p>
+        </div>
+      `
+    }
+  };
+
+  return contents[emailType];
+}
