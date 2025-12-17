@@ -70,6 +70,8 @@ export default function OrderConfirmationPage() {
     return (
       <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
         <Header />
+        {/* Spacer for fixed header */}
+        <div className="h-40"></div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
@@ -83,7 +85,8 @@ export default function OrderConfirmationPage() {
   return (
     <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
       <Header />
-      <div className="h-20"></div>
+      {/* Spacer for fixed header */}
+      <div className="h-40"></div>
       
       {/* Confetti Effect */}
       {confettiVisible && (
