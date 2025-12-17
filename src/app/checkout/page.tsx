@@ -459,7 +459,8 @@ export default function CheckoutPage() {
         discountAmount
       });
 
-      // Prepare cart items with only essential data (strip large fields like base64 images)
+      // Prepare cart items - keep essential data for print generation
+      // placedItems are needed for gang sheet generation (contain image URLs and positions)
       const cleanedCartItems = items.map(item => ({
         id: item.id,
         name: item.name,
@@ -473,14 +474,13 @@ export default function CheckoutPage() {
           totalCopies: item.layout.totalCopies,
           sheetWidth: item.layout.sheetWidth,
           sheetHeight: item.layout.sheetHeight,
-          // Strip large position data, send only count
-          positionCount: item.layout.positions?.length || 0
+          positions: item.layout.positions // Keep positions for layout info
         } : undefined,
         thumbnailUrl: item.thumbnailUrl,
-        // Images array stripped - URLs are stored in thumbnailUrl/positions
-        imageCount: item.images?.length || 0,
-        // PlacedItems stripped - reconstruct from layout positions if needed
-        placedItemsCount: item.placedItems?.length || 0
+        // Keep placedItems - required for print generation!
+        placedItems: item.placedItems,
+        // Strip images array (large ManagedImage objects with potential base64)
+        imageCount: item.images?.length || 0
       }));
       
       // Send payment to your backend
