@@ -169,11 +169,6 @@ const steps = [
         <p className="text-slate-400">
           Then click the cart icon at the top of the page to review your order and complete checkout.
         </p>
-        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-4 mt-4">
-          <p className="text-purple-300 text-sm">
-            🚀 <strong>Fast Turnaround:</strong> Orders placed before 2pm ship same day!
-          </p>
-        </div>
         <div className="mt-6 text-center">
           <p className="text-lg text-white font-medium">You're all set! Let's create something awesome! 🎉</p>
         </div>
