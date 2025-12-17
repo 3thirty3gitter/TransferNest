@@ -1,6 +1,70 @@
 {
   "indexes": [
     {
+      "collectionGroup": "abandonedCarts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sessionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "recovered",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "abandonedCarts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "recovered",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "abandonedCarts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "recovered",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastActivityAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "abandonedCarts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "recovered",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "cartItems",
       "queryScope": "COLLECTION",
       "fields": [

@@ -1,5 +1,3 @@
-'use server';
-
 import { getFirestore } from '@/lib/firebase-admin';
 import type { Timestamp, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 

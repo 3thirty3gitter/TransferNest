@@ -234,12 +234,20 @@ export default function CheckoutPage() {
       setSelectedShippingRate(null);
 
       try {
+        // Send only minimal data needed for shipping calculation
+        const shippingItems = items.map(item => ({
+          id: item.id,
+          sheetWidth: item.sheetWidth,
+          sheetLength: item.sheetLength,
+          quantity: item.quantity || 1
+        }));
+        
         const response = await fetch('/api/shipping/rates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             address: addressToUse,
-            items: items
+            items: shippingItems
           })
         });
 
@@ -451,6 +459,30 @@ export default function CheckoutPage() {
         discountAmount
       });
 
+      // Prepare cart items with only essential data (strip large fields like base64 images)
+      const cleanedCartItems = items.map(item => ({
+        id: item.id,
+        name: item.name,
+        sheetSize: item.sheetSize,
+        sheetWidth: item.sheetWidth,
+        sheetLength: item.sheetLength,
+        quantity: item.quantity,
+        pricing: item.pricing,
+        layout: item.layout ? {
+          utilization: item.layout.utilization,
+          totalCopies: item.layout.totalCopies,
+          sheetWidth: item.layout.sheetWidth,
+          sheetHeight: item.layout.sheetHeight,
+          // Strip large position data, send only count
+          positionCount: item.layout.positions?.length || 0
+        } : undefined,
+        thumbnailUrl: item.thumbnailUrl,
+        // Images array stripped - URLs are stored in thumbnailUrl/positions
+        imageCount: item.images?.length || 0,
+        // PlacedItems stripped - reconstruct from layout positions if needed
+        placedItemsCount: item.placedItems?.length || 0
+      }));
+      
       // Send payment to your backend
       const response = await fetch('/api/process-payment', {
         method: 'POST',
@@ -465,7 +497,7 @@ export default function CheckoutPage() {
           shippingAddress: deliveryMethod === 'shipping' && useShippingAddress ? shippingAddress : customerInfo,
           deliveryMethod,
           useShippingAddress,
-          cartItems: items,
+          cartItems: cleanedCartItems,
           userId: user.uid,
           taxAmount: taxCalculation.total,
           taxRate: taxCalculation.rate,
