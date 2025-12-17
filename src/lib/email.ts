@@ -105,7 +105,7 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
   try {
     const { orderId, orderNumber, customerName, total } = details;
     const displayOrderNumber = orderNumber || orderId.slice(-8).toUpperCase();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://dtfwhiz.com');
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.dtf-wholesale.ca');
 
     const template = await getProcessedTemplate('admin_new_order', {
       orderId,
@@ -302,7 +302,7 @@ function getAbandonedCartEmailContent(
     `
     : '';
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://dtfwhiz.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.dtf-wholesale.ca';
   
   const contents = {
     first: {
