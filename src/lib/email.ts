@@ -105,13 +105,14 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
   try {
     const { orderId, orderNumber, customerName, total } = details;
     const displayOrderNumber = orderNumber || orderId.slice(-8).toUpperCase();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://dtfwhiz.com');
 
     const template = await getProcessedTemplate('admin_new_order', {
       orderId,
       orderNumber: displayOrderNumber,
       customerName,
       total: total.toFixed(2),
-      adminUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${orderId}`
+      adminUrl: `${appUrl}/admin/jobs/${orderId}`
     });
 
     const fallbackHtml = `
@@ -119,7 +120,7 @@ export async function sendAdminNewOrderEmail(details: EmailOrderDetails, recipie
       <p><strong>Order:</strong> #${displayOrderNumber}</p>
       <p><strong>Customer:</strong> ${customerName}</p>
       <p><strong>Total:</strong> $${total.toFixed(2)} CAD</p>
-      <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${orderId}">View Order in Admin</a></p>
+      <p><a href="${appUrl}/admin/jobs/${orderId}">View Order in Admin</a></p>
     `;
 
     // Send to each admin email
