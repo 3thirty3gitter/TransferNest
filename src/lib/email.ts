@@ -323,7 +323,7 @@ function getAbandonedCartEmailContent(
             </a>
           </div>
           <p style="font-size: 14px; color: #64748b;">
-            Questions? Reply to this email or contact us at support@dtfwhiz.com
+            Questions? Reply to this email or contact us at orders@dtf-wholesale.ca
           </p>
         </div>
       `
@@ -375,7 +375,7 @@ function getAbandonedCartEmailContent(
             </a>
           </div>
           <p style="font-size: 14px; color: #64748b;">
-            If you have any issues, please reach out to us at support@dtfwhiz.com
+            If you have any issues, please reach out to us at orders@dtf-wholesale.ca
           </p>
         </div>
       `

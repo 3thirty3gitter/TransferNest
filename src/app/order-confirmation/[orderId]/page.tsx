@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Mail, Home, Package, Sparkles, Clock, Truck, Heart } from 'lucide-react';
+import { CheckCircle2, Mail, Home, Package, Sparkles, Clock, Truck } from 'lucide-react';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { getCompanySettings, type CompanySettings } from '@/lib/company-settings';
@@ -63,7 +63,7 @@ export default function OrderConfirmationPage() {
     loadSettings();
   }, []);
 
-  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+  const email = settings?.companyInfo?.email || 'orders@dtf-wholesale.ca';
   const phone = settings?.companyInfo?.phone || '587-405-3005';
 
   if (loading) {
@@ -233,11 +233,6 @@ export default function OrderConfirmationPage() {
 
           {/* Thank You Message */}
           <div className="text-center space-y-4 animate-fade-in max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-500/10 border border-pink-500/20 rounded-full">
-              <Heart className="h-4 w-4 text-pink-400 animate-pulse" />
-              <span className="text-sm text-pink-300 font-medium">Made with love by 3Thirty3 Ltd.</span>
-            </div>
-            
             <p className="text-slate-400">
               Questions about your order? We're here to help!<br />
               Contact us at{' '}
