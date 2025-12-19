@@ -96,6 +96,30 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const cartId = searchParams.get('id');
+    const healthCheck = searchParams.get('health');
+
+    // Health check endpoint
+    if (healthCheck === 'true') {
+      try {
+        const { getFirestore } = await import('@/lib/firebase-admin');
+        const db = getFirestore();
+        // Try a simple query
+        const testQuery = await db.collection('abandonedCarts').limit(1).get();
+        return NextResponse.json({ 
+          success: true, 
+          status: 'healthy', 
+          firestoreConnected: true,
+          docsFound: testQuery.size 
+        });
+      } catch (healthError: any) {
+        return NextResponse.json({ 
+          success: false, 
+          status: 'unhealthy', 
+          error: healthError?.message,
+          stack: healthError?.stack
+        }, { status: 500 });
+      }
+    }
 
     if (!cartId) {
       return NextResponse.json({ error: 'Cart ID required' }, { status: 400 });
@@ -108,10 +132,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, cart });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[ABANDONED_CART] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to get cart' },
+      { error: 'Failed to get cart', message: error?.message },
       { status: 500 }
     );
   }
