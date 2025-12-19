@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { useNestingTracking, useCartTracking } from '@/hooks/use-abandoned-cart-tracking';
+import { useNestingTracking, useCartTracking, useImageUploadTracking } from '@/hooks/use-abandoned-cart-tracking';
 import { reportError, formatErrorForUser, getBrowserInfo, detectBrowserIssues } from '@/lib/error-telemetry';
 import { ShoppingCart, Download, Info, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -52,9 +52,17 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
   const { toast } = useToast();
   const { trackNestingComplete } = useNestingTracking();
   const { trackAddToCart } = useCartTracking();
+  const { trackImageUpload } = useImageUploadTracking();
   
   // Helper modal state
   const [showHelper, setShowHelper] = useState(false);
+
+  // Track when images are uploaded for abandoned cart recovery
+  React.useEffect(() => {
+    if (images.length > 0) {
+      trackImageUpload(images.length, sheetWidth);
+    }
+  }, [images.length, sheetWidth, trackImageUpload]);
 
   // Check if any images are too wide for the sheet
   const oversizedImages = images.filter(img => img.width > MAX_IMAGE_WIDTH_INCHES);

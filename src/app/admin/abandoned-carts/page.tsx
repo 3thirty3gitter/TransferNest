@@ -237,6 +237,7 @@ export default function AbandonedCartsPage() {
   // Stage badge color
   const getStageBadge = (stage: AbandonmentStage) => {
     const colors: Record<AbandonmentStage, string> = {
+      image_upload: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
       nesting: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       cart: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
       checkout: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
@@ -247,6 +248,7 @@ export default function AbandonedCartsPage() {
 
   const getStageLabel = (stage: AbandonmentStage) => {
     const labels: Record<AbandonmentStage, string> = {
+      image_upload: 'Image Upload',
       nesting: 'Nesting',
       cart: 'Cart',
       checkout: 'Checkout',
@@ -453,6 +455,7 @@ export default function AbandonedCartsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Stages</SelectItem>
+                  <SelectItem value="image_upload">Image Upload</SelectItem>
                   <SelectItem value="nesting">Nesting</SelectItem>
                   <SelectItem value="cart">Cart</SelectItem>
                   <SelectItem value="checkout">Checkout</SelectItem>

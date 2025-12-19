@@ -153,6 +153,63 @@ export function useAbandonedCartTracking() {
 /**
  * Convenience functions for specific tracking points
  */
+
+export function useImageUploadTracking() {
+  const { user } = useAuth();
+  const sessionIdRef = useRef<string>('');
+  const lastTrackedCountRef = useRef<number>(0);
+  
+  // Initialize session ID on mount
+  useEffect(() => {
+    sessionIdRef.current = getSessionId();
+  }, []);
+
+  // Call when user uploads images to the nesting tool
+  const trackImageUpload = useCallback(async (imageCount: number, sheetWidth: number) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+    
+    // Only track if image count increased (avoid duplicate tracking)
+    if (imageCount <= lastTrackedCountRef.current) return;
+    lastTrackedCountRef.current = imageCount;
+
+    console.log('[ABANDONED_CART] trackImageUpload called:', { imageCount, sheetWidth });
+
+    const payload = {
+      action: 'track',
+      sessionId,
+      userId: user?.uid,
+      email: user?.email,
+      items: [{
+        name: `DTF Sheet ${sheetWidth}" (in progress)`,
+        sheetSize: String(sheetWidth),
+        sheetWidth: sheetWidth,
+        sheetLength: 0,
+        imageCount: imageCount,
+        estimatedPrice: 0,
+        placedItemsCount: 0,
+      }],
+      estimatedTotal: 0,
+      stage: 'image_upload',
+      stageDetails: `${imageCount} image(s) uploaded`,
+      referrer: typeof document !== 'undefined' ? document.referrer : undefined,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+    };
+
+    try {
+      await fetch('/api/abandoned-carts/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.error('[ABANDONED_CART] Image upload tracking failed:', error);
+    }
+  }, [user]);
+
+  return { trackImageUpload };
+}
+
 export function useNestingTracking() {
   const { trackCart, updateStage } = useAbandonedCartTracking();
 

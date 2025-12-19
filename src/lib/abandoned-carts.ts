@@ -10,6 +10,7 @@ import type { Timestamp, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
 // Stages in the customer journey - where they dropped off
 export type AbandonmentStage = 
+  | 'image_upload'   // Uploaded images but didn't complete nesting
   | 'nesting'        // Created gang sheet but didn't add to cart
   | 'cart'           // Added to cart but didn't start checkout
   | 'checkout'       // Started checkout but didn't complete payment
@@ -336,6 +337,7 @@ export async function getAbandonedCartStats(): Promise<AbandonedCartStats> {
   const stats: AbandonedCartStats = {
     total: carts.length,
     byStage: {
+      image_upload: 0,
       nesting: 0,
       cart: 0,
       checkout: 0,
