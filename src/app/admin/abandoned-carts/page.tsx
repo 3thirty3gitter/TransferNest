@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ShoppingCart, 
@@ -27,9 +29,23 @@ import {
   Send,
   TrendingUp,
   Users,
-  Percent
+  Percent,
+  Settings,
+  Play,
+  Zap
 } from 'lucide-react';
 import type { AbandonedCart, AbandonedCartStats, AbandonmentStage } from '@/lib/abandoned-carts';
+
+// Recovery config type
+interface RecoveryConfig {
+  enabled: boolean;
+  email1: { enabled: boolean; delayHours: number; subject: string };
+  email2: { enabled: boolean; delayHours: number; subject: string; discountPercent: number; discountValidDays: number };
+  email3: { enabled: boolean; delayHours: number; subject: string; discountPercent: number; discountValidDays: number };
+  companyName: string;
+  supportEmail: string;
+  websiteUrl: string;
+}
 
 export default function AbandonedCartsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -43,9 +59,84 @@ export default function AbandonedCartsPage() {
   const [stageFilter, setStageFilter] = useState<AbandonmentStage | 'all'>('all');
   const [selectedCart, setSelectedCart] = useState<AbandonedCart | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('carts');
+  
+  // Recovery config state
+  const [recoveryConfig, setRecoveryConfig] = useState<RecoveryConfig | null>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [isRunningRecovery, setIsRunningRecovery] = useState(false);
 
   // Admin check is handled by src/app/admin/layout.tsx
   // If user gets here, they're already verified as admin
+
+  // Fetch recovery config
+  const fetchRecoveryConfig = async () => {
+    try {
+      setIsLoadingConfig(true);
+      const response = await fetch('/api/abandoned-carts/recovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get-config' })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRecoveryConfig(data.config);
+      }
+    } catch (error) {
+      console.error('Failed to fetch recovery config:', error);
+    } finally {
+      setIsLoadingConfig(false);
+    }
+  };
+
+  // Save recovery config
+  const saveRecoveryConfig = async () => {
+    if (!recoveryConfig) return;
+    try {
+      setIsSavingConfig(true);
+      const response = await fetch('/api/abandoned-carts/recovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save-config', config: recoveryConfig })
+      });
+      if (response.ok) {
+        toast({ title: 'Settings Saved', description: 'Recovery email settings have been updated.' });
+      } else {
+        throw new Error('Failed to save');
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  // Run recovery manually
+  const runRecoveryNow = async () => {
+    try {
+      setIsRunningRecovery(true);
+      const response = await fetch('/api/abandoned-carts/recovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'test-run' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({ 
+          title: 'Recovery Complete', 
+          description: `Processed ${data.processed} carts, sent ${data.emailsSent} emails.` 
+        });
+        fetchData(); // Refresh cart list
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to run recovery', variant: 'destructive' });
+    } finally {
+      setIsRunningRecovery(false);
+    }
+  };
 
   // Fetch data
   const fetchData = async () => {
@@ -86,6 +177,7 @@ export default function AbandonedCartsPage() {
   useEffect(() => {
     if (user) {
       fetchData();
+      fetchRecoveryConfig();
     }
   }, [user]);
 
@@ -194,16 +286,36 @@ export default function AbandonedCartsPage() {
           <div>
             <h1 className="text-2xl font-bold">Abandoned Carts</h1>
             <p className="text-muted-foreground">
-              Track and recover abandoned orders
+              Track and recover abandoned orders with automated emails
             </p>
           </div>
-          <Button onClick={handleRefresh} disabled={isRefreshing} variant="outline">
-            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={runRecoveryNow} disabled={isRunningRecovery} variant="default">
+              <Zap className={`w-4 h-4 mr-2 ${isRunningRecovery ? 'animate-pulse' : ''}`} />
+              {isRunningRecovery ? 'Running...' : 'Run Recovery Now'}
+            </Button>
+            <Button onClick={handleRefresh} disabled={isRefreshing} variant="outline">
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="carts">
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Abandoned Carts
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="w-4 h-4 mr-2" />
+              Recovery Settings
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Carts Tab */}
+          <TabsContent value="carts" className="space-y-6">
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card>
@@ -583,6 +695,275 @@ export default function AbandonedCartsPage() {
             )}
           </DialogContent>
         </Dialog>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            {isLoadingConfig ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : recoveryConfig ? (
+              <>
+                {/* Master Toggle */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Zap className="w-5 h-5" />
+                      Automated Recovery
+                    </CardTitle>
+                    <CardDescription>
+                      Enable automated recovery emails for abandoned carts
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="recovery-enabled" className="text-base font-medium">Enable Recovery Emails</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Automatically send recovery emails to customers who abandon their carts
+                        </p>
+                      </div>
+                      <Switch
+                        id="recovery-enabled"
+                        checked={recoveryConfig.enabled}
+                        onCheckedChange={(checked) => setRecoveryConfig({...recoveryConfig, enabled: checked})}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Email 1: Reminder */}
+                <Card className={!recoveryConfig.enabled ? 'opacity-50' : ''}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="w-5 h-5" />
+                      Email 1: Friendly Reminder
+                    </CardTitle>
+                    <CardDescription>
+                      Sent after the customer abandons their cart (no discount)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Enable this email</Label>
+                      <Switch
+                        checked={recoveryConfig.email1.enabled}
+                        onCheckedChange={(checked) => setRecoveryConfig({
+                          ...recoveryConfig, 
+                          email1: {...recoveryConfig.email1, enabled: checked}
+                        })}
+                        disabled={!recoveryConfig.enabled}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Delay (hours after abandonment)</Label>
+                        <Input
+                          type="number"
+                          value={recoveryConfig.email1.delayHours}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email1: {...recoveryConfig.email1, delayHours: parseInt(e.target.value) || 1}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                      <div>
+                        <Label>Subject Line</Label>
+                        <Input
+                          value={recoveryConfig.email1.subject}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email1: {...recoveryConfig.email1, subject: e.target.value}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Email 2: With Discount */}
+                <Card className={!recoveryConfig.enabled ? 'opacity-50' : ''}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Percent className="w-5 h-5" />
+                      Email 2: Discount Offer
+                    </CardTitle>
+                    <CardDescription>
+                      Sent with a discount code to incentivize purchase
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Enable this email</Label>
+                      <Switch
+                        checked={recoveryConfig.email2.enabled}
+                        onCheckedChange={(checked) => setRecoveryConfig({
+                          ...recoveryConfig, 
+                          email2: {...recoveryConfig.email2, enabled: checked}
+                        })}
+                        disabled={!recoveryConfig.enabled}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Delay (hours after Email 1)</Label>
+                        <Input
+                          type="number"
+                          value={recoveryConfig.email2.delayHours}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email2: {...recoveryConfig.email2, delayHours: parseInt(e.target.value) || 24}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                      <div>
+                        <Label>Subject Line</Label>
+                        <Input
+                          value={recoveryConfig.email2.subject}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email2: {...recoveryConfig.email2, subject: e.target.value}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Discount Percentage (%)</Label>
+                        <Input
+                          type="number"
+                          value={recoveryConfig.email2.discountPercent}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email2: {...recoveryConfig.email2, discountPercent: parseInt(e.target.value) || 10}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                      <div>
+                        <Label>Discount Valid For (days)</Label>
+                        <Input
+                          type="number"
+                          value={recoveryConfig.email2.discountValidDays}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email2: {...recoveryConfig.email2, discountValidDays: parseInt(e.target.value) || 7}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Email 3: Final Offer */}
+                <Card className={!recoveryConfig.enabled ? 'opacity-50' : ''}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5" />
+                      Email 3: Final Reminder
+                    </CardTitle>
+                    <CardDescription>
+                      Last chance email with a bigger discount
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Enable this email</Label>
+                      <Switch
+                        checked={recoveryConfig.email3.enabled}
+                        onCheckedChange={(checked) => setRecoveryConfig({
+                          ...recoveryConfig, 
+                          email3: {...recoveryConfig.email3, enabled: checked}
+                        })}
+                        disabled={!recoveryConfig.enabled}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Delay (hours after Email 2)</Label>
+                        <Input
+                          type="number"
+                          value={recoveryConfig.email3.delayHours}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email3: {...recoveryConfig.email3, delayHours: parseInt(e.target.value) || 72}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                      <div>
+                        <Label>Subject Line</Label>
+                        <Input
+                          value={recoveryConfig.email3.subject}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email3: {...recoveryConfig.email3, subject: e.target.value}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Discount Percentage (%)</Label>
+                        <Input
+                          type="number"
+                          value={recoveryConfig.email3.discountPercent}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email3: {...recoveryConfig.email3, discountPercent: parseInt(e.target.value) || 15}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                      <div>
+                        <Label>Discount Valid For (days)</Label>
+                        <Input
+                          type="number"
+                          value={recoveryConfig.email3.discountValidDays}
+                          onChange={(e) => setRecoveryConfig({
+                            ...recoveryConfig,
+                            email3: {...recoveryConfig.email3, discountValidDays: parseInt(e.target.value) || 3}
+                          })}
+                          disabled={!recoveryConfig.enabled}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Save Button */}
+                <div className="flex justify-end">
+                  <Button onClick={saveRecoveryConfig} disabled={isSavingConfig}>
+                    {isSavingConfig ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Save Settings
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  Failed to load recovery settings. Please refresh the page.
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
   );
 }

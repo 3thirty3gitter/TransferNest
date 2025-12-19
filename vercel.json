@@ -14,5 +14,11 @@
     "env": {
       "NPM_CONFIG_OPTIONAL": "true"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/abandoned-carts/recovery",
+      "schedule": "0 * * * *"
+    }
+  ]
 }

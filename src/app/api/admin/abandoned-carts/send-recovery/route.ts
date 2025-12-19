@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/admin-auth-server';
-import { getAbandonedCart, recordRecoveryEmail } from '@/lib/abandoned-carts';
-import { sendAbandonedCartRecoveryEmail } from '@/lib/email';
+import { getAbandonedCart } from '@/lib/abandoned-carts';
+import { sendManualRecoveryEmail } from '@/lib/abandoned-cart-recovery';
 
 /**
  * POST /api/admin/abandoned-carts/send-recovery
  * Send a recovery email for an abandoned cart
+ * Now uses the recovery engine with discount code generation
  */
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { cartId, emailType } = await request.json();
+    const { cartId, emailType, customDiscountPercent } = await request.json();
 
     if (!cartId || !emailType) {
       return NextResponse.json(
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the cart
+    // Get the cart to validate it exists
     const cart = await getAbandonedCart(cartId);
     if (!cart) {
       return NextResponse.json({ error: 'Cart not found' }, { status: 404 });
@@ -51,32 +52,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if this email type was already sent (based on email count)
-    const emailTypeIndex: Record<string, number> = { first: 1, second: 2, final: 3 };
-    if (cart.recoveryEmailsSent >= emailTypeIndex[emailType]) {
-      return NextResponse.json(
-        { error: `${emailType} email was already sent` },
-        { status: 400 }
-      );
-    }
-
-    // Send the recovery email
-    const result = await sendAbandonedCartRecoveryEmail({
-      email: cart.email,
-      customerName: cart.customerName,
-      items: cart.items,
-      estimatedTotal: cart.estimatedTotal,
-      emailType,
-      cartId
-    });
+    // Send the recovery email using the new recovery engine
+    const result = await sendManualRecoveryEmail(
+      cartId, 
+      emailType as 'first' | 'second' | 'final',
+      customDiscountPercent
+    );
 
     if (result.success) {
-      // Record the email was sent
-      await recordRecoveryEmail(cartId, emailType);
-      
       return NextResponse.json({ 
         success: true, 
-        message: `${emailType} recovery email sent to ${cart.email}`
+        message: `${emailType} recovery email sent to ${cart.email}`,
+        discountCode: result.discountCode
       });
     } else {
       return NextResponse.json(
