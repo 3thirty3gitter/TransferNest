@@ -96,7 +96,36 @@ export const DEFAULT_RECOVERY_CONFIG: RecoveryEmailConfig = {
 // ============ Discount Code Generation ============
 
 /**
+ * Cancel any existing recovery discount codes for a cart
+ */
+async function cancelPreviousRecoveryDiscounts(cartId: string): Promise<number> {
+  const db = getFirestore();
+  
+  // Find all active recovery discounts for this cart
+  const existingDiscounts = await db.collection('discounts')
+    .where('abandonedCartId', '==', cartId)
+    .where('isActive', '==', true)
+    .get();
+  
+  let cancelledCount = 0;
+  
+  for (const doc of existingDiscounts.docs) {
+    await doc.ref.update({
+      isActive: false,
+      cancelledAt: new Date(),
+      cancelReason: 'Superseded by newer recovery discount',
+      updatedAt: new Date(),
+    });
+    cancelledCount++;
+    console.log(`[RECOVERY] Cancelled previous discount: ${doc.data().code}`);
+  }
+  
+  return cancelledCount;
+}
+
+/**
  * Generate a unique discount code for cart recovery
+ * Automatically cancels any previous recovery discounts for this cart
  */
 export async function generateRecoveryDiscountCode(
   cartId: string,
@@ -105,6 +134,12 @@ export async function generateRecoveryDiscountCode(
   emailType: 'second' | 'final'
 ): Promise<string> {
   const db = getFirestore();
+  
+  // Cancel any previous recovery discounts for this cart
+  const cancelledCount = await cancelPreviousRecoveryDiscounts(cartId);
+  if (cancelledCount > 0) {
+    console.log(`[RECOVERY] Cancelled ${cancelledCount} previous discount(s) for cart ${cartId}`);
+  }
   
   // Generate unique code: RECOVER-{percentage}-{random}
   const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
