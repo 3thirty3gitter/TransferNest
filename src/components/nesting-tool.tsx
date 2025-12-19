@@ -270,7 +270,17 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
     addItem(cartItem);
     
     // Track cart addition for abandoned cart recovery
-    trackAddToCart();
+    trackAddToCart({
+      name: cartItem.name,
+      sheetSize: cartItem.sheetSize,
+      sheetWidth: sheetWidth,
+      sheetLength: nestingResult.sheetLength,
+      imageCount: images.length,
+      estimatedPrice: pricing?.total || 0,
+      thumbnailUrl: images[0]?.url, // Use first image as thumbnail
+      placedItemsCount: nestingResult.placedItems?.length || 0,
+      utilization: nestingResult.areaUtilizationPct,
+    });
     
     toast({
       title: "Added to Cart!",

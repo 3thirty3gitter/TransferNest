@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useCart } from '@/contexts/cart-context';
 import type { AbandonmentStage, AbandonedCartItem } from '@/lib/abandoned-carts';
@@ -165,12 +165,70 @@ export function useNestingTracking() {
 }
 
 export function useCartTracking() {
-  const { trackCart, updateStage } = useAbandonedCartTracking();
+  const { user } = useAuth();
+  const sessionIdRef = useRef<string>('');
+  
+  // Initialize session ID on mount
+  useEffect(() => {
+    sessionIdRef.current = getSessionId();
+  }, []);
 
-  // Call when user adds item to cart
-  const trackAddToCart = useCallback(() => {
-    trackCart('cart');
-  }, [trackCart]);
+  // Call when user adds item to cart - pass the item directly to avoid state timing issues
+  const trackAddToCart = useCallback(async (item?: {
+    name: string;
+    sheetSize: string;
+    sheetWidth?: number;
+    sheetLength?: number;
+    imageCount?: number;
+    estimatedPrice?: number;
+    thumbnailUrl?: string;
+    placedItemsCount?: number;
+    utilization?: number;
+  }) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) {
+      console.log('[ABANDONED_CART] No session ID, skipping tracking');
+      return;
+    }
+
+    console.log('[ABANDONED_CART] trackAddToCart called with item:', item?.name);
+
+    // Create tracking payload with the passed item
+    const payload = {
+      action: 'track',
+      sessionId,
+      userId: user?.uid,
+      email: user?.email,
+      items: item ? [{
+        name: item.name,
+        sheetSize: item.sheetSize,
+        sheetWidth: item.sheetWidth || 0,
+        sheetLength: item.sheetLength || 0,
+        imageCount: item.imageCount || 0,
+        estimatedPrice: item.estimatedPrice || 0,
+        thumbnailUrl: item.thumbnailUrl,
+        placedItemsCount: item.placedItemsCount || 0,
+        utilization: item.utilization,
+      }] : [],
+      estimatedTotal: item?.estimatedPrice || 0,
+      stage: 'cart',
+      referrer: typeof document !== 'undefined' ? document.referrer : undefined,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+    };
+
+    try {
+      console.log('[ABANDONED_CART] Sending tracking request...');
+      const response = await fetch('/api/abandoned-carts/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      console.log('[ABANDONED_CART] Tracking response:', result);
+    } catch (error) {
+      console.error('[ABANDONED_CART] Tracking failed:', error);
+    }
+  }, [user]);
 
   return { trackAddToCart };
 }
