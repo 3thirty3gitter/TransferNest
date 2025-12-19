@@ -97,6 +97,24 @@ export async function upsertAbandonedCart(
 ): Promise<string> {
   console.log('[ABANDONED_CART_LIB] upsertAbandonedCart called with sessionId:', sessionId);
   
+  // Helper to remove undefined values (Firestore doesn't accept them)
+  const removeUndefined = (obj: any): any => {
+    if (Array.isArray(obj)) {
+      return obj.map(removeUndefined);
+    }
+    if (obj && typeof obj === 'object' && !(obj instanceof Date)) {
+      return Object.fromEntries(
+        Object.entries(obj)
+          .filter(([_, v]) => v !== undefined)
+          .map(([k, v]) => [k, removeUndefined(v)])
+      );
+    }
+    return obj;
+  };
+
+  const cleanData = removeUndefined(data);
+  console.log('[ABANDONED_CART_LIB] Cleaned data keys:', Object.keys(cleanData));
+  
   const db = getFirestore();
   console.log('[ABANDONED_CART_LIB] Got Firestore instance');
   
@@ -120,7 +138,7 @@ export async function upsertAbandonedCart(
     const doc = existingQuery.docs[0];
     console.log('[ABANDONED_CART_LIB] Updating existing cart:', doc.id);
     await doc.ref.update({
-      ...data,
+      ...cleanData,
       updatedAt: now,
       lastActivityAt: now,
     });
@@ -129,7 +147,7 @@ export async function upsertAbandonedCart(
   } else {
     // Create new cart
     console.log('[ABANDONED_CART_LIB] Creating new cart...');
-    const newCart: Omit<AbandonedCart, 'id'> = {
+    const newCart = removeUndefined({
       sessionId,
       items: [],
       estimatedTotal: 0,
@@ -140,8 +158,8 @@ export async function upsertAbandonedCart(
       lastActivityAt: now,
       recoveryEmailsSent: 0,
       recovered: false,
-      ...data,
-    };
+      ...cleanData,
+    });
     
     const docRef = await cartsRef.add(newCart);
     console.log('[ABANDONED_CART_LIB] Created new cart:', docRef.id);
