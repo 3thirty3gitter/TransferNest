@@ -31,6 +31,7 @@ export default function AddressAutocomplete({
   country = "ca",
 }: AddressAutocompleteProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<any>(null);
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -44,6 +45,7 @@ export default function AddressAutocomplete({
 
     // Create the place picker element
     const pickerElement = document.createElement('gmpx-place-picker') as any;
+    pickerRef.current = pickerElement;
     
     // Set attributes
     pickerElement.setAttribute('type', 'address');
@@ -111,6 +113,16 @@ export default function AddressAutocomplete({
         
         console.log('Address components parsed:', components);
         
+        // Update the input field to show the selected address
+        // The place picker clears its input after selection, so we need to set it manually
+        setTimeout(() => {
+          const input = pickerElement.shadowRoot?.querySelector('input') || 
+                        pickerElement.querySelector('input');
+          if (input && components.address) {
+            input.value = components.address;
+          }
+        }, 50);
+        
         onChange(components.address);
 
         if (onAddressSelect) {
@@ -127,11 +139,49 @@ export default function AddressAutocomplete({
     // Clear container and append
     containerRef.current.innerHTML = '';
     containerRef.current.appendChild(pickerElement);
+    
+    // Disable browser autofill on the input to prevent interference with address lookup
+    // Use requestAnimationFrame to ensure the shadow DOM is ready
+    const disableAutofill = () => {
+      const input = pickerElement.shadowRoot?.querySelector('input') || 
+                    pickerElement.querySelector('input');
+      if (input) {
+        // Set multiple attributes to disable autofill across browsers
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('autocapitalize', 'off');
+        input.setAttribute('spellcheck', 'false');
+        // Chrome specifically ignores 'off', so use a random string
+        input.setAttribute('autocomplete', 'new-address-' + Math.random().toString(36).slice(2));
+        input.setAttribute('data-lpignore', 'true'); // LastPass
+        input.setAttribute('data-form-type', 'other'); // Dashlane
+      }
+    };
+    
+    // Try immediately and again after a short delay (shadow DOM timing)
+    requestAnimationFrame(disableAutofill);
+    setTimeout(disableAutofill, 100);
+    setTimeout(disableAutofill, 500);
 
     return () => {
       pickerElement.removeEventListener('gmpx-placechange', handlePlaceChange);
     };
   }, [country, onChange, onAddressSelect, placeholder]);
+  
+  // Sync external value prop to the input when it changes (e.g., on page load with saved data)
+  useEffect(() => {
+    if (pickerRef.current && value) {
+      const setInputValue = () => {
+        const input = pickerRef.current.shadowRoot?.querySelector('input') || 
+                      pickerRef.current.querySelector('input');
+        if (input && value && input.value !== value) {
+          input.value = value;
+        }
+      };
+      requestAnimationFrame(setInputValue);
+      setTimeout(setInputValue, 100);
+    }
+  }, [value]);
 
   return (
     <>

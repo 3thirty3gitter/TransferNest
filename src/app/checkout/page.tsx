@@ -671,6 +671,8 @@ export default function CheckoutPage() {
                       value={customerInfo.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
                       required
+                      autoComplete="off"
+                      data-lpignore="true"
                       className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                     />
                   </div>
@@ -683,6 +685,8 @@ export default function CheckoutPage() {
                       value={customerInfo.state}
                       onChange={(e) => handleInputChange('state', e.target.value.toUpperCase())}
                       required
+                      autoComplete="off"
+                      data-lpignore="true"
                       placeholder={customerInfo.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
                       maxLength={2}
                       className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
@@ -698,6 +702,8 @@ export default function CheckoutPage() {
                     value={customerInfo.zipCode}
                     onChange={(e) => handleInputChange('zipCode', e.target.value.toUpperCase())}
                     required
+                    autoComplete="off"
+                    data-lpignore="true"
                     placeholder={customerInfo.country === 'CA' ? 'A1A 1A1' : '12345'}
                     className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                   />
@@ -848,6 +854,8 @@ export default function CheckoutPage() {
                             value={shippingAddress.city}
                             onChange={(e) => handleShippingInputChange('city', e.target.value)}
                             required
+                            autoComplete="off"
+                            data-lpignore="true"
                             className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                           />
                         </div>
@@ -860,6 +868,8 @@ export default function CheckoutPage() {
                             value={shippingAddress.state}
                             onChange={(e) => handleShippingInputChange('state', e.target.value.toUpperCase())}
                             required
+                            autoComplete="off"
+                            data-lpignore="true"
                             placeholder={shippingAddress.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
                             maxLength={2}
                             className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
@@ -875,6 +885,8 @@ export default function CheckoutPage() {
                           value={shippingAddress.zipCode}
                           onChange={(e) => handleShippingInputChange('zipCode', e.target.value.toUpperCase())}
                           required
+                          autoComplete="off"
+                          data-lpignore="true"
                           placeholder={shippingAddress.country === 'CA' ? 'A1A 1A1' : '12345'}
                           className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                         />
