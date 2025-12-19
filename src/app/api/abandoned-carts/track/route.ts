@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, sessionId, ...data } = body;
 
+    console.log('[ABANDONED_CART_API] Received request:', { action, sessionId, hasData: !!data });
+
     if (!sessionId) {
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
     }
@@ -25,6 +27,7 @@ export async function POST(request: NextRequest) {
       case 'track': {
         // Track/update cart state
         try {
+          console.log('[ABANDONED_CART_API] Calling upsertAbandonedCart...');
           const cartId = await upsertAbandonedCart(sessionId, {
             userId: data.userId,
             email: data.email,
@@ -38,11 +41,13 @@ export async function POST(request: NextRequest) {
             userAgent: data.userAgent,
           });
           
+          console.log('[ABANDONED_CART_API] Successfully created/updated cart:', cartId);
           return NextResponse.json({ success: true, cartId });
-        } catch (trackError) {
-          console.error('[ABANDONED_CART] Track error:', trackError);
+        } catch (trackError: any) {
+          console.error('[ABANDONED_CART_API] Track error:', trackError?.message || trackError);
+          console.error('[ABANDONED_CART_API] Track error stack:', trackError?.stack);
           // Return success anyway - abandoned cart tracking should not block the user
-          return NextResponse.json({ success: true, cartId: null, warning: 'tracking_failed' });
+          return NextResponse.json({ success: true, cartId: null, warning: 'tracking_failed', error: trackError?.message });
         }
       }
 
@@ -56,9 +61,9 @@ export async function POST(request: NextRequest) {
           );
           
           return NextResponse.json({ success: true });
-        } catch (stageError) {
-          console.error('[ABANDONED_CART] Stage update error:', stageError);
-          return NextResponse.json({ success: true, warning: 'stage_update_failed' });
+        } catch (stageError: any) {
+          console.error('[ABANDONED_CART_API] Stage update error:', stageError?.message || stageError);
+          return NextResponse.json({ success: true, warning: 'stage_update_failed', error: stageError?.message });
         }
       }
 
@@ -68,20 +73,20 @@ export async function POST(request: NextRequest) {
           await markCartAsRecovered(sessionId, data.orderId);
           
           return NextResponse.json({ success: true });
-        } catch (recoveredError) {
-          console.error('[ABANDONED_CART] Recovery mark error:', recoveredError);
-          return NextResponse.json({ success: true, warning: 'recovery_mark_failed' });
+        } catch (recoveredError: any) {
+          console.error('[ABANDONED_CART_API] Recovery mark error:', recoveredError?.message || recoveredError);
+          return NextResponse.json({ success: true, warning: 'recovery_mark_failed', error: recoveredError?.message });
         }
       }
 
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (error) {
-    console.error('[ABANDONED_CART] Error:', error);
+  } catch (error: any) {
+    console.error('[ABANDONED_CART_API] Request error:', error?.message || error);
     // Return success to not block users - tracking is non-critical
     return NextResponse.json(
-      { success: true, warning: 'tracking_unavailable' },
+      { success: true, warning: 'tracking_unavailable', error: error?.message },
       { status: 200 }
     );
   }

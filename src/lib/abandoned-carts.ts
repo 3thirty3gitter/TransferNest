@@ -95,10 +95,15 @@ export async function upsertAbandonedCart(
   sessionId: string,
   data: Partial<Omit<AbandonedCart, 'id' | 'createdAt'>>
 ): Promise<string> {
+  console.log('[ABANDONED_CART_LIB] upsertAbandonedCart called with sessionId:', sessionId);
+  
   const db = getFirestore();
+  console.log('[ABANDONED_CART_LIB] Got Firestore instance');
+  
   const cartsRef = db.collection('abandonedCarts');
   
   // Check if cart already exists for this session
+  console.log('[ABANDONED_CART_LIB] Querying for existing cart...');
   const existingQuery = await cartsRef
     .where('sessionId', '==', sessionId)
     .where('recovered', '==', false)
@@ -106,19 +111,24 @@ export async function upsertAbandonedCart(
     .limit(1)
     .get();
   
+  console.log('[ABANDONED_CART_LIB] Query complete, found:', existingQuery.size, 'docs');
+  
   const now = new Date();
   
   if (!existingQuery.empty) {
     // Update existing cart
     const doc = existingQuery.docs[0];
+    console.log('[ABANDONED_CART_LIB] Updating existing cart:', doc.id);
     await doc.ref.update({
       ...data,
       updatedAt: now,
       lastActivityAt: now,
     });
+    console.log('[ABANDONED_CART_LIB] Update complete');
     return doc.id;
   } else {
     // Create new cart
+    console.log('[ABANDONED_CART_LIB] Creating new cart...');
     const newCart: Omit<AbandonedCart, 'id'> = {
       sessionId,
       items: [],
@@ -134,6 +144,7 @@ export async function upsertAbandonedCart(
     };
     
     const docRef = await cartsRef.add(newCart);
+    console.log('[ABANDONED_CART_LIB] Created new cart:', docRef.id);
     return docRef.id;
   }
 }
