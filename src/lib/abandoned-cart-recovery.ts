@@ -195,10 +195,15 @@ export async function generateRecoveryDiscountCode(
 
 // ============ Email Templates ============
 
+function getRecoveryUrl(config: RecoveryEmailConfig, cartId: string): string {
+  return `${config.websiteUrl}/recover-cart/${cartId}`;
+}
+
 function generateEmail1Template(
   cart: AbandonedCart,
   config: RecoveryEmailConfig
 ): string {
+  const recoveryUrl = getRecoveryUrl(config, cart.id);
   const itemsHtml = cart.items.map(item => `
     <tr>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
@@ -245,7 +250,7 @@ function generateEmail1Template(
   </div>
   
   <div style="text-align: center; margin: 30px 0;">
-    <a href="${config.websiteUrl}/cart" style="display: inline-block; background: #0066cc; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+    <a href="${recoveryUrl}" style="display: inline-block; background: #0066cc; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
       Complete Your Order →
     </a>
   </div>
@@ -341,7 +346,7 @@ function generateEmail2Template(
   </div>
   
   <div style="text-align: center; margin: 30px 0;">
-    <a href="${config.websiteUrl}/cart" style="display: inline-block; background: #28a745; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+    <a href="${getRecoveryUrl(config, cart.id)}" style="display: inline-block; background: #28a745; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
       Claim Your ${config.email2.discountPercent}% Discount →
     </a>
   </div>
@@ -419,7 +424,7 @@ function generateEmail3Template(
   </div>
   
   <div style="text-align: center; margin: 30px 0;">
-    <a href="${config.websiteUrl}/cart" style="display: inline-block; background: #dc3545; color: white; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-weight: bold; font-size: 18px;">
+    <a href="${getRecoveryUrl(config, cart.id)}" style="display: inline-block; background: #dc3545; color: white; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-weight: bold; font-size: 18px;">
       🛒 Complete My Order Now
     </a>
   </div>
