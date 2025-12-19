@@ -643,9 +643,12 @@ export async function sendManualRecoveryEmail(
     await sendEmail(cart.email, subject, emailHtml);
     await recordRecoveryEmail(cart.id, emailType, discountCode);
     
+    console.log(`[RECOVERY] Successfully sent ${emailType} email to ${cart.email}`);
     return { success: true, discountCode };
     
   } catch (error: any) {
-    return { success: false, error: error.message };
+    console.error('[RECOVERY] sendManualRecoveryEmail error:', error?.message || error);
+    console.error('[RECOVERY] Error stack:', error?.stack);
+    return { success: false, error: error?.message || 'Unknown error' };
   }
 }

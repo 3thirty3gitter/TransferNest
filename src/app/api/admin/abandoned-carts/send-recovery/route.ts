@@ -66,15 +66,17 @@ export async function POST(request: NextRequest) {
         discountCode: result.discountCode
       });
     } else {
+      console.error('[ADMIN] Recovery email failed:', result.error);
       return NextResponse.json(
         { error: 'Failed to send email', details: result.error },
         { status: 500 }
       );
     }
-  } catch (error) {
-    console.error('[ADMIN] Error sending recovery email:', error);
+  } catch (error: any) {
+    console.error('[ADMIN] Error sending recovery email:', error?.message || error);
+    console.error('[ADMIN] Stack:', error?.stack);
     return NextResponse.json(
-      { error: 'Failed to send recovery email' },
+      { error: 'Failed to send recovery email', details: error?.message },
       { status: 500 }
     );
   }
