@@ -459,8 +459,9 @@ export default function CheckoutPage() {
         discountAmount
       });
 
-      // Prepare cart items - keep essential data for print generation
-      // placedItems are needed for gang sheet generation (contain image URLs and positions)
+      // Prepare cart items - keep MINIMAL data for checkout
+      // The gang sheet PNG is generated AFTER checkout (in process-payment)
+      // So we need placedItems with URLs for print generation
       const cleanedCartItems = items.map(item => ({
         id: item.id,
         name: item.name,
@@ -469,17 +470,26 @@ export default function CheckoutPage() {
         sheetLength: item.sheetLength,
         quantity: item.quantity,
         pricing: item.pricing,
+        // Minimal layout info - strip positions array to reduce size
         layout: item.layout ? {
           utilization: item.layout.utilization,
           totalCopies: item.layout.totalCopies,
           sheetWidth: item.layout.sheetWidth,
           sheetHeight: item.layout.sheetHeight,
-          positions: item.layout.positions // Keep positions for layout info
+          positionCount: item.layout.positions?.length || 0
         } : undefined,
+        // Keep thumbnailUrl (single small URL for order display)
         thumbnailUrl: item.thumbnailUrl,
-        // Keep placedItems - required for print generation!
-        placedItems: item.placedItems,
-        // Strip images array (large ManagedImage objects with potential base64)
+        // For print generation - send essential data with URLs
+        placedItems: item.placedItems?.map((pi: any) => ({
+          id: pi.id,
+          x: pi.x,
+          y: pi.y,
+          width: pi.width,
+          height: pi.height,
+          rotated: pi.rotated || false,
+          url: pi.url // Keep URL - needed for print generation
+        })),
         imageCount: item.images?.length || 0
       }));
       
