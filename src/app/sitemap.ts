@@ -1,6 +1,5 @@
 import { MetadataRoute } from 'next';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
+import { getFirestore } from '@/lib/firebase-admin';
 
 const BASE_URL = 'https://dtf-wholesale.ca';
 
@@ -70,7 +69,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let blogPages: MetadataRoute.Sitemap = [];
   
   try {
-    initializeFirebaseAdmin();
     const db = getFirestore();
     const postsSnapshot = await db
       .collection('blogPosts')
