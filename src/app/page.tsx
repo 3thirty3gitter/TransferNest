@@ -10,6 +10,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/layout/footer';
 import { useRouter } from 'next/navigation';
+import { SEOFAQSection } from '@/components/seo/faq-section';
 
 interface Product {
   id: string;
@@ -533,6 +534,9 @@ export default function Home() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-float"></div>
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-float-delayed"></div>
         </section>
+
+        {/* FAQ Section - SEO Optimized */}
+        <SEOFAQSection />
       </main>
       <Footer />
     </div>
