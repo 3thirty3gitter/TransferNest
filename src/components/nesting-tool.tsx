@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { useCartTracking } from '@/hooks/use-abandoned-cart-tracking';
 import { ShoppingCart, Download } from 'lucide-react';
 import Link from 'next/link';
 
@@ -42,6 +43,7 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
   const { addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { trackAddToCart } = useCartTracking();
 
   const performNesting = async () => {
     if (images.length === 0) return;
@@ -197,6 +199,41 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
     };
 
     addItem(cartItem);
+    
+    // Track for abandoned cart recovery - include full data for restoration
+    trackAddToCart({
+      name: cartItem.name,
+      sheetSize: cartItem.sheetSize,
+      sheetWidth: cartItem.sheetWidth,
+      sheetLength: cartItem.sheetLength,
+      estimatedPrice: cartItem.pricing.total,
+      placedItemsCount: cartItem.placedItems?.length || 0,
+      utilization: cartItem.layout.utilization,
+      // Full recovery data
+      images: cartItem.images.map(img => ({
+        id: img.id,
+        url: img.url,
+        width: img.width,
+        height: img.height,
+        aspectRatio: img.aspectRatio,
+        copies: img.copies,
+        dataAiHint: img.dataAiHint,
+      })),
+      placedItems: cartItem.placedItems?.map((placed: any) => ({
+        id: placed.id,
+        url: placed.url,
+        x: placed.x,
+        y: placed.y,
+        width: placed.width,
+        height: placed.height,
+        originalWidth: placed.originalWidth,
+        originalHeight: placed.originalHeight,
+        rotated: placed.rotated,
+        copyIndex: placed.copyIndex,
+      })),
+      layout: cartItem.layout,
+      pricing: cartItem.pricing,
+    });
     
     toast({
       title: "Added to Cart!",
