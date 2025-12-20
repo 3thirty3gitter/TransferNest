@@ -270,10 +270,34 @@ export default function AbandonedCartsPage() {
     return 'Just now';
   };
 
-  // Format date for display
+  // Format date for display - handles Firestore Timestamps, Date objects, and ISO strings
   const formatDate = (date: Date | any): string => {
     if (!date) return 'Unknown';
-    const d = date?.toDate ? date.toDate() : new Date(date);
+    
+    let d: Date;
+    
+    // Handle Firestore Timestamp (has toDate method - server-side only)
+    if (typeof date?.toDate === 'function') {
+      d = date.toDate();
+    }
+    // Handle serialized Firestore Timestamp from JSON (has _seconds property)
+    else if (date?._seconds !== undefined) {
+      d = new Date(date._seconds * 1000);
+    }
+    // Handle seconds timestamp format (sometimes Firestore returns this)
+    else if (date?.seconds !== undefined) {
+      d = new Date(date.seconds * 1000);
+    }
+    // Handle ISO string or timestamp number
+    else {
+      d = new Date(date);
+    }
+    
+    // Check if valid date
+    if (isNaN(d.getTime())) {
+      return 'Invalid Date';
+    }
+    
     return d.toLocaleString();
   };
 
