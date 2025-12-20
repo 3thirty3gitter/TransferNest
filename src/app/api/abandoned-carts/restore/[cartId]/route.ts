@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAbandonedCart } from '@/lib/abandoned-carts';
+import { getFirestore } from '@/lib/firebase-admin';
 
 /**
  * GET /api/abandoned-carts/restore/[cartId]
@@ -31,12 +32,34 @@ export async function GET(
       }, { status: 400 });
     }
     
-    // Return the cart items and any discount code
+    // Mark the cart as being restored (track the recovery attempt)
+    try {
+      const db = getFirestore();
+      await db.collection('abandonedCarts').doc(cartId).update({
+        lastRestoredAt: new Date(),
+        restoreCount: (cart as any).restoreCount ? (cart as any).restoreCount + 1 : 1,
+      });
+    } catch (updateError) {
+      console.warn('[CART_RESTORE] Failed to update restore tracking:', updateError);
+      // Continue anyway - don't block the restore
+    }
+    
+    // Log recovery data availability
+    const firstItem = cart.items?.[0];
+    console.log('[CART_RESTORE] Restoring cart:', {
+      cartId,
+      itemCount: cart.items?.length || 0,
+      hasFullData: !!(firstItem?.images?.length),
+      hasPlacedItems: !!(firstItem?.placedItems?.length),
+      hasLayout: !!firstItem?.layout,
+    });
+    
+    // Return the cart items with FULL recovery data (images, placedItems, layout, pricing)
     return NextResponse.json({
       success: true,
       cart: {
         id: cart.id,
-        items: cart.items,
+        items: cart.items,  // Now includes full recovery data
         estimatedTotal: cart.estimatedTotal,
         email: cart.email,
         customerName: cart.customerName,

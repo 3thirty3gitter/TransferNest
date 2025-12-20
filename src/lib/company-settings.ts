@@ -184,7 +184,7 @@ export function getDefaultSettings(): CompanySettings {
       name: 'DTF Wholesale',
       tagline: 'Professional DTF Printing Solutions',
       description: 'High-quality Direct-to-Film printing services for custom apparel and merchandise.',
-      email: 'orders@dtf-wholesale.ca',
+      email: 'info@dtfwholesale.ca',
       phone: '(555) 123-4567',
       address: {
         street: '133 Church St',

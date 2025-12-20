@@ -35,10 +35,9 @@ import Link from 'next/link';
 
 import EmailTemplateManager from '@/components/admin/EmailTemplateManager';
 import SignatureManager from '@/components/admin/SignatureManager';
-import DiscountManager from '@/components/admin/DiscountManager';
-import { Bell, Tag } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
-type TabType = 'company' | 'integrations' | 'social' | 'email' | 'notifications' | 'discounts';
+type TabType = 'company' | 'integrations' | 'social' | 'email' | 'notifications';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -322,17 +321,6 @@ export default function AdminSettingsPage() {
           >
             <Bell className="inline h-5 w-5 mr-2" />
             Notifications
-          </button>
-          <button
-            onClick={() => setActiveTab('discounts')}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'discounts'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white/10 text-slate-300 hover:bg-white/20'
-            }`}
-          >
-            <Tag className="inline h-5 w-5 mr-2" />
-            Discounts
           </button>
         </div>
 
@@ -815,26 +803,6 @@ export default function AdminSettingsPage() {
         {/* Email Settings Tab */}
         {activeTab === 'email' && (
           <div className="space-y-6">
-            {/* Blog Editor Card */}
-            <div className="glass-strong rounded-2xl p-6 border border-purple-500/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                    <PenTool className="h-6 w-6 text-purple-400" />
-                    Blog Editor
-                  </h2>
-                  <p className="text-slate-300 mt-2">
-                    Create and manage blog posts with AI-powered content and image generation.
-                  </p>
-                </div>
-                <Link href="/admin/blog-editor">
-                  <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-colors font-medium">
-                    Open Blog Editor
-                  </button>
-                </Link>
-              </div>
-            </div>
-
             {/* Test Emails Card */}
             <div className="glass-strong rounded-2xl p-6 border border-white/10">
               <div className="flex items-center justify-between">
@@ -967,11 +935,6 @@ export default function AdminSettingsPage() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Discounts Tab */}
-        {activeTab === 'discounts' && (
-          <DiscountManager adminUserId={auth.currentUser?.uid || 'unknown'} />
         )}
 
         <SignatureManager 

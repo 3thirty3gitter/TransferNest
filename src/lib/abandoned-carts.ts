@@ -16,6 +16,31 @@ export type AbandonmentStage =
   | 'checkout'       // Started checkout but didn't complete payment
   | 'payment_failed'; // Payment was attempted but failed
 
+// Full image data for recovery
+export interface AbandonedCartImage {
+  id: string;
+  url: string;          // Firebase Storage URL (persistent)
+  width: number;        // Original width in pixels
+  height: number;       // Original height in pixels
+  aspectRatio: number;
+  copies: number;
+  dataAiHint?: string;
+}
+
+// Placed item data for recovery
+export interface AbandonedCartPlacedItem {
+  id: string;
+  url: string;
+  x: number;
+  y: number;
+  width: number;       // Placed width in inches
+  height: number;      // Placed height in inches
+  originalWidth?: number;
+  originalHeight?: number;
+  rotated?: boolean;
+  copyIndex?: number;
+}
+
 export interface AbandonedCartItem {
   name: string;
   sheetSize: string;
@@ -26,6 +51,24 @@ export interface AbandonedCartItem {
   thumbnailUrl?: string;
   placedItemsCount: number;
   utilization?: number;
+  
+  // Full recovery data (stored for cart restoration)
+  images?: AbandonedCartImage[];        // Original images with Firebase URLs
+  placedItems?: AbandonedCartPlacedItem[];  // Layout positions for each image
+  layout?: {
+    positions: Array<{ x: number; y: number; width: number; height: number; imageId: string; copyIndex: number; rotated?: boolean }>;
+    utilization: number;
+    totalCopies: number;
+    sheetWidth: number;
+    sheetHeight: number;
+  };
+  pricing?: {
+    basePrice: number;
+    total: number;
+    sqInchPrice?: number;
+    perUnitPrice?: number;
+    breakdown?: any[];
+  };
 }
 
 export interface AbandonedCart {

@@ -50,7 +50,7 @@ export function useAbandonedCartTracking() {
     const sessionId = sessionIdRef.current;
     if (!sessionId) return;
 
-    // Convert cart items to abandoned cart items
+    // Convert cart items to abandoned cart items with FULL recovery data
     const abandonedItems: AbandonedCartItem[] = items.map(item => ({
       name: item.name,
       sheetSize: item.sheetSize,
@@ -61,6 +61,49 @@ export function useAbandonedCartTracking() {
       thumbnailUrl: item.thumbnailUrl,
       placedItemsCount: item.placedItems?.length || item.layout?.totalCopies || 0,
       utilization: item.layout?.utilization,
+      
+      // Full recovery data - store images with their Firebase Storage URLs
+      images: item.images?.map(img => ({
+        id: img.id,
+        url: img.url,                   // Firebase Storage URL (persistent)
+        width: img.width,
+        height: img.height,
+        aspectRatio: img.aspectRatio,
+        copies: img.copies,
+        dataAiHint: img.dataAiHint,
+      })),
+      
+      // Store placed items for gang sheet recreation
+      placedItems: item.placedItems?.map(placed => ({
+        id: placed.id,
+        url: placed.url,
+        x: placed.x,
+        y: placed.y,
+        width: placed.width,
+        height: placed.height,
+        originalWidth: placed.originalWidth,
+        originalHeight: placed.originalHeight,
+        rotated: placed.rotated,
+        copyIndex: placed.copyIndex,
+      })),
+      
+      // Store full layout data
+      layout: item.layout ? {
+        positions: item.layout.positions,
+        utilization: item.layout.utilization,
+        totalCopies: item.layout.totalCopies,
+        sheetWidth: item.layout.sheetWidth,
+        sheetHeight: item.layout.sheetHeight,
+      } : undefined,
+      
+      // Store pricing data
+      pricing: item.pricing ? {
+        basePrice: item.pricing.basePrice,
+        total: item.pricing.total,
+        sqInchPrice: (item.pricing as any).sqInchPrice,
+        perUnitPrice: (item.pricing as any).perUnitPrice,
+        breakdown: (item.pricing as any).breakdown,
+      } : undefined,
     }));
 
     // Create tracking payload
