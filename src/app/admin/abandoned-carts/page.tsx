@@ -203,19 +203,23 @@ export default function AbandonedCartsPage() {
         })
       });
 
-      if (response.ok) {
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
         toast({
           title: 'Email Sent',
-          description: `Recovery email sent to ${cart.email}`
+          description: `Recovery email sent to ${cart.email}${data.discountCode ? ` (Code: ${data.discountCode})` : ''}`
         });
-        fetchData(); // Refresh data
+        // Refresh data in background - don't let errors affect the success toast
+        fetchData().catch(console.error);
       } else {
-        throw new Error('Failed to send email');
+        throw new Error(data.error || data.details || 'Failed to send email');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Failed to send recovery email:', error);
       toast({
         title: 'Error',
-        description: 'Failed to send recovery email',
+        description: error?.message || 'Failed to send recovery email',
         variant: 'destructive'
       });
     }
