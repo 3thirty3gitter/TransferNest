@@ -409,6 +409,9 @@ export async function recordRecoveryEmail(
 /**
  * Get carts that need recovery emails
  * Returns carts that haven't received emails yet or are due for follow-up
+ * 
+ * IMPORTANT: De-duplicates by email to prevent sending multiple emails
+ * to the same customer from different cart records
  */
 export async function getCartsNeedingRecovery(): Promise<AbandonedCart[]> {
   const db = getFirestore();
@@ -430,6 +433,23 @@ export async function getCartsNeedingRecovery(): Promise<AbandonedCart[]> {
     .orderBy('createdAt', 'desc')
     .get();
   
+  // Track emails we've already processed to prevent duplicates
+  const processedEmails = new Set<string>();
+  
+  // Also check recently emailed addresses (within last hour) to prevent race conditions
+  const recentlyEmailedCarts = await cartsRef
+    .where('recovered', '==', false)
+    .where('lastRecoveryEmailAt', '>=', oneHourAgo)
+    .get();
+  
+  recentlyEmailedCarts.docs.forEach((doc: QueryDocumentSnapshot) => {
+    const cart = doc.data() as AbandonedCart;
+    if (cart.email) {
+      processedEmails.add(cart.email.toLowerCase());
+      console.log(`[RECOVERY] Skipping ${cart.email} - already emailed within last hour`);
+    }
+  });
+  
   return snapshot.docs
     .map((doc: QueryDocumentSnapshot) => ({ id: doc.id, ...doc.data() } as AbandonedCart))
     .filter((cart: AbandonedCart) => {
@@ -439,30 +459,47 @@ export async function getCartsNeedingRecovery(): Promise<AbandonedCart[]> {
       // Must have items
       if (!cart.items || cart.items.length === 0) return false;
       
-      // Check if due for next email
-      if (cart.recoveryEmailsSent === 0) return true; // Never sent
-      if (cart.recoveryEmailsSent === 1) {
-        // Send second email after 24 hours
-        const lastSent = cart.lastRecoveryEmailAt instanceof Date
-          ? cart.lastRecoveryEmailAt
-          : (cart.lastRecoveryEmailAt as any)?.toDate?.();
-        if (lastSent) {
-          const hoursSinceLast = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
-          return hoursSinceLast >= 24;
-        }
-      }
-      if (cart.recoveryEmailsSent === 2) {
-        // Send final email after 48 hours
-        const lastSent = cart.lastRecoveryEmailAt instanceof Date
-          ? cart.lastRecoveryEmailAt
-          : (cart.lastRecoveryEmailAt as any)?.toDate?.();
-        if (lastSent) {
-          const hoursSinceLast = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
-          return hoursSinceLast >= 48;
-        }
+      const emailLower = cart.email.toLowerCase();
+      
+      // Skip if we've already processed/scheduled an email to this address
+      if (processedEmails.has(emailLower)) {
+        console.log(`[RECOVERY] Skipping cart ${cart.id} - email ${cart.email} already processed`);
+        return false;
       }
       
-      // Max 3 emails
+      // Check if due for next email based on recoveryEmailsSent count
+      let isDue = false;
+      
+      if (cart.recoveryEmailsSent === 0) {
+        // Never sent - eligible for first email
+        isDue = true;
+      } else if (cart.recoveryEmailsSent === 1) {
+        // Send second email after 24 hours from last email
+        const lastSent = cart.lastRecoveryEmailAt instanceof Date
+          ? cart.lastRecoveryEmailAt
+          : (cart.lastRecoveryEmailAt as any)?.toDate?.();
+        if (lastSent) {
+          const hoursSinceLast = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+          isDue = hoursSinceLast >= 24;
+        }
+      } else if (cart.recoveryEmailsSent === 2) {
+        // Send final email after 48 hours from last email
+        const lastSent = cart.lastRecoveryEmailAt instanceof Date
+          ? cart.lastRecoveryEmailAt
+          : (cart.lastRecoveryEmailAt as any)?.toDate?.();
+        if (lastSent) {
+          const hoursSinceLast = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+          isDue = hoursSinceLast >= 48;
+        }
+      }
+      // Max 3 emails - don't send more
+      
+      if (isDue) {
+        // Mark this email as processed to prevent duplicates in same batch
+        processedEmails.add(emailLower);
+        return true;
+      }
+      
       return false;
     });
 }
