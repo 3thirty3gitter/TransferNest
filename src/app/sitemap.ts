@@ -76,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .orderBy('publishedAt', 'desc')
       .get();
 
-    blogPages = postsSnapshot.docs.map((doc) => {
+    blogPages = postsSnapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
       const data = doc.data();
       const publishedAt = data.publishedAt?.toDate?.() || new Date();
       const updatedAt = data.updatedAt?.toDate?.() || publishedAt;
