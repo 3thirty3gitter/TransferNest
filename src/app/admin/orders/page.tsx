@@ -7,7 +7,7 @@ import { Download, Search, Filter, ChevronDown, CheckSquare, Square } from 'luci
 import Link from 'next/link';
 
 type OrderStatus = 'pending' | 'printing' | 'shipped' | 'completed' | 'ready_for_pickup';
-type PaymentStatus = 'paid' | 'refunded';
+type PaymentStatus = 'pending' | 'paid' | 'refunded';
 type ShippingStatus = 'pending' | 'processing' | 'shipped' | 'delivered';
 
 type PrintFile = {
@@ -386,14 +386,20 @@ export default function AdminPage() {
                     </select>
                   </td>
                   <td className="p-4">
-                    <span className={`
-                      inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                      ${order.paymentStatus === 'paid' ? 'bg-green-500/10 text-green-400' : 
-                        order.paymentStatus === 'refunded' ? 'bg-orange-500/10 text-orange-400' :
-                        'bg-yellow-500/10 text-yellow-400'}
-                    `}>
-                      {order.paymentStatus || 'pending'}
-                    </span>
+                    <select
+                      value={order.paymentStatus || 'pending'}
+                      onChange={(e) => updateOrderStatus(order.id, 'paymentStatus', e.target.value)}
+                      className={`
+                        bg-transparent text-sm font-medium rounded px-2 py-1 border border-transparent hover:border-slate-700 focus:border-blue-500 focus:bg-slate-800 outline-none cursor-pointer
+                        ${order.paymentStatus === 'paid' ? 'text-green-400' : 
+                          order.paymentStatus === 'refunded' ? 'text-orange-400' :
+                          'text-yellow-400'}
+                      `}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="paid">Paid</option>
+                      <option value="refunded">Refunded</option>
+                    </select>
                   </td>
                   <td className="p-4 text-white font-medium">
                     ${(order.total || order.totalAmount || 0).toFixed(2)}
