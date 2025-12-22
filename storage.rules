@@ -7,7 +7,7 @@ service firebase.storage {
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.email == 'admin@transfernest.com' ||
-        request.auth.token.email == 'your-email@gmail.com' // Replace with actual admin emails
+        request.auth.token.email == 'trent@3thirty3.ca'
       );
     }
     
@@ -33,6 +33,12 @@ service firebase.storage {
     match /public/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+    
+    // Email template images - admins can upload, anyone can read (for email rendering)
+    match /email-images/{filename} {
+      allow read: if true;
+      allow write: if request.auth != null && isAdmin();
     }
     
     // Default deny for all other paths
