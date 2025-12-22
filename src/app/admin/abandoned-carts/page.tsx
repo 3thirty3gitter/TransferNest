@@ -203,23 +203,19 @@ export default function AbandonedCartsPage() {
         })
       });
 
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
+      if (response.ok) {
         toast({
           title: 'Email Sent',
-          description: `Recovery email sent to ${cart.email}${data.discountCode ? ` (Code: ${data.discountCode})` : ''}`
+          description: `Recovery email sent to ${cart.email}`
         });
-        // Refresh data in background - don't let errors affect the success toast
-        fetchData().catch(console.error);
+        fetchData(); // Refresh data
       } else {
-        throw new Error(data.error || data.details || 'Failed to send email');
+        throw new Error('Failed to send email');
       }
-    } catch (error: any) {
-      console.error('Failed to send recovery email:', error);
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error?.message || 'Failed to send recovery email',
+        description: 'Failed to send recovery email',
         variant: 'destructive'
       });
     }
@@ -274,34 +270,10 @@ export default function AbandonedCartsPage() {
     return 'Just now';
   };
 
-  // Format date for display - handles Firestore Timestamps, Date objects, and ISO strings
+  // Format date for display
   const formatDate = (date: Date | any): string => {
     if (!date) return 'Unknown';
-    
-    let d: Date;
-    
-    // Handle Firestore Timestamp (has toDate method - server-side only)
-    if (typeof date?.toDate === 'function') {
-      d = date.toDate();
-    }
-    // Handle serialized Firestore Timestamp from JSON (has _seconds property)
-    else if (date?._seconds !== undefined) {
-      d = new Date(date._seconds * 1000);
-    }
-    // Handle seconds timestamp format (sometimes Firestore returns this)
-    else if (date?.seconds !== undefined) {
-      d = new Date(date.seconds * 1000);
-    }
-    // Handle ISO string or timestamp number
-    else {
-      d = new Date(date);
-    }
-    
-    // Check if valid date
-    if (isNaN(d.getTime())) {
-      return 'Invalid Date';
-    }
-    
+    const d = date?.toDate ? date.toDate() : new Date(date);
     return d.toLocaleString();
   };
 

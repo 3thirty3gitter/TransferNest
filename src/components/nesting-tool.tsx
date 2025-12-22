@@ -8,12 +8,18 @@ import NestingProgressModal from './nesting-progress-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { useCartTracking } from '@/hooks/use-abandoned-cart-tracking';
-import { ShoppingCart, Download } from 'lucide-react';
+import { useNestingTracking, useCartTracking, useImageUploadTracking } from '@/hooks/use-abandoned-cart-tracking';
+import { reportError, formatErrorForUser, getBrowserInfo, detectBrowserIssues } from '@/lib/error-telemetry';
+import { ShoppingCart, Download, Info, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
+import { NestingToolHelper, NestingToolHelperButton } from './nesting-tool-helper';
+
+// Maximum usable width for gang sheets (17" - 0.5" margins = 16.5")
+const MAX_IMAGE_WIDTH_INCHES = 16.5;
 
 // Development-only logging
 const debugLog = (...args: any[]) => {
@@ -39,14 +45,41 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
   const [modalProgress, setModalProgress] = useState(0);
   const [currentGeneration, setCurrentGeneration] = useState(0);
   const [bestUtilization, setBestUtilization] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   
   const { addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { trackNestingComplete } = useNestingTracking();
   const { trackAddToCart } = useCartTracking();
+  const { trackImageUpload } = useImageUploadTracking();
+  
+  // Helper modal state
+  const [showHelper, setShowHelper] = useState(false);
+
+  // Track when images are uploaded for abandoned cart recovery
+  React.useEffect(() => {
+    if (images.length > 0) {
+      trackImageUpload(images.length, sheetWidth);
+    }
+  }, [images.length, sheetWidth, trackImageUpload]);
+
+  // Check if any images are too wide for the sheet
+  const oversizedImages = images.filter(img => img.width > MAX_IMAGE_WIDTH_INCHES);
+  const hasOversizedImages = oversizedImages.length > 0;
 
   const performNesting = async () => {
     if (images.length === 0) return;
+
+    // Check for oversized images before proceeding
+    if (hasOversizedImages) {
+      toast({
+        title: "Images Too Wide",
+        description: `${oversizedImages.length} image(s) exceed the maximum width of ${MAX_IMAGE_WIDTH_INCHES}". Please resize them before nesting.`,
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Set modal state FIRST - this makes it appear instantly
     setIsProcessing(true);
@@ -54,6 +87,13 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
     setModalProgress(10);
     setBestUtilization(0);
     setCurrentGeneration(0);
+    setElapsedSeconds(0);
+    
+    // Track elapsed time for extended messages
+    const startTime = Date.now();
+    const timeInterval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
 
     // Give UI time to render the modal before starting heavy computation
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -79,18 +119,22 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       // Brief pause to show stage transition
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Simulate generation progress (in real implementation, this would come from GA callbacks)
+      // Smooth progress animation that continues throughout the whole process
+      // Uses asymptotic approach - progress slows as it approaches 90% but never stops
       const progressInterval = setInterval(() => {
-        setCurrentGeneration(prev => {
-          const next = prev + 1;
-          if (next <= 40) {
-            setModalProgress(20 + (next / 40) * 70); // 20% to 90%
-            setBestUtilization(prev => Math.min(prev + Math.random() * 2, 87));
-            return next;
-          }
-          return prev;
-        });
-      }, 100); // Update every 100ms for smooth progress
+        const elapsed = (Date.now() - startTime) / 1000; // seconds
+        // Asymptotic progress: starts fast, slows down, approaches 90% but never stops moving
+        // Formula: 20 + 70 * (1 - e^(-elapsed/30)) gives smooth curve approaching 90%
+        const asymptotic = 20 + 70 * (1 - Math.exp(-elapsed / 30));
+        // Add small oscillation to show it's still working
+        const wiggle = Math.sin(elapsed * 2) * 0.5;
+        setModalProgress(Math.min(asymptotic + wiggle, 89.9));
+        
+        // Update generation display based on elapsed time
+        setCurrentGeneration(Math.min(Math.floor(elapsed * 2), 100));
+        // Slowly increase utilization estimate
+        setBestUtilization(prev => Math.min(prev + Math.random() * 0.3, 87));
+      }, 250); // Update every 250ms
 
       // Call server-side API to avoid freezing browser
       const response = await fetch('/api/nesting', {
@@ -100,12 +144,19 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       });
 
       if (!response.ok) {
-        throw new Error('Nesting API failed');
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Nesting API failed (${response.status}): ${errorText}`);
       }
 
       const result = await response.json();
       
+      // Validate result has required fields
+      if (!result || !result.placedItems || !Array.isArray(result.placedItems)) {
+        throw new Error('Invalid nesting result - missing placedItems');
+      }
+      
       clearInterval(progressInterval);
+      clearInterval(timeInterval);
       
       setModalStage('optimizing');
       setModalProgress(95);
@@ -127,11 +178,37 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
       await new Promise(resolve => setTimeout(resolve, 1500)); // Show completion
       
       setNestingResult(result);
+      
+      // Track for abandoned cart recovery
+      trackNestingComplete();
     } catch (error) {
       console.error('Nesting failed:', error);
+      
+      // Report error with full context
+      const totalCopies = images.reduce((sum, img) => sum + img.copies, 0);
+      reportError(error as Error, {
+        component: 'NestingTool',
+        action: 'nesting',
+        userId: user?.uid,
+        imageCount: images.length,
+        sheetWidth,
+        totalCopies,
+        metadata: {
+          imageSizes: images.map(img => `${img.width}x${img.height}`),
+          copies: images.map(img => img.copies),
+        },
+      });
+
+      // Show user-friendly error with browser compatibility warnings
+      const browserInfo = getBrowserInfo();
+      const browserIssues = detectBrowserIssues(browserInfo);
+      const userError = formatErrorForUser(error as Error, 'gang sheet generation');
+      
       toast({
-        title: "Nesting Failed",
-        description: "An error occurred while processing your layout.",
+        title: userError.title,
+        description: browserIssues.length > 0 
+          ? `${userError.description} Note: ${browserIssues[0]}`
+          : userError.description,
         variant: "destructive"
       });
     } finally {
@@ -200,39 +277,17 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
 
     addItem(cartItem);
     
-    // Track for abandoned cart recovery - include full data for restoration
+    // Track cart addition for abandoned cart recovery
     trackAddToCart({
       name: cartItem.name,
       sheetSize: cartItem.sheetSize,
-      sheetWidth: cartItem.sheetWidth,
-      sheetLength: cartItem.sheetLength,
-      estimatedPrice: cartItem.pricing.total,
-      placedItemsCount: cartItem.placedItems?.length || 0,
-      utilization: cartItem.layout.utilization,
-      // Full recovery data
-      images: cartItem.images.map(img => ({
-        id: img.id,
-        url: img.url,
-        width: img.width,
-        height: img.height,
-        aspectRatio: img.aspectRatio,
-        copies: img.copies,
-        dataAiHint: img.dataAiHint,
-      })),
-      placedItems: cartItem.placedItems?.map((placed: any) => ({
-        id: placed.id,
-        url: placed.url,
-        x: placed.x,
-        y: placed.y,
-        width: placed.width,
-        height: placed.height,
-        originalWidth: placed.originalWidth,
-        originalHeight: placed.originalHeight,
-        rotated: placed.rotated,
-        copyIndex: placed.copyIndex,
-      })),
-      layout: cartItem.layout,
-      pricing: cartItem.pricing,
+      sheetWidth: sheetWidth,
+      sheetLength: nestingResult.sheetLength,
+      imageCount: images.length,
+      estimatedPrice: pricing?.total || 0,
+      thumbnailUrl: images[0]?.url, // Use first image as thumbnail
+      placedItemsCount: nestingResult.placedItems?.length || 0,
+      utilization: nestingResult.areaUtilizationPct,
     });
     
     toast({
@@ -243,10 +298,17 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Onboarding Helper */}
+      <NestingToolHelper 
+        forceOpen={showHelper} 
+        onClose={() => setShowHelper(false)} 
+      />
+      
       {/* Progress Modal */}
       <NestingProgressModal
         isOpen={isProcessing}
         stage={modalStage}
+        elapsedSeconds={elapsedSeconds}
         progress={modalProgress}
         currentGeneration={currentGeneration}
         totalGenerations={40}
@@ -259,11 +321,32 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
         {/* Left Panel - Controls (Sticky) */}
         <div className="lg:w-1/3 space-y-6 lg:sticky lg:top-6 lg:h-fit">
           <div className="bg-card p-4 rounded-lg border">
-            <h2 className="text-xl font-semibold mb-4">Nesting Configuration</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Nesting Configuration</h2>
+              <NestingToolHelperButton onClick={() => setShowHelper(true)} />
+            </div>
 
             {/* Sheet Width Selector */}
             <div className="mb-4">
-              <label className="text-sm font-medium mb-2 block">Sheet Width</label>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium">Sheet Width</label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-[280px] p-3">
+                      <p className="font-medium mb-1">📏 FYI: Printable Area</p>
+                      <p className="text-sm text-muted-foreground">
+                        Our 17" sheets have a <span className="text-foreground font-medium">16.5" printable area</span>. 
+                        The extra 0.25" on each side is reserved for printer alignment guides to ensure your prints come out perfectly!
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <div className="flex gap-2">
                 <Button
                   variant="default"
@@ -321,13 +404,31 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
               </div>
             )}
 
-            {/* Manual Re-nest Button */}
+            {/* Oversized Images Warning */}
+            {hasOversizedImages && (
+              <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-400 text-lg">⚠️</span>
+                  <div>
+                    <p className="text-amber-400 font-medium text-sm">
+                      {oversizedImages.length} image{oversizedImages.length > 1 ? 's' : ''} too wide
+                    </p>
+                    <p className="text-amber-300/80 text-xs mt-1">
+                      Resize to {MAX_IMAGE_WIDTH_INCHES}" or less to nest
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Build Gangsheet Button */}
             <Button 
               onClick={performNesting}
-              disabled={images.length === 0 || isProcessing}
+              disabled={images.length === 0 || isProcessing || hasOversizedImages}
               className="w-full mt-4"
+              size="lg"
             >
-              {isProcessing ? 'Processing...' : 'Nest Images'}
+              {isProcessing ? 'Processing...' : hasOversizedImages ? 'Resize Images First' : 'Build My Gangsheet'}
             </Button>
           </div>
 

@@ -507,7 +507,7 @@ export default function AdminDashboard() {
                   <tr key={order.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td className="py-3">
                       <Link href={`/admin/jobs/${order.id}`} className="text-blue-400 hover:text-blue-300 font-mono">
-                        #{order.orderNumber || order.id.slice(-6)}
+                        #{order.orderNumber || order.id?.slice(-6) || 'Unknown'}
                       </Link>
                     </td>
                     <td className="py-3">

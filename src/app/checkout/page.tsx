@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { CreditCard, Lock, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useCheckoutTracking } from '@/hooks/use-abandoned-cart-tracking';
 import { initSquarePayments, squareConfig } from '@/lib/square';
 import { calculateTax, formatTaxBreakdown } from '@/lib/tax-calculator';
 import { db } from '@/lib/firebase';
@@ -23,6 +24,7 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { trackCheckoutStart, trackPaymentFailed, trackOrderComplete } = useCheckoutTracking();
   
   const [isLoading, setIsLoading] = useState(false);
   const [cardPayment, setCardPayment] = useState<any>(null);
@@ -62,6 +64,19 @@ export default function CheckoutPage() {
   const [shippingError, setShippingError] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [paymentComplete, setPaymentComplete] = useState(false);
+  
+  // Discount Code State
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountCodeError, setDiscountCodeError] = useState<string | null>(null);
+  const [discountCodeSuccess, setDiscountCodeSuccess] = useState<string | null>(null);
+  const [isValidatingCode, setIsValidatingCode] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string;
+    type: 'percentage' | 'fixed' | 'free_shipping';
+    value: number;
+    discountId: string;
+    freeShipping?: boolean;
+  } | null>(null);
 
   // Redirect if not authenticated or cart is empty (but not after successful payment)
   useEffect(() => {
@@ -74,6 +89,11 @@ export default function CheckoutPage() {
     if (items.length === 0 && !paymentComplete) {
       router.push('/cart');
       return;
+    }
+    
+    // Track checkout start for abandoned cart recovery
+    if (user && items.length > 0 && !paymentComplete) {
+      trackCheckoutStart();
     }
 
     // Load customer profile from Firestore
@@ -214,12 +234,20 @@ export default function CheckoutPage() {
       setSelectedShippingRate(null);
 
       try {
+        // Send only minimal data needed for shipping calculation
+        const shippingItems = items.map(item => ({
+          id: item.id,
+          sheetWidth: item.sheetWidth,
+          sheetLength: item.sheetLength,
+          quantity: item.quantity || 1
+        }));
+        
         const response = await fetch('/api/shipping/rates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             address: addressToUse,
-            items: items
+            items: shippingItems
           })
         });
 
@@ -247,15 +275,31 @@ export default function CheckoutPage() {
     return () => clearTimeout(timer);
   }, [deliveryMethod, useShippingAddress, shippingAddress, customerInfo.address, customerInfo.city, customerInfo.state, customerInfo.zipCode, items]);
 
-  // Calculate shipping cost
+  // Calculate shipping cost (accounting for free shipping discount)
   const shippingCost = useMemo(() => {
     if (deliveryMethod === 'pickup') return 0;
+    if (appliedDiscount?.freeShipping) return 0;
     return selectedShippingRate ? parseFloat(selectedShippingRate.rate) : 0;
-  }, [deliveryMethod, selectedShippingRate]);
+  }, [deliveryMethod, selectedShippingRate, appliedDiscount]);
 
+  // Calculate discount amount from both profile discount and promo codes
   const discountAmount = useMemo(() => {
-    return (totalPrice * discountPercentage) / 100;
-  }, [totalPrice, discountPercentage]);
+    // Profile-based percentage discount
+    let profileDiscount = (totalPrice * discountPercentage) / 100;
+    
+    // Promo code discount
+    let promoDiscount = 0;
+    if (appliedDiscount) {
+      if (appliedDiscount.type === 'percentage') {
+        promoDiscount = (totalPrice * appliedDiscount.value) / 100;
+      } else if (appliedDiscount.type === 'fixed') {
+        promoDiscount = Math.min(appliedDiscount.value, totalPrice);
+      }
+      // free_shipping type doesn't add to discountAmount, handled separately
+    }
+    
+    return profileDiscount + promoDiscount;
+  }, [totalPrice, discountPercentage, appliedDiscount]);
 
   const discountedSubtotal = totalPrice - discountAmount;
 
@@ -273,6 +317,58 @@ export default function CheckoutPage() {
   }, [discountedSubtotal, shippingCost, customerInfo.state, customerInfo.country]);
 
   const orderTotal = discountedSubtotal + shippingCost + taxCalculation.total;
+
+  // Apply discount code
+  const applyDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      setDiscountCodeError('Please enter a discount code');
+      return;
+    }
+    
+    setIsValidatingCode(true);
+    setDiscountCodeError(null);
+    setDiscountCodeSuccess(null);
+    
+    try {
+      const response = await fetch('/api/discounts/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: discountCode.trim(),
+          orderTotal: totalPrice,
+          itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+          customerId: user?.uid,
+          sheetSizes: items.map(item => item.sheetSize?.toString())
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.valid && result.discount) {
+        setAppliedDiscount({
+          code: result.discount.code,
+          type: result.discount.type,
+          value: result.discount.value,
+          discountId: result.discount.id,
+          freeShipping: result.freeShipping
+        });
+        setDiscountCodeSuccess(result.message);
+        setDiscountCode('');
+      } else {
+        setDiscountCodeError(result.message || 'Invalid discount code');
+      }
+    } catch (error) {
+      setDiscountCodeError('Failed to validate discount code');
+    } finally {
+      setIsValidatingCode(false);
+    }
+  };
+  
+  // Remove applied discount
+  const removeDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCodeSuccess(null);
+  };
 
   const validateForm = () => {
     const contactRequired = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'] as const;
@@ -363,6 +459,40 @@ export default function CheckoutPage() {
         discountAmount
       });
 
+      // Prepare cart items - keep MINIMAL data for checkout
+      // The gang sheet PNG is generated AFTER checkout (in process-payment)
+      // So we need placedItems with URLs for print generation
+      const cleanedCartItems = items.map(item => ({
+        id: item.id,
+        name: item.name,
+        sheetSize: item.sheetSize,
+        sheetWidth: item.sheetWidth,
+        sheetLength: item.sheetLength,
+        quantity: item.quantity,
+        pricing: item.pricing,
+        // Minimal layout info - strip positions array to reduce size
+        layout: item.layout ? {
+          utilization: item.layout.utilization,
+          totalCopies: item.layout.totalCopies,
+          sheetWidth: item.layout.sheetWidth,
+          sheetHeight: item.layout.sheetHeight,
+          positionCount: item.layout.positions?.length || 0
+        } : undefined,
+        // Keep thumbnailUrl (single small URL for order display)
+        thumbnailUrl: item.thumbnailUrl,
+        // For print generation - send essential data with URLs
+        placedItems: item.placedItems?.map((pi: any) => ({
+          id: pi.id,
+          x: pi.x,
+          y: pi.y,
+          width: pi.width,
+          height: pi.height,
+          rotated: pi.rotated || false,
+          url: pi.url // Keep URL - needed for print generation
+        })),
+        imageCount: item.images?.length || 0
+      }));
+      
       // Send payment to your backend
       const response = await fetch('/api/process-payment', {
         method: 'POST',
@@ -377,7 +507,7 @@ export default function CheckoutPage() {
           shippingAddress: deliveryMethod === 'shipping' && useShippingAddress ? shippingAddress : customerInfo,
           deliveryMethod,
           useShippingAddress,
-          cartItems: items,
+          cartItems: cleanedCartItems,
           userId: user.uid,
           taxAmount: taxCalculation.total,
           taxRate: taxCalculation.rate,
@@ -390,6 +520,14 @@ export default function CheckoutPage() {
           shippingRate: selectedShippingRate,
           discountPercentage,
           discountAmount,
+          // Promo code info
+          promoCode: appliedDiscount ? {
+            code: appliedDiscount.code,
+            discountId: appliedDiscount.discountId,
+            type: appliedDiscount.type,
+            value: appliedDiscount.value,
+            freeShipping: appliedDiscount.freeShipping
+          } : null,
         }),
       });
       
@@ -398,6 +536,9 @@ export default function CheckoutPage() {
       if (paymentResult.success) {
         // Mark payment as complete to prevent cart redirect race condition
         setPaymentComplete(true);
+        
+        // Track order completion for abandoned cart recovery
+        trackOrderComplete(paymentResult.orderId);
         
         // Clear cart and redirect to success page
         clearCart();
@@ -413,6 +554,10 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error('Payment error:', error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred processing your payment. Please try again.";
+      
+      // Track payment failure for abandoned cart recovery
+      trackPaymentFailed(errorMessage);
+      
       toast({
         title: "Payment Failed",
         description: errorMessage,
@@ -536,6 +681,8 @@ export default function CheckoutPage() {
                       value={customerInfo.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
                       required
+                      autoComplete="off"
+                      data-lpignore="true"
                       className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                     />
                   </div>
@@ -548,6 +695,8 @@ export default function CheckoutPage() {
                       value={customerInfo.state}
                       onChange={(e) => handleInputChange('state', e.target.value.toUpperCase())}
                       required
+                      autoComplete="off"
+                      data-lpignore="true"
                       placeholder={customerInfo.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
                       maxLength={2}
                       className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
@@ -563,6 +712,8 @@ export default function CheckoutPage() {
                     value={customerInfo.zipCode}
                     onChange={(e) => handleInputChange('zipCode', e.target.value.toUpperCase())}
                     required
+                    autoComplete="off"
+                    data-lpignore="true"
                     placeholder={customerInfo.country === 'CA' ? 'A1A 1A1' : '12345'}
                     className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                   />
@@ -713,6 +864,8 @@ export default function CheckoutPage() {
                             value={shippingAddress.city}
                             onChange={(e) => handleShippingInputChange('city', e.target.value)}
                             required
+                            autoComplete="off"
+                            data-lpignore="true"
                             className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                           />
                         </div>
@@ -725,6 +878,8 @@ export default function CheckoutPage() {
                             value={shippingAddress.state}
                             onChange={(e) => handleShippingInputChange('state', e.target.value.toUpperCase())}
                             required
+                            autoComplete="off"
+                            data-lpignore="true"
                             placeholder={shippingAddress.country === 'CA' ? 'e.g., ON' : 'e.g., CA'}
                             maxLength={2}
                             className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
@@ -740,6 +895,8 @@ export default function CheckoutPage() {
                           value={shippingAddress.zipCode}
                           onChange={(e) => handleShippingInputChange('zipCode', e.target.value.toUpperCase())}
                           required
+                          autoComplete="off"
+                          data-lpignore="true"
                           placeholder={shippingAddress.country === 'CA' ? 'A1A 1A1' : '12345'}
                           className="bg-white/10 border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 mt-2"
                         />
@@ -920,22 +1077,87 @@ export default function CheckoutPage() {
                   ))}
                 </div>
                 
+                {/* Discount Code Input */}
+                <div className="border-t border-white/10 pt-4">
+                  <Label className="text-slate-200 text-sm">Have a promo code?</Label>
+                  {appliedDiscount ? (
+                    <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-400 font-mono font-bold">{appliedDiscount.code}</span>
+                        <span className="text-green-300 text-sm">
+                          {appliedDiscount.type === 'percentage' && `${appliedDiscount.value}% off`}
+                          {appliedDiscount.type === 'fixed' && `$${appliedDiscount.value} off`}
+                          {appliedDiscount.type === 'free_shipping' && 'Free shipping'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeDiscount}
+                        className="text-slate-400 hover:text-red-400 transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex gap-2">
+                      <Input
+                        value={discountCode}
+                        onChange={(e) => {
+                          setDiscountCode(e.target.value.toUpperCase());
+                          setDiscountCodeError(null);
+                        }}
+                        placeholder="Enter code"
+                        className="bg-white/10 border-white/20 text-white font-mono uppercase flex-1"
+                        onKeyDown={(e) => e.key === 'Enter' && applyDiscountCode()}
+                      />
+                      <button
+                        type="button"
+                        onClick={applyDiscountCode}
+                        disabled={isValidatingCode || !discountCode.trim()}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white rounded-lg transition-colors text-sm font-medium"
+                      >
+                        {isValidatingCode ? '...' : 'Apply'}
+                      </button>
+                    </div>
+                  )}
+                  {discountCodeError && (
+                    <p className="text-red-400 text-sm mt-1">{discountCodeError}</p>
+                  )}
+                  {discountCodeSuccess && !appliedDiscount && (
+                    <p className="text-green-400 text-sm mt-1">{discountCodeSuccess}</p>
+                  )}
+                </div>
+                
                 <div className="border-t border-white/10 pt-4">
                   <div className="space-y-2 text-slate-300">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
                       <span className="text-white">${totalPrice.toFixed(2)}</span>
                     </div>
-                    {discountAmount > 0 && (
+                    {discountPercentage > 0 && (
                       <div className="flex justify-between text-green-400">
-                        <span>Discount ({discountPercentage}%)</span>
-                        <span>-${discountAmount.toFixed(2)}</span>
+                        <span>Account Discount ({discountPercentage}%)</span>
+                        <span>-${((totalPrice * discountPercentage) / 100).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {appliedDiscount && appliedDiscount.type !== 'free_shipping' && (
+                      <div className="flex justify-between text-green-400">
+                        <span>Promo: {appliedDiscount.code}</span>
+                        <span>
+                          {appliedDiscount.type === 'percentage' && `-${appliedDiscount.value}%`}
+                          {appliedDiscount.type === 'fixed' && `-$${(appliedDiscount.value || 0).toFixed(2)}`}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between">
                       <span>Shipping</span>
                       <span className={shippingCost > 0 ? "text-white" : "text-green-400"}>
-                        {shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free'}
+                        {appliedDiscount?.freeShipping ? (
+                          <span className="flex items-center gap-1">
+                            <span className="line-through text-slate-500">${parseFloat(selectedShippingRate?.rate || '0').toFixed(2)}</span>
+                            Free
+                          </span>
+                        ) : shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free'}
                       </span>
                     </div>
                     <div className="flex justify-between">

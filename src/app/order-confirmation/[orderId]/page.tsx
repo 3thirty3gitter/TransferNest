@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Mail, Home, Package, Sparkles, Clock, Truck, Heart } from 'lucide-react';
+import { CheckCircle2, Mail, Home, Package, Sparkles, Clock, Truck } from 'lucide-react';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { getCompanySettings, type CompanySettings } from '@/lib/company-settings';
+import { auth } from '@/lib/firebase';
 
 export default function OrderConfirmationPage() {
   const params = useParams();
@@ -19,9 +20,29 @@ export default function OrderConfirmationPage() {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
 
   useEffect(() => {
-    // In a real implementation, you'd fetch order details from your backend
-    // For now, we'll just show the confirmation
-    setLoading(false);
+    // Fetch order details to get the order number
+    async function fetchOrderDetails() {
+      try {
+        // Get auth token for authenticated request
+        const token = await auth.currentUser?.getIdToken();
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(`/api/orders/${orderId}`, { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setOrderDetails(data.order || data);
+        }
+      } catch (error) {
+        console.error('Error fetching order details:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchOrderDetails();
     
     // Hide confetti after animation
     const timer = setTimeout(() => setConfettiVisible(false), 3000);
@@ -42,13 +63,15 @@ export default function OrderConfirmationPage() {
     loadSettings();
   }, []);
 
-  const email = settings?.companyInfo?.email || 'support@dtfwholesale.ca';
+  const email = settings?.companyInfo?.email || 'orders@dtf-wholesale.ca';
   const phone = settings?.companyInfo?.phone || '587-405-3005';
 
   if (loading) {
     return (
       <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
         <Header />
+        {/* Spacer for fixed header */}
+        <div className="h-40"></div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
@@ -62,7 +85,8 @@ export default function OrderConfirmationPage() {
   return (
     <div className="flex flex-col min-h-dvh bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
       <Header />
-      <div className="h-20"></div>
+      {/* Spacer for fixed header */}
+      <div className="h-40"></div>
       
       {/* Confetti Effect */}
       {confettiVisible && (
@@ -125,7 +149,7 @@ export default function OrderConfirmationPage() {
             <CardContent className="space-y-6 pt-6">
               <div className="flex justify-between items-center py-3 px-4 bg-slate-800/50 rounded-lg">
                 <span className="text-slate-300 font-medium">Order Number:</span>
-                <span className="font-mono font-bold text-xl text-purple-400">#{orderId}</span>
+                <span className="font-mono font-bold text-xl text-purple-400">#{orderDetails?.orderNumber || orderId?.slice(-8).toUpperCase() || 'Unknown'}</span>
               </div>
               
               {/* What Happens Next */}
@@ -209,11 +233,6 @@ export default function OrderConfirmationPage() {
 
           {/* Thank You Message */}
           <div className="text-center space-y-4 animate-fade-in max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-500/10 border border-pink-500/20 rounded-full">
-              <Heart className="h-4 w-4 text-pink-400 animate-pulse" />
-              <span className="text-sm text-pink-300 font-medium">Made with love by 3Thirty3 Ltd.</span>
-            </div>
-            
             <p className="text-slate-400">
               Questions about your order? We're here to help!<br />
               Contact us at{' '}

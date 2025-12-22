@@ -1,4 +1,4 @@
-import { getCompanySettingsAdmin } from './firebase-admin';
+import { getCompanySettings } from './company-settings';
 
 interface GraphEmail {
   id: string;
@@ -19,25 +19,12 @@ interface GraphEmail {
 }
 
 export async function getMicrosoftGraphToken() {
-  console.log('[MS Graph] Getting token...');
-  const settings = await getCompanySettingsAdmin();
-  
-  if (!settings) {
-    console.error('[MS Graph] Company settings not found');
-    throw new Error('Company settings not found');
-  }
-  
+  const settings = await getCompanySettings();
   if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) {
-    console.error('[MS Graph] Microsoft 365 not configured:', {
-      enabled: settings?.email?.enabled,
-      provider: settings?.email?.provider,
-      hasMicrosoft365: !!settings?.email?.microsoft365
-    });
     throw new Error('Microsoft 365 integration is not enabled');
   }
 
   const { tenantId, clientId, clientSecret } = settings.email.microsoft365;
-  console.log('[MS Graph] Using tenant:', tenantId?.slice(0, 8) + '...');
 
   const params = new URLSearchParams();
   params.append('client_id', clientId);
@@ -64,7 +51,7 @@ export async function getMicrosoftGraphToken() {
 }
 
 export async function getEmails(folder = 'inbox', top = 20): Promise<GraphEmail[]> {
-  const settings = await getCompanySettingsAdmin();
+  const settings = await getCompanySettings();
   if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) {
     throw new Error('Microsoft 365 integration is not enabled');
   }
@@ -92,7 +79,7 @@ export async function getEmails(folder = 'inbox', top = 20): Promise<GraphEmail[
 }
 
 export async function markEmailAsRead(messageId: string): Promise<void> {
-  const settings = await getCompanySettingsAdmin();
+  const settings = await getCompanySettings();
   if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) return;
 
   const { userEmail } = settings.email.microsoft365;
@@ -114,62 +101,47 @@ export async function markEmailAsRead(messageId: string): Promise<void> {
 }
 
 export async function sendEmail(to: string, subject: string, content: string): Promise<void> {
-  console.log('[MS Graph] sendEmail called - To:', to, 'Subject:', subject);
-  
-  try {
-    const settings = await getCompanySettingsAdmin();
-    console.log('[MS Graph] Got settings:', settings ? 'yes' : 'no', 'email enabled:', settings?.email?.enabled);
-    
-    if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) {
-      console.error('[MS Graph] Email not enabled or not configured');
-      throw new Error('Microsoft 365 integration is not enabled');
-    }
+  const settings = await getCompanySettings();
+  if (!settings?.email?.enabled || settings.email.provider !== 'microsoft365' || !settings.email.microsoft365) {
+    throw new Error('Microsoft 365 integration is not enabled');
+  }
 
-    const { userEmail } = settings.email.microsoft365;
-    console.log('[MS Graph] Sending from:', userEmail);
-    
-    const token = await getMicrosoftGraphToken();
-    console.log('[MS Graph] Got token, sending email...');
+  const { userEmail } = settings.email.microsoft365;
+  const token = await getMicrosoftGraphToken();
 
-    const requestBody = {
-      message: {
-        subject: subject,
-        body: {
-          contentType: 'HTML',
-          content: content,
-        },
-        toRecipients: [
-          {
-            emailAddress: {
-              address: to,
-            },
-          },
-        ],
+  const message = {
+    message: {
+      subject: subject,
+      body: {
+        contentType: 'HTML',
+        content: content,
       },
-      saveToSentItems: true,
-    };
-
-    const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${userEmail}/sendMail`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      toRecipients: [
+        {
+          emailAddress: {
+            address: to,
+          },
         },
-        body: JSON.stringify(requestBody),
-      }
-    );
+      ],
+    },
+    saveToSentItems: 'true',
+  };
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('[MS Graph] Send Error:', error);
-      throw new Error(`Failed to send email: ${error.error?.message || 'Unknown error'}`);
+  const response = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${userEmail}/sendMail`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message),
     }
-  
-    console.log('[MS Graph] Email sent successfully to:', to);
-  } catch (err) {
-    console.error('[MS Graph] sendEmail EXCEPTION:', err);
-    throw err;
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('Graph API Send Error:', error);
+    throw new Error(`Failed to send email: ${error.error?.message || 'Unknown error'}`);
   }
 }

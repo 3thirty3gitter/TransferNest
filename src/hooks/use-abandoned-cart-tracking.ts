@@ -50,7 +50,7 @@ export function useAbandonedCartTracking() {
     const sessionId = sessionIdRef.current;
     if (!sessionId) return;
 
-    // Convert cart items to abandoned cart items with FULL recovery data
+    // Convert cart items to abandoned cart items
     const abandonedItems: AbandonedCartItem[] = items.map(item => ({
       name: item.name,
       sheetSize: item.sheetSize,
@@ -61,49 +61,6 @@ export function useAbandonedCartTracking() {
       thumbnailUrl: item.thumbnailUrl,
       placedItemsCount: item.placedItems?.length || item.layout?.totalCopies || 0,
       utilization: item.layout?.utilization,
-      
-      // Full recovery data - store images with their Firebase Storage URLs
-      images: item.images?.map(img => ({
-        id: img.id,
-        url: img.url,                   // Firebase Storage URL (persistent)
-        width: img.width,
-        height: img.height,
-        aspectRatio: img.aspectRatio,
-        copies: img.copies,
-        dataAiHint: img.dataAiHint,
-      })),
-      
-      // Store placed items for gang sheet recreation
-      placedItems: item.placedItems?.map(placed => ({
-        id: placed.id,
-        url: placed.url,
-        x: placed.x,
-        y: placed.y,
-        width: placed.width,
-        height: placed.height,
-        originalWidth: placed.originalWidth,
-        originalHeight: placed.originalHeight,
-        rotated: placed.rotated,
-        copyIndex: placed.copyIndex,
-      })),
-      
-      // Store full layout data
-      layout: item.layout ? {
-        positions: item.layout.positions,
-        utilization: item.layout.utilization,
-        totalCopies: item.layout.totalCopies,
-        sheetWidth: item.layout.sheetWidth,
-        sheetHeight: item.layout.sheetHeight,
-      } : undefined,
-      
-      // Store pricing data
-      pricing: item.pricing ? {
-        basePrice: item.pricing.basePrice,
-        total: item.pricing.total,
-        sqInchPrice: (item.pricing as any).sqInchPrice,
-        perUnitPrice: (item.pricing as any).perUnitPrice,
-        breakdown: (item.pricing as any).breakdown,
-      } : undefined,
     }));
 
     // Create tracking payload
@@ -273,7 +230,7 @@ export function useCartTracking() {
     sessionIdRef.current = getSessionId();
   }, []);
 
-  // Call when user adds item to cart - pass the FULL cart item with images and layouts
+  // Call when user adds item to cart - pass the item directly to avoid state timing issues
   const trackAddToCart = useCallback(async (item?: {
     name: string;
     sheetSize: string;
@@ -284,42 +241,6 @@ export function useCartTracking() {
     thumbnailUrl?: string;
     placedItemsCount?: number;
     utilization?: number;
-    // Full recovery data
-    images?: Array<{
-      id: string;
-      url: string;
-      width: number;
-      height: number;
-      aspectRatio: number;
-      copies: number;
-      dataAiHint?: string;
-    }>;
-    placedItems?: Array<{
-      id: string;
-      url: string;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      originalWidth?: number;
-      originalHeight?: number;
-      rotated?: boolean;
-      copyIndex?: number;
-    }>;
-    layout?: {
-      positions: any[];
-      utilization: number;
-      totalCopies: number;
-      sheetWidth: number;
-      sheetHeight: number;
-    };
-    pricing?: {
-      basePrice: number;
-      total: number;
-      sqInchPrice?: number;
-      perUnitPrice?: number;
-      breakdown?: any[];
-    };
   }) => {
     const sessionId = sessionIdRef.current;
     if (!sessionId) {
@@ -327,9 +248,9 @@ export function useCartTracking() {
       return;
     }
 
-    console.log('[ABANDONED_CART] trackAddToCart called with item:', item?.name, 'has images:', !!(item?.images?.length));
+    console.log('[ABANDONED_CART] trackAddToCart called with item:', item?.name);
 
-    // Create tracking payload with FULL recovery data
+    // Create tracking payload with the passed item
     const payload = {
       action: 'track',
       sessionId,
@@ -340,44 +261,20 @@ export function useCartTracking() {
         sheetSize: item.sheetSize,
         sheetWidth: item.sheetWidth || 0,
         sheetLength: item.sheetLength || 0,
-        imageCount: item.images?.length || item.imageCount || 0,
-        estimatedPrice: item.pricing?.total || item.estimatedPrice || 0,
+        imageCount: item.imageCount || 0,
+        estimatedPrice: item.estimatedPrice || 0,
         thumbnailUrl: item.thumbnailUrl,
-        placedItemsCount: item.placedItems?.length || item.placedItemsCount || 0,
-        utilization: item.layout?.utilization || item.utilization,
-        // Full recovery data
-        images: item.images?.map(img => ({
-          id: img.id,
-          url: img.url,
-          width: img.width,
-          height: img.height,
-          aspectRatio: img.aspectRatio,
-          copies: img.copies,
-          dataAiHint: img.dataAiHint,
-        })),
-        placedItems: item.placedItems?.map(placed => ({
-          id: placed.id,
-          url: placed.url,
-          x: placed.x,
-          y: placed.y,
-          width: placed.width,
-          height: placed.height,
-          originalWidth: placed.originalWidth,
-          originalHeight: placed.originalHeight,
-          rotated: placed.rotated,
-          copyIndex: placed.copyIndex,
-        })),
-        layout: item.layout,
-        pricing: item.pricing,
+        placedItemsCount: item.placedItemsCount || 0,
+        utilization: item.utilization,
       }] : [],
-      estimatedTotal: item?.pricing?.total || item?.estimatedPrice || 0,
+      estimatedTotal: item?.estimatedPrice || 0,
       stage: 'cart',
       referrer: typeof document !== 'undefined' ? document.referrer : undefined,
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
     };
 
     try {
-      console.log('[ABANDONED_CART] Sending tracking request with full data...');
+      console.log('[ABANDONED_CART] Sending tracking request...');
       const response = await fetch('/api/abandoned-carts/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

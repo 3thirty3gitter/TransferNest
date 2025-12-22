@@ -350,7 +350,7 @@ export default function AdminPage() {
                       href={`/admin/jobs/${order.id}`}
                       className="font-mono text-sm text-white hover:text-blue-400 hover:underline"
                     >
-                      #{order.orderNumber || order.id.slice(-6)}
+                      #{order.orderNumber || order.id?.slice(-6) || 'Unknown'}
                     </Link>
                   </td>
                   <td className="p-4">

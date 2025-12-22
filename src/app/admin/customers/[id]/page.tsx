@@ -399,7 +399,7 @@ export default function CustomerDetailPage() {
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <p className="text-white font-semibold mb-1">
-                              Order #{order.orderNumber || order.id.slice(-8).toUpperCase()}
+                              Order #{order.orderNumber || order.id?.slice(-8).toUpperCase() || 'Unknown'}
                             </p>
                             <p className="text-slate-400 text-sm flex items-center gap-2">
                               <Clock className="h-4 w-4" />
@@ -416,10 +416,10 @@ export default function CustomerDetailPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-white font-bold text-lg">
-                              ${order.total.toFixed(2)} {order.currency}
+                              ${order.total?.toFixed(2) || '0.00'} {order.currency || 'CAD'}
                             </p>
                             <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(order.status)}`}>
-                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
                             </span>
                           </div>
                         </div>

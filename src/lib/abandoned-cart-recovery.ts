@@ -204,18 +204,17 @@ function generateEmail1Template(
   config: RecoveryEmailConfig
 ): string {
   const recoveryUrl = getRecoveryUrl(config, cart.id);
-  const items = cart.items || [];
-  const itemsHtml = items.map(item => `
+  const itemsHtml = cart.items.map(item => `
     <tr>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
+        ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        <strong>${item.name || 'DTF Transfer'}</strong><br>
-        <span style="color: #666; font-size: 14px;">${item.imageCount || 0} images • ${item.sheetSize || '?'}" sheet</span>
+        <strong>${item.name}</strong><br>
+        <span style="color: #666; font-size: 14px;">${item.imageCount} images • ${item.sheetSize}" sheet</span>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
-        $${(item.estimatedPrice || 0).toFixed(2)}
+        $${item.estimatedPrice.toFixed(2)}
       </td>
     </tr>
   `).join('');
@@ -244,7 +243,7 @@ function generateEmail1Template(
       <tr>
         <td colspan="2" style="padding: 12px; font-weight: bold;">Estimated Total:</td>
         <td style="padding: 12px; text-align: right; font-weight: bold; color: #0066cc;">
-          $${(cart.estimatedTotal || 0).toFixed(2)} CAD
+          $${cart.estimatedTotal.toFixed(2)} CAD
         </td>
       </tr>
     </table>
@@ -277,22 +276,20 @@ function generateEmail2Template(
   config: RecoveryEmailConfig,
   discountCode: string
 ): string {
-  const items = cart.items || [];
-  const itemsHtml = items.map(item => `
+  const itemsHtml = cart.items.map(item => `
     <tr>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        <strong>${item.name || 'DTF Transfer'}</strong><br>
-        <span style="color: #666; font-size: 14px;">${item.imageCount || 0} images • ${item.sheetSize || '?'}" sheet</span>
+        <strong>${item.name}</strong><br>
+        <span style="color: #666; font-size: 14px;">${item.imageCount} images • ${item.sheetSize}" sheet</span>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
-        $${(item.estimatedPrice || 0).toFixed(2)}
+        $${item.estimatedPrice.toFixed(2)}
       </td>
     </tr>
   `).join('');
 
-  const total = cart.estimatedTotal || 0;
-  const discountAmount = total * (config.email2.discountPercent / 100);
-  const newTotal = total - discountAmount;
+  const discountAmount = cart.estimatedTotal * (config.email2.discountPercent / 100);
+  const newTotal = cart.estimatedTotal - discountAmount;
 
   return `
 <!DOCTYPE html>
@@ -330,7 +327,7 @@ function generateEmail2Template(
       <tr>
         <td style="padding: 12px; color: #666;">Original Total:</td>
         <td style="padding: 12px; text-align: right; color: #666; text-decoration: line-through;">
-          $${total.toFixed(2)} CAD
+          $${cart.estimatedTotal.toFixed(2)} CAD
         </td>
       </tr>
       <tr>
@@ -375,9 +372,8 @@ function generateEmail3Template(
   config: RecoveryEmailConfig,
   discountCode: string
 ): string {
-  const total = cart.estimatedTotal || 0;
-  const discountAmount = total * (config.email3.discountPercent / 100);
-  const newTotal = total - discountAmount;
+  const discountAmount = cart.estimatedTotal * (config.email3.discountPercent / 100);
+  const newTotal = cart.estimatedTotal - discountAmount;
 
   return `
 <!DOCTYPE html>
@@ -421,7 +417,7 @@ function generateEmail3Template(
   <div style="background: #e8f5e9; border-radius: 8px; padding: 20px; margin: 24px 0; text-align: center;">
     <p style="margin: 0 0 8px 0; color: #666;">Your Total with Discount:</p>
     <p style="margin: 0;">
-      <span style="text-decoration: line-through; color: #999; font-size: 18px;">$${total.toFixed(2)}</span>
+      <span style="text-decoration: line-through; color: #999; font-size: 18px;">$${cart.estimatedTotal.toFixed(2)}</span>
       <span style="font-size: 32px; font-weight: bold; color: #28a745; margin-left: 12px;">$${newTotal.toFixed(2)} CAD</span>
     </p>
     <p style="margin: 8px 0 0 0; color: #28a745; font-weight: bold;">You save $${discountAmount.toFixed(2)}!</p>
