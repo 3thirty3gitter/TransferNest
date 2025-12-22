@@ -289,10 +289,17 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
   const db = getFirestore();
   try {
     const snapshot = await db.collection(COLLECTION).get();
-    if (snapshot.empty) {
-      // Seed defaults if empty
+    
+    // Get existing template IDs
+    const existingIds = new Set(snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => doc.id));
+    
+    // Find missing default templates
+    const missingTemplates = DEFAULT_TEMPLATES.filter(t => !existingIds.has(t.id));
+    
+    // Add any missing default templates
+    if (missingTemplates.length > 0) {
       const batch = db.batch();
-      DEFAULT_TEMPLATES.forEach(t => {
+      missingTemplates.forEach(t => {
         const docRef = db.collection(COLLECTION).doc(t.id);
         batch.set(docRef, {
           ...t,
@@ -300,7 +307,20 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
         });
       });
       await batch.commit();
-      return DEFAULT_TEMPLATES;
+      console.log(`[EmailTemplates] Added ${missingTemplates.length} missing templates: ${missingTemplates.map(t => t.id).join(', ')}`);
+    }
+    
+    // Re-fetch if we added new templates, otherwise use existing
+    if (missingTemplates.length > 0) {
+      const updatedSnapshot = await db.collection(COLLECTION).get();
+      return updatedSnapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          updatedAt: data.updatedAt?.toDate() || new Date()
+        };
+      }) as EmailTemplate[];
     }
     
     return snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
