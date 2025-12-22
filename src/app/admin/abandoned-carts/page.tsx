@@ -203,19 +203,23 @@ export default function AbandonedCartsPage() {
         })
       });
 
-      if (response.ok) {
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
         toast({
           title: 'Email Sent',
           description: `Recovery email sent to ${cart.email}`
         });
-        fetchData(); // Refresh data
+        // Refresh data in background - don't let errors affect the success toast
+        fetchData().catch(console.error);
       } else {
-        throw new Error('Failed to send email');
+        throw new Error(data.error || data.details || 'Failed to send email');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Failed to send recovery email:', error);
       toast({
         title: 'Error',
-        description: 'Failed to send recovery email',
+        description: error?.message || 'Failed to send recovery email',
         variant: 'destructive'
       });
     }
@@ -270,10 +274,34 @@ export default function AbandonedCartsPage() {
     return 'Just now';
   };
 
-  // Format date for display
+  // Format date for display - handles Firestore Timestamps, Date objects, and ISO strings
   const formatDate = (date: Date | any): string => {
     if (!date) return 'Unknown';
-    const d = date?.toDate ? date.toDate() : new Date(date);
+    
+    let d: Date;
+    
+    // Handle Firestore Timestamp (has toDate method - server-side only)
+    if (typeof date?.toDate === 'function') {
+      d = date.toDate();
+    }
+    // Handle serialized Firestore Timestamp from JSON (has _seconds property)
+    else if (date?._seconds !== undefined) {
+      d = new Date(date._seconds * 1000);
+    }
+    // Handle seconds timestamp format (sometimes Firestore returns this)
+    else if (date?.seconds !== undefined) {
+      d = new Date(date.seconds * 1000);
+    }
+    // Handle ISO string or timestamp number
+    else {
+      d = new Date(date);
+    }
+    
+    // Check if valid date
+    if (isNaN(d.getTime())) {
+      return 'Invalid Date';
+    }
+    
     return d.toLocaleString();
   };
 
@@ -787,15 +815,15 @@ export default function AbandonedCartsPage() {
                   </CardContent>
                 </Card>
 
-                {/* Email 2: With Discount */}
+                {/* Email 2: Follow-up Reminder */}
                 <Card className={!recoveryConfig.enabled ? 'opacity-50' : ''}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Percent className="w-5 h-5" />
-                      Email 2: Discount Offer
+                      <Mail className="w-5 h-5" />
+                      Email 2: Follow-up Reminder
                     </CardTitle>
                     <CardDescription>
-                      Sent with a discount code to incentivize purchase
+                      A friendly check-in sent 24 hours after the first email
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -835,36 +863,10 @@ export default function AbandonedCartsPage() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Discount Percentage (%)</Label>
-                        <Input
-                          type="number"
-                          value={recoveryConfig.email2.discountPercent}
-                          onChange={(e) => setRecoveryConfig({
-                            ...recoveryConfig,
-                            email2: {...recoveryConfig.email2, discountPercent: parseInt(e.target.value) || 10}
-                          })}
-                          disabled={!recoveryConfig.enabled}
-                        />
-                      </div>
-                      <div>
-                        <Label>Discount Valid For (days)</Label>
-                        <Input
-                          type="number"
-                          value={recoveryConfig.email2.discountValidDays}
-                          onChange={(e) => setRecoveryConfig({
-                            ...recoveryConfig,
-                            email2: {...recoveryConfig.email2, discountValidDays: parseInt(e.target.value) || 7}
-                          })}
-                          disabled={!recoveryConfig.enabled}
-                        />
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
 
-                {/* Email 3: Final Offer */}
+                {/* Email 3: Final Reminder */}
                 <Card className={!recoveryConfig.enabled ? 'opacity-50' : ''}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -872,7 +874,7 @@ export default function AbandonedCartsPage() {
                       Email 3: Final Reminder
                     </CardTitle>
                     <CardDescription>
-                      Last chance email with a bigger discount
+                      Last friendly reminder before we stop emailing them
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -907,32 +909,6 @@ export default function AbandonedCartsPage() {
                           onChange={(e) => setRecoveryConfig({
                             ...recoveryConfig,
                             email3: {...recoveryConfig.email3, subject: e.target.value}
-                          })}
-                          disabled={!recoveryConfig.enabled}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Discount Percentage (%)</Label>
-                        <Input
-                          type="number"
-                          value={recoveryConfig.email3.discountPercent}
-                          onChange={(e) => setRecoveryConfig({
-                            ...recoveryConfig,
-                            email3: {...recoveryConfig.email3, discountPercent: parseInt(e.target.value) || 15}
-                          })}
-                          disabled={!recoveryConfig.enabled}
-                        />
-                      </div>
-                      <div>
-                        <Label>Discount Valid For (days)</Label>
-                        <Input
-                          type="number"
-                          value={recoveryConfig.email3.discountValidDays}
-                          onChange={(e) => setRecoveryConfig({
-                            ...recoveryConfig,
-                            email3: {...recoveryConfig.email3, discountValidDays: parseInt(e.target.value) || 3}
                           })}
                           disabled={!recoveryConfig.enabled}
                         />

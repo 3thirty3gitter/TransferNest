@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SquareClient, SquareEnvironment } from 'square';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { PrintExportGenerator } from '@/lib/print-export';
 import { PrintFileStorageAdmin } from '@/lib/print-storage-admin';
 import { OrderManagerAdmin } from '@/lib/order-manager-admin';
 import { sendOrderConfirmationEmail, sendAdminNewOrderEmail } from '@/lib/email';
-import { recordDiscountUsage } from '@/lib/discounts';
-import { markCartAsRecoveredByUser } from '@/lib/abandoned-carts';
+import { generateGangSheet } from '@/lib/gang-sheet-generator';
 
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
@@ -31,8 +30,7 @@ export async function POST(request: NextRequest) {
       shippingRate,
       taxBreakdown,
       discountPercentage,
-      discountAmount,
-      promoCode
+      discountAmount
     } = await request.json();
 
     console.log('[PAYMENT API] Received request:', {
@@ -101,6 +99,13 @@ export async function POST(request: NextRequest) {
         }
       };
     } else {
+      // Generate deterministic idempotency key from userId + sourceId + amount
+      // This ensures the same payment attempt gets the same key, preventing duplicates
+      const idempotencyData = `${userId}-${sourceId}-${amountNum}-${customerInfo.email}`;
+      const idempotencyKey = createHash('sha256').update(idempotencyData).digest('hex').substring(0, 45);
+      
+      console.log('[PAYMENT] Using idempotency key:', idempotencyKey.substring(0, 20) + '...');
+      
       // Create the payment request for normal orders
       const requestBody = {
         sourceId,
@@ -109,7 +114,7 @@ export async function POST(request: NextRequest) {
           currency: currency || 'CAD',
         },
         locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-        idempotencyKey: randomUUID(),
+        idempotencyKey,
         note: `DTF Print Order - ${cartItems.length} item(s)`,
         buyerEmailAddress: customerInfo.email,
       };
@@ -152,48 +157,10 @@ export async function POST(request: NextRequest) {
         shippingRate,
         taxBreakdown,
         discountPercentage,
-        discountAmount,
-        promoCode
+        discountAmount
       });
 
       console.log('[PAYMENT] Order created:', orderId);
-
-      // Fetch the order to get the generated orderNumber
-      const orderManager = new OrderManagerAdmin();
-      const createdOrder = await orderManager.getOrder(orderId);
-      const orderNumber = createdOrder?.orderNumber;
-      console.log('[PAYMENT] Order number:', orderNumber);
-
-      // Record promo code usage if a discount code was applied
-      if (promoCode && promoCode.discountId) {
-        try {
-          // Calculate the actual discount amount from the promo code
-          let promoDiscountAmount = 0;
-          const cartSubtotal = cartItems.reduce((sum: number, item: any) => 
-            sum + (item.pricing?.total || 0) * item.quantity, 0);
-          
-          if (promoCode.type === 'percentage') {
-            promoDiscountAmount = (cartSubtotal * promoCode.value) / 100;
-          } else if (promoCode.type === 'fixed') {
-            promoDiscountAmount = Math.min(promoCode.value, cartSubtotal);
-          } else if (promoCode.type === 'free_shipping' && shippingRate) {
-            promoDiscountAmount = parseFloat(shippingRate.rate) || 0;
-          }
-          
-          await recordDiscountUsage(
-            promoCode.discountId,
-            orderId,
-            orderNumber || orderId,
-            userId,
-            customerInfo.email,
-            promoDiscountAmount
-          );
-          console.log('[PAYMENT] Recorded promo code usage:', promoCode.code);
-        } catch (discountErr) {
-          console.error('[PAYMENT] Failed to record discount usage:', discountErr);
-          // Don't fail the payment if discount recording fails
-        }
-      }
 
       // Now link existing print files to the order
       console.log('[PAYMENT] Cart items for print files:', JSON.stringify(cartItems.map((item: any) => ({
@@ -220,24 +187,9 @@ export async function POST(request: NextRequest) {
         console.warn('[PAYMENT] Cart items structure:', JSON.stringify(cartItems, null, 2));
       }
 
-      // Send to PrintPilot CRM (fire and forget)
-      sendToPrintPilotCRM({
-        orderId,
-        orderNumber: orderNumber || orderId,
-        customerInfo,
-        cartItems,
-        total: actualAmountDollars,
-        shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined,
-        deliveryMethod,
-        printFiles
-      }).catch(err => {
-        console.error('[WEBHOOK] PrintPilot webhook failed:', err);
-      });
-
-      // Send emails (fire and forget)
+      // Send emails - await to ensure they complete before function terminates
       const emailDetails = {
         orderId,
-        orderNumber, // Include the generated order number
         customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
         customerEmail: customerInfo.email,
         items: cartItems,
@@ -245,37 +197,22 @@ export async function POST(request: NextRequest) {
         shippingAddress: deliveryMethod === 'shipping' ? shippingAddress : undefined
       };
 
-      // Send emails - await them to ensure they complete before response
-      // This ensures any errors are logged properly
+      console.log('[EMAIL] Starting email sending...');
       try {
-        console.log('[EMAIL] Starting to send customer confirmation email...');
-        const customerResult = await sendOrderConfirmationEmail(emailDetails);
-        console.log('[EMAIL] Customer email result:', customerResult);
-      } catch (customerErr) {
-        console.error('[EMAIL] Failed to send customer confirmation:', customerErr);
+        const emailResults = await Promise.all([
+          sendOrderConfirmationEmail(emailDetails),
+          sendAdminNewOrderEmail(emailDetails)
+        ]);
+        console.log('[EMAIL] Email sending results:', emailResults);
+      } catch (emailError) {
+        console.error('[EMAIL] Failed to send emails:', emailError);
+        // Don't fail the order if emails fail
       }
-      
-      try {
-        console.log('[EMAIL] Starting to send admin notification email...');
-        console.log('[EMAIL] Admin emails env var:', process.env.NEXT_PUBLIC_ADMIN_EMAILS || '(not set - using fallback)');
-        const adminResult = await sendAdminNewOrderEmail(emailDetails);
-        console.log('[EMAIL] Admin email result:', JSON.stringify(adminResult));
-      } catch (adminErr) {
-        console.error('[EMAIL] Failed to send admin notification:', adminErr);
-      }
-
-      // Mark any abandoned carts as recovered for this user
-      markCartAsRecoveredByUser(userId, orderId).then(() => {
-        console.log('[ABANDONED CART] Marked abandoned cart as recovered for user:', userId);
-      }).catch(err => {
-        console.error('[ABANDONED CART] Failed to mark cart as recovered:', err);
-      });
 
       return NextResponse.json({
         success: true,
         paymentId: paymentResult.payment.id,
         orderId,
-        orderNumber, // Include the generated order number
         message: 'Payment processed successfully',
         printFiles: printFiles.map((pf: any) => ({
           filename: pf.filename,
@@ -397,7 +334,6 @@ async function saveOrder(orderData: any) {
       userId: orderData.userId,
       paymentId: orderData.paymentId,
       status: orderData.status,
-      paymentStatus: 'paid',  // Order is created after successful payment
       customerInfo: orderData.customerInfo,
       items: orderItems,
       subtotal,
@@ -412,13 +348,6 @@ async function saveOrder(orderData: any) {
       deliveryMethod: orderData.deliveryMethod,
       shippingRate: orderData.shippingRate,
       taxBreakdown: orderData.taxBreakdown,
-      promoCode: orderData.promoCode ? {
-        code: orderData.promoCode.code,
-        discountId: orderData.promoCode.discountId,
-        type: orderData.promoCode.type,
-        value: orderData.promoCode.value,
-        freeShipping: orderData.promoCode.freeShipping || false
-      } : null,
     });
 
     console.log('[SAVE ORDER] Print files count:', orderData.printFiles?.length || 0);
@@ -476,27 +405,23 @@ async function linkPrintFilesToOrder(cartItems: any[], userId: string, orderId: 
         continue;
       }
 
-      // Generate gang sheet PNG in background
+      // Generate gang sheet PNG directly (no HTTP call)
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/generate-gang-sheet`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            placedItems: item.placedItems,
-            sheetWidth: item.sheetWidth,
-            sheetLength: item.sheetLength,
-            userId,
-            orderId,
-            customerInfo
-          })
+        const result = await generateGangSheet({
+          placedItems: item.placedItems,
+          sheetWidth: item.sheetWidth,
+          sheetLength: item.sheetLength,
+          userId,
+          orderId,
+          customerInfo
         });
 
-        if (!response.ok) {
-          console.error('[GENERATE_PRINT] Failed to generate gang sheet:', response.status);
+        if (!result.success) {
+          console.error('[GENERATE_PRINT] Failed to generate gang sheet');
           continue;
         }
 
-        const { pngUrl, dimensions, size } = await response.json();
+        const { pngUrl, dimensions, size } = result;
 
         // Get actual sheet dimensions from cart item
         const sheetWidth = item.sheetWidth;
@@ -639,96 +564,5 @@ async function updateOrderPrintFiles(orderId: string, printFiles: any[]) {
   } catch (error) {
     console.error('[UPDATE] Error updating order print files:', error);
     // Don't throw - order was already saved, print files are a bonus
-  }
-}
-
-// Helper function to send order to PrintPilot CRM webhook
-async function sendToPrintPilotCRM(orderData: {
-  orderId: string;
-  orderNumber: string;
-  customerInfo: any;
-  cartItems: any[];
-  total: number;
-  shippingAddress?: any;
-  deliveryMethod: string;
-  printFiles: any[];
-}) {
-  const webhookUrl = process.env.PRINTPILOT_WEBHOOK_URL;
-  const webhookSecret = process.env.PRINTPILOT_WEBHOOK_SECRET;
-  const tenantId = process.env.PRINTPILOT_TENANT_ID;
-
-  // Skip if webhook is not configured
-  if (!webhookUrl || !webhookSecret) {
-    console.log('[WEBHOOK] PrintPilot webhook not configured, skipping');
-    return;
-  }
-
-  try {
-    console.log('[WEBHOOK] Sending order to PrintPilot CRM...');
-
-    // Build the payload in PrintPilot's expected format
-    const payload = {
-      tenantId: tenantId || 'dtf-wholesale-default',
-      orderId: orderData.orderNumber || orderData.orderId,
-      customer: {
-        name: `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`.trim(),
-        email: orderData.customerInfo.email,
-        phone: orderData.customerInfo.phone || '',
-        company: '' // DTF Wholesale customers are typically individuals
-      },
-      orderDetails: {
-        totalAmount: orderData.total,
-        currency: 'CAD',
-        status: 'paid',
-        createdAt: new Date().toISOString()
-      },
-      items: orderData.cartItems.map((item: any) => ({
-        name: `DTF Gang Sheet ${item.sheetSize || item.sheetWidth}"`,
-        quantity: item.quantity || 1,
-        price: item.totalPrice || item.pricing?.total || 0,
-        description: `${item.sheetWidth || item.sheetSize}" x ${item.sheetLength?.toFixed(1) || '?'}" gang sheet - ${item.placedItems?.length || 0} designs`
-      })),
-      printFiles: orderData.printFiles.map((file: any) => ({
-        name: file.filename,
-        url: file.url,
-        fileType: 'artwork'
-      })),
-      shipping: orderData.deliveryMethod === 'shipping' && orderData.shippingAddress ? {
-        address: orderData.shippingAddress.line1 || orderData.shippingAddress.address1 || '',
-        city: orderData.shippingAddress.city || '',
-        state: orderData.shippingAddress.state || orderData.shippingAddress.province || '',
-        zip: orderData.shippingAddress.postal_code || orderData.shippingAddress.zip || orderData.shippingAddress.postalCode || '',
-        country: orderData.shippingAddress.country || 'CA',
-        method: orderData.deliveryMethod
-      } : {
-        address: 'Local Pickup',
-        city: 'Edmonton',
-        state: 'AB',
-        zip: 'T6H 4J9',
-        country: 'CA',
-        method: 'pickup'
-      },
-      notes: `Source: DTF Wholesale (TransferNest) | Order ID: ${orderData.orderId}`
-    };
-
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-webhook-secret': webhookSecret
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      console.log('[WEBHOOK] PrintPilot response:', result);
-    } else {
-      const errorText = await response.text();
-      console.error('[WEBHOOK] PrintPilot error:', response.status, errorText);
-    }
-  } catch (error) {
-    console.error('[WEBHOOK] Error sending to PrintPilot:', error);
-    // Don't throw - webhook failure shouldn't affect the order
   }
 }

@@ -1,10 +1,10 @@
 /**
  * Abandoned Cart Recovery Engine
  * 
- * Handles automated recovery emails with escalating incentives:
+ * Handles automated recovery emails with personal touch:
  * - Email 1 (after 1 hour): Friendly reminder
- * - Email 2 (after 24 hours): Reminder with discount offer
- * - Email 3 (after 72 hours): Final reminder with bigger discount (optional)
+ * - Email 2 (after 24 hours): Second gentle reminder
+ * - Email 3 (after 72 hours): Final reminder (optional)
  */
 
 import { getFirestore } from '@/lib/firebase-admin';
@@ -77,16 +77,16 @@ export const DEFAULT_RECOVERY_CONFIG: RecoveryEmailConfig = {
   email2: {
     enabled: true,
     delayHours: 24,
-    subject: "Still thinking about it? Here's 10% off! 🎉",
-    discountPercent: 10,
-    discountValidDays: 7,
+    subject: "Still thinking about your DTF transfers? 💭",
+    discountPercent: 0,
+    discountValidDays: 0,
   },
   email3: {
     enabled: true,
     delayHours: 72,
-    subject: "Last chance! 15% off your DTF order 🔥",
-    discountPercent: 15,
-    discountValidDays: 3,
+    subject: "We'd hate to see you go! 💙",
+    discountPercent: 0,
+    discountValidDays: 0,
   },
   companyName: "DTF Wholesale",
   supportEmail: "hello@dtf-wholesale.ca",
@@ -204,17 +204,18 @@ function generateEmail1Template(
   config: RecoveryEmailConfig
 ): string {
   const recoveryUrl = getRecoveryUrl(config, cart.id);
-  const itemsHtml = cart.items.map(item => `
+  const items = cart.items || [];
+  const itemsHtml = items.map(item => `
     <tr>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
+        ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        <strong>${item.name}</strong><br>
-        <span style="color: #666; font-size: 14px;">${item.imageCount} images • ${item.sheetSize}" sheet</span>
+        <strong>${item.name || 'DTF Transfer'}</strong><br>
+        <span style="color: #666; font-size: 14px;">${item.imageCount || 0} images • ${item.sheetSize || '?'}" sheet</span>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
-        $${item.estimatedPrice.toFixed(2)}
+        $${(item.estimatedPrice || 0).toFixed(2)}
       </td>
     </tr>
   `).join('');
@@ -232,9 +233,9 @@ function generateEmail1Template(
     ${config.companyLogo ? `<img src="${config.companyLogo}" alt="${config.companyName}" style="max-height: 60px;">` : `<h1 style="color: #0066cc; margin: 0;">${config.companyName}</h1>`}
   </div>
   
-  <h2 style="color: #333; margin-bottom: 20px;">Hey${cart.customerName ? ` ${cart.customerName.split(' ')[0]}` : ''}! 👋</h2>
+  <h2 style="color: #333; margin-bottom: 20px;">Hey${cart.customerName ? ` ${cart.customerName.split(' ')[0]}` : ' there'}! 👋</h2>
   
-  <p>We noticed you were working on some awesome DTF transfers but didn't complete your order. No worries – your cart is still waiting for you!</p>
+  <p>${cart.customerName ? `${cart.customerName.split(' ')[0]}, we` : 'We'} noticed you were working on some awesome DTF transfers but didn't complete your order. No worries – your cart is still waiting for you!</p>
   
   <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;">
     <h3 style="margin-top: 0; color: #333;">Your Cart:</h3>
@@ -243,7 +244,7 @@ function generateEmail1Template(
       <tr>
         <td colspan="2" style="padding: 12px; font-weight: bold;">Estimated Total:</td>
         <td style="padding: 12px; text-align: right; font-weight: bold; color: #0066cc;">
-          $${cart.estimatedTotal.toFixed(2)} CAD
+          $${(cart.estimatedTotal || 0).toFixed(2)} CAD
         </td>
       </tr>
     </table>
@@ -273,23 +274,26 @@ function generateEmail1Template(
 
 function generateEmail2Template(
   cart: AbandonedCart,
-  config: RecoveryEmailConfig,
-  discountCode: string
+  config: RecoveryEmailConfig
 ): string {
-  const itemsHtml = cart.items.map(item => `
+  const recoveryUrl = getRecoveryUrl(config, cart.id);
+  const items = cart.items || [];
+  const firstName = cart.customerName ? cart.customerName.split(' ')[0] : '';
+  
+  const itemsHtml = items.map(item => `
     <tr>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        <strong>${item.name}</strong><br>
-        <span style="color: #666; font-size: 14px;">${item.imageCount} images • ${item.sheetSize}" sheet</span>
+        ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">
+        <strong>${item.name || 'DTF Transfer'}</strong><br>
+        <span style="color: #666; font-size: 14px;">${item.imageCount || 0} images • ${item.sheetSize || '?'}" sheet</span>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
-        $${item.estimatedPrice.toFixed(2)}
+        $${(item.estimatedPrice || 0).toFixed(2)}
       </td>
     </tr>
   `).join('');
-
-  const discountAmount = cart.estimatedTotal * (config.email2.discountPercent / 100);
-  const newTotal = cart.estimatedTotal - discountAmount;
 
   return `
 <!DOCTYPE html>
@@ -304,55 +308,43 @@ function generateEmail2Template(
     ${config.companyLogo ? `<img src="${config.companyLogo}" alt="${config.companyName}" style="max-height: 60px;">` : `<h1 style="color: #0066cc; margin: 0;">${config.companyName}</h1>`}
   </div>
   
-  <!-- Discount Banner -->
-  <div style="background: linear-gradient(135deg, #0066cc 0%, #004499 100%); color: white; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
-    <h2 style="margin: 0 0 8px 0; font-size: 28px;">🎉 ${config.email2.discountPercent}% OFF Your Order!</h2>
-    <p style="margin: 0; opacity: 0.9;">Use code at checkout:</p>
-    <div style="background: rgba(255,255,255,0.2); border: 2px dashed rgba(255,255,255,0.5); border-radius: 6px; padding: 12px 24px; margin-top: 12px; display: inline-block;">
-      <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">${discountCode}</span>
-    </div>
-    <p style="margin: 12px 0 0 0; font-size: 14px; opacity: 0.8;">
-      Expires in ${config.email2.discountValidDays} days
-    </p>
-  </div>
+  <h2 style="color: #333; margin-bottom: 20px;">${firstName ? `Hey ${firstName}` : 'Hey there'}, still thinking it over? 💭</h2>
   
-  <h2 style="color: #333; margin-bottom: 20px;">Still thinking about it${cart.customerName ? `, ${cart.customerName.split(' ')[0]}` : ''}?</h2>
+  <p>${firstName ? `${firstName}, we` : 'We'} just wanted to check in! Your custom DTF transfers are still saved and ready to go whenever you are.</p>
   
-  <p>We get it – sometimes you need a little extra time. But your custom DTF transfers are too good to leave behind! Here's a special discount just for you.</p>
+  <p>We know choosing the right print provider is a big decision. If there's anything we can help with – questions about sizing, turnaround times, or the printing process – we're here for you!</p>
   
   <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;">
-    <h3 style="margin-top: 0; color: #333;">Your Cart:</h3>
+    <h3 style="margin-top: 0; color: #333;">Your Saved Cart:</h3>
     <table style="width: 100%; border-collapse: collapse;">
       ${itemsHtml}
       <tr>
-        <td style="padding: 12px; color: #666;">Original Total:</td>
-        <td style="padding: 12px; text-align: right; color: #666; text-decoration: line-through;">
-          $${cart.estimatedTotal.toFixed(2)} CAD
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 12px; color: #28a745; font-weight: bold;">Your Discount (${config.email2.discountPercent}% off):</td>
-        <td style="padding: 12px; text-align: right; color: #28a745; font-weight: bold;">
-          -$${discountAmount.toFixed(2)} CAD
-        </td>
-      </tr>
-      <tr style="background: #e8f5e9;">
-        <td style="padding: 12px; font-weight: bold; font-size: 18px;">New Total:</td>
-        <td style="padding: 12px; text-align: right; font-weight: bold; font-size: 18px; color: #0066cc;">
-          $${newTotal.toFixed(2)} CAD
+        <td colspan="2" style="padding: 12px; font-weight: bold;">Total:</td>
+        <td style="padding: 12px; text-align: right; font-weight: bold; color: #0066cc;">
+          $${(cart.estimatedTotal || 0).toFixed(2)} CAD
         </td>
       </tr>
     </table>
   </div>
   
+  <div style="background: #e3f2fd; border-radius: 8px; padding: 16px; margin: 20px 0;">
+    <p style="margin: 0; color: #1565c0;">
+      <strong>💡 Why customers love our DTF transfers:</strong><br>
+      • Vibrant, long-lasting colors<br>
+      • Easy heat-press application<br>
+      • Fast turnaround on custom orders<br>
+      • No minimum order requirements
+    </p>
+  </div>
+  
   <div style="text-align: center; margin: 30px 0;">
-    <a href="${getRecoveryUrl(config, cart.id)}" style="display: inline-block; background: #28a745; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
-      Claim Your ${config.email2.discountPercent}% Discount →
+    <a href="${recoveryUrl}" style="display: inline-block; background: #0066cc; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+      Complete Your Order →
     </a>
   </div>
   
   <p style="color: #666; font-size: 14px;">
-    Questions? Just reply to this email or contact us at <a href="mailto:${config.supportEmail}">${config.supportEmail}</a>.
+    Have questions? Just hit reply – ${firstName ? `${firstName}, ` : ''}we'd love to help! Or reach us at <a href="mailto:${config.supportEmail}">${config.supportEmail}</a>.
   </p>
   
   <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
@@ -369,11 +361,26 @@ function generateEmail2Template(
 
 function generateEmail3Template(
   cart: AbandonedCart,
-  config: RecoveryEmailConfig,
-  discountCode: string
+  config: RecoveryEmailConfig
 ): string {
-  const discountAmount = cart.estimatedTotal * (config.email3.discountPercent / 100);
-  const newTotal = cart.estimatedTotal - discountAmount;
+  const recoveryUrl = getRecoveryUrl(config, cart.id);
+  const items = cart.items || [];
+  const firstName = cart.customerName ? cart.customerName.split(' ')[0] : '';
+  
+  const itemsHtml = items.map(item => `
+    <tr>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">
+        ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">
+        <strong>${item.name || 'DTF Transfer'}</strong><br>
+        <span style="color: #666; font-size: 14px;">${item.imageCount || 0} images • ${item.sheetSize || '?'}" sheet</span>
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
+        $${(item.estimatedPrice || 0).toFixed(2)}
+      </td>
+    </tr>
+  `).join('');
 
   return `
 <!DOCTYPE html>
@@ -388,50 +395,41 @@ function generateEmail3Template(
     ${config.companyLogo ? `<img src="${config.companyLogo}" alt="${config.companyName}" style="max-height: 60px;">` : `<h1 style="color: #0066cc; margin: 0;">${config.companyName}</h1>`}
   </div>
   
-  <!-- Urgency Banner -->
-  <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
-    <h2 style="margin: 0 0 8px 0; font-size: 24px;">⏰ Last Chance! ${config.email3.discountPercent}% OFF</h2>
-    <p style="margin: 0; font-size: 16px;">This is our final offer – don't miss out!</p>
-    <div style="background: rgba(255,255,255,0.2); border: 2px dashed rgba(255,255,255,0.5); border-radius: 6px; padding: 12px 24px; margin-top: 12px; display: inline-block;">
-      <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">${discountCode}</span>
-    </div>
-    <p style="margin: 12px 0 0 0; font-size: 14px; opacity: 0.9;">
-      ⚡ Expires in ${config.email3.discountValidDays} days – Act now!
+  <h2 style="color: #333; margin-bottom: 20px;">${firstName ? `${firstName}, we` : 'We'}'d hate to see you go! 💙</h2>
+  
+  <p>This is just a final, friendly reminder that your custom DTF transfers are still waiting for you. We understand life gets busy, but we wanted to make sure you didn't forget about them!</p>
+  
+  <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;">
+    <h3 style="margin-top: 0; color: #333;">Your Saved Cart:</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+      ${itemsHtml}
+      <tr>
+        <td colspan="2" style="padding: 12px; font-weight: bold;">Total:</td>
+        <td style="padding: 12px; text-align: right; font-weight: bold; color: #0066cc;">
+          $${(cart.estimatedTotal || 0).toFixed(2)} CAD
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <div style="background: #fff8e1; border: 1px solid #ffcc02; border-radius: 8px; padding: 16px; margin: 20px 0;">
+    <p style="margin: 0; color: #7c6800;">
+      <strong>⏰ Just a heads up:</strong><br>
+      After this reminder, we won't send any more emails about this cart. If you're still interested, now's a great time to complete your order!
     </p>
   </div>
   
-  <h2 style="color: #333; margin-bottom: 20px;">This is it${cart.customerName ? `, ${cart.customerName.split(' ')[0]}` : ''}! 🔥</h2>
-  
-  <p>Your custom DTF transfers are still waiting, and we really don't want you to miss out. This is our <strong>best offer</strong> – ${config.email3.discountPercent}% off your entire order!</p>
-  
-  <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 20px 0;">
-    <p style="margin: 0; color: #856404;">
-      <strong>⚡ Why order now?</strong><br>
-      • Premium DTF transfers with vibrant colors<br>
-      • Fast turnaround on custom gang sheets<br>
-      • Easy heat-press application<br>
-      • Your biggest discount yet: <strong>${config.email3.discountPercent}% off!</strong>
-    </p>
-  </div>
-  
-  <div style="background: #e8f5e9; border-radius: 8px; padding: 20px; margin: 24px 0; text-align: center;">
-    <p style="margin: 0 0 8px 0; color: #666;">Your Total with Discount:</p>
-    <p style="margin: 0;">
-      <span style="text-decoration: line-through; color: #999; font-size: 18px;">$${cart.estimatedTotal.toFixed(2)}</span>
-      <span style="font-size: 32px; font-weight: bold; color: #28a745; margin-left: 12px;">$${newTotal.toFixed(2)} CAD</span>
-    </p>
-    <p style="margin: 8px 0 0 0; color: #28a745; font-weight: bold;">You save $${discountAmount.toFixed(2)}!</p>
-  </div>
+  <p>${firstName ? `${firstName}, if` : 'If'} something is holding you back – pricing questions, sizing concerns, or anything else – we're genuinely here to help. Just reply to this email!</p>
   
   <div style="text-align: center; margin: 30px 0;">
-    <a href="${getRecoveryUrl(config, cart.id)}" style="display: inline-block; background: #dc3545; color: white; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-weight: bold; font-size: 18px;">
-      🛒 Complete My Order Now
+    <a href="${recoveryUrl}" style="display: inline-block; background: #0066cc; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+      Complete Your Order →
     </a>
   </div>
   
-  <p style="color: #666; font-size: 14px; text-align: center;">
-    This is our final reminder. After this, your cart items may not be saved.<br>
-    Questions? Contact us at <a href="mailto:${config.supportEmail}">${config.supportEmail}</a>
+  <p style="color: #666; font-size: 14px;">
+    Thanks for considering us${firstName ? `, ${firstName}` : ''}! We hope to see you soon. 🙂<br><br>
+    Questions? <a href="mailto:${config.supportEmail}">${config.supportEmail}</a>
   </p>
   
   <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
@@ -478,9 +476,8 @@ export async function processAbandonedCartRecovery(
         let emailType: 'first' | 'second' | 'final';
         let emailHtml: string;
         let subject: string;
-        let discountCode: string | undefined;
 
-        // Determine which email to send
+        // Determine which email to send (no discount codes - just friendly reminders)
         if (cart.recoveryEmailsSent === 0 && config.email1.enabled) {
           emailType = 'first';
           subject = config.email1.subject;
@@ -488,25 +485,11 @@ export async function processAbandonedCartRecovery(
         } else if (cart.recoveryEmailsSent === 1 && config.email2.enabled) {
           emailType = 'second';
           subject = config.email2.subject;
-          // Generate discount code for email 2
-          discountCode = await generateRecoveryDiscountCode(
-            cart.id,
-            config.email2.discountPercent,
-            config.email2.discountValidDays,
-            'second'
-          );
-          emailHtml = generateEmail2Template(cart, config, discountCode);
+          emailHtml = generateEmail2Template(cart, config);
         } else if (cart.recoveryEmailsSent === 2 && config.email3.enabled) {
           emailType = 'final';
           subject = config.email3.subject;
-          // Generate bigger discount code for email 3
-          discountCode = await generateRecoveryDiscountCode(
-            cart.id,
-            config.email3.discountPercent,
-            config.email3.discountValidDays,
-            'final'
-          );
-          emailHtml = generateEmail3Template(cart, config, discountCode);
+          emailHtml = generateEmail3Template(cart, config);
         } else {
           // Skip this cart
           continue;
@@ -515,8 +498,8 @@ export async function processAbandonedCartRecovery(
         // Send the email
         await sendEmail(cart.email!, subject, emailHtml);
         
-        // Record that we sent the email
-        await recordRecoveryEmail(cart.id, emailType, discountCode);
+        // Record that we sent the email (no discount code)
+        await recordRecoveryEmail(cart.id, emailType);
         
         result.emailsSent++;
         result.details.push({
@@ -524,7 +507,6 @@ export async function processAbandonedCartRecovery(
           email: cart.email!,
           emailType,
           success: true,
-          discountCode,
         });
         
         console.log(`[RECOVERY] Sent ${emailType} email to ${cart.email} for cart ${cart.id}`);
@@ -587,12 +569,12 @@ export async function saveRecoveryConfig(config: Partial<RecoveryEmailConfig>): 
 
 /**
  * Send a recovery email manually to a specific cart
+ * Note: Discount codes have been removed - emails are now personal reminders only
  */
 export async function sendManualRecoveryEmail(
   cartId: string,
-  emailType: 'first' | 'second' | 'final',
-  customDiscountPercent?: number
-): Promise<{ success: boolean; error?: string; discountCode?: string }> {
+  emailType: 'first' | 'second' | 'final'
+): Promise<{ success: boolean; error?: string }> {
   try {
     const db = getFirestore();
     const cartDoc = await db.collection('abandonedCarts').doc(cartId).get();
@@ -610,46 +592,23 @@ export async function sendManualRecoveryEmail(
     const config = await getRecoveryConfig();
     let emailHtml: string;
     let subject: string;
-    let discountCode: string | undefined;
     
     if (emailType === 'first') {
       subject = config.email1.subject;
       emailHtml = generateEmail1Template(cart, config);
     } else if (emailType === 'second') {
-      const discountPercent = customDiscountPercent || config.email2.discountPercent;
-      discountCode = await generateRecoveryDiscountCode(
-        cart.id,
-        discountPercent,
-        config.email2.discountValidDays,
-        'second'
-      );
       subject = config.email2.subject;
-      emailHtml = generateEmail2Template(
-        cart, 
-        { ...config, email2: { ...config.email2, discountPercent } },
-        discountCode
-      );
+      emailHtml = generateEmail2Template(cart, config);
     } else {
-      const discountPercent = customDiscountPercent || config.email3.discountPercent;
-      discountCode = await generateRecoveryDiscountCode(
-        cart.id,
-        discountPercent,
-        config.email3.discountValidDays,
-        'final'
-      );
       subject = config.email3.subject;
-      emailHtml = generateEmail3Template(
-        cart,
-        { ...config, email3: { ...config.email3, discountPercent } },
-        discountCode
-      );
+      emailHtml = generateEmail3Template(cart, config);
     }
     
     await sendEmail(cart.email, subject, emailHtml);
-    await recordRecoveryEmail(cart.id, emailType, discountCode);
+    await recordRecoveryEmail(cart.id, emailType);
     
     console.log(`[RECOVERY] Successfully sent ${emailType} email to ${cart.email}`);
-    return { success: true, discountCode };
+    return { success: true };
     
   } catch (error: any) {
     console.error('[RECOVERY] sendManualRecoveryEmail error:', error?.message || error);

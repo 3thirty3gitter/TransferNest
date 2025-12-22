@@ -6,7 +6,7 @@ import { sendManualRecoveryEmail } from '@/lib/abandoned-cart-recovery';
 /**
  * POST /api/admin/abandoned-carts/send-recovery
  * Send a recovery email for an abandoned cart
- * Now uses the recovery engine with discount code generation
+ * Emails are personal reminders (no discount codes)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { cartId, emailType, customDiscountPercent } = await request.json();
+    const { cartId, emailType } = await request.json();
 
     if (!cartId || !emailType) {
       return NextResponse.json(
@@ -52,18 +52,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send the recovery email using the new recovery engine
+    // Send the recovery email (personal reminder, no discount)
     const result = await sendManualRecoveryEmail(
       cartId, 
-      emailType as 'first' | 'second' | 'final',
-      customDiscountPercent
+      emailType as 'first' | 'second' | 'final'
     );
 
     if (result.success) {
       return NextResponse.json({ 
         success: true, 
-        message: `${emailType} recovery email sent to ${cart.email}`,
-        discountCode: result.discountCode
+        message: `${emailType} recovery email sent to ${cart.email}`
       });
     } else {
       console.error('[ADMIN] Recovery email failed:', result.error);

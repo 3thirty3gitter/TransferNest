@@ -16,6 +16,31 @@ export type AbandonmentStage =
   | 'checkout'       // Started checkout but didn't complete payment
   | 'payment_failed'; // Payment was attempted but failed
 
+// Full image data for recovery
+export interface AbandonedCartImage {
+  id: string;
+  url: string;          // Firebase Storage URL (persistent)
+  width: number;        // Original width in pixels
+  height: number;       // Original height in pixels
+  aspectRatio: number;
+  copies: number;
+  dataAiHint?: string;
+}
+
+// Placed item data for recovery
+export interface AbandonedCartPlacedItem {
+  id: string;
+  url: string;
+  x: number;
+  y: number;
+  width: number;       // Placed width in inches
+  height: number;      // Placed height in inches
+  originalWidth?: number;
+  originalHeight?: number;
+  rotated?: boolean;
+  copyIndex?: number;
+}
+
 export interface AbandonedCartItem {
   name: string;
   sheetSize: string;
@@ -26,6 +51,24 @@ export interface AbandonedCartItem {
   thumbnailUrl?: string;
   placedItemsCount: number;
   utilization?: number;
+  
+  // Full recovery data (stored for cart restoration)
+  images?: AbandonedCartImage[];        // Original images with Firebase URLs
+  placedItems?: AbandonedCartPlacedItem[];  // Layout positions for each image
+  layout?: {
+    positions: Array<{ x: number; y: number; width: number; height: number; imageId: string; copyIndex: number; rotated?: boolean }>;
+    utilization: number;
+    totalCopies: number;
+    sheetWidth: number;
+    sheetHeight: number;
+  };
+  pricing?: {
+    basePrice: number;
+    total: number;
+    sqInchPrice?: number;
+    perUnitPrice?: number;
+    breakdown?: any[];
+  };
 }
 
 export interface AbandonedCart {
@@ -409,6 +452,9 @@ export async function recordRecoveryEmail(
 /**
  * Get carts that need recovery emails
  * Returns carts that haven't received emails yet or are due for follow-up
+ * 
+ * IMPORTANT: De-duplicates by email to prevent sending multiple emails
+ * to the same customer from different cart records
  */
 export async function getCartsNeedingRecovery(): Promise<AbandonedCart[]> {
   const db = getFirestore();
@@ -430,6 +476,23 @@ export async function getCartsNeedingRecovery(): Promise<AbandonedCart[]> {
     .orderBy('createdAt', 'desc')
     .get();
   
+  // Track emails we've already processed to prevent duplicates
+  const processedEmails = new Set<string>();
+  
+  // Also check recently emailed addresses (within last hour) to prevent race conditions
+  const recentlyEmailedCarts = await cartsRef
+    .where('recovered', '==', false)
+    .where('lastRecoveryEmailAt', '>=', oneHourAgo)
+    .get();
+  
+  recentlyEmailedCarts.docs.forEach((doc: QueryDocumentSnapshot) => {
+    const cart = doc.data() as AbandonedCart;
+    if (cart.email) {
+      processedEmails.add(cart.email.toLowerCase());
+      console.log(`[RECOVERY] Skipping ${cart.email} - already emailed within last hour`);
+    }
+  });
+  
   return snapshot.docs
     .map((doc: QueryDocumentSnapshot) => ({ id: doc.id, ...doc.data() } as AbandonedCart))
     .filter((cart: AbandonedCart) => {
@@ -439,30 +502,47 @@ export async function getCartsNeedingRecovery(): Promise<AbandonedCart[]> {
       // Must have items
       if (!cart.items || cart.items.length === 0) return false;
       
-      // Check if due for next email
-      if (cart.recoveryEmailsSent === 0) return true; // Never sent
-      if (cart.recoveryEmailsSent === 1) {
-        // Send second email after 24 hours
-        const lastSent = cart.lastRecoveryEmailAt instanceof Date
-          ? cart.lastRecoveryEmailAt
-          : (cart.lastRecoveryEmailAt as any)?.toDate?.();
-        if (lastSent) {
-          const hoursSinceLast = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
-          return hoursSinceLast >= 24;
-        }
-      }
-      if (cart.recoveryEmailsSent === 2) {
-        // Send final email after 48 hours
-        const lastSent = cart.lastRecoveryEmailAt instanceof Date
-          ? cart.lastRecoveryEmailAt
-          : (cart.lastRecoveryEmailAt as any)?.toDate?.();
-        if (lastSent) {
-          const hoursSinceLast = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
-          return hoursSinceLast >= 48;
-        }
+      const emailLower = cart.email.toLowerCase();
+      
+      // Skip if we've already processed/scheduled an email to this address
+      if (processedEmails.has(emailLower)) {
+        console.log(`[RECOVERY] Skipping cart ${cart.id} - email ${cart.email} already processed`);
+        return false;
       }
       
-      // Max 3 emails
+      // Check if due for next email based on recoveryEmailsSent count
+      let isDue = false;
+      
+      if (cart.recoveryEmailsSent === 0) {
+        // Never sent - eligible for first email
+        isDue = true;
+      } else if (cart.recoveryEmailsSent === 1) {
+        // Send second email after 24 hours from last email
+        const lastSent = cart.lastRecoveryEmailAt instanceof Date
+          ? cart.lastRecoveryEmailAt
+          : (cart.lastRecoveryEmailAt as any)?.toDate?.();
+        if (lastSent) {
+          const hoursSinceLast = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+          isDue = hoursSinceLast >= 24;
+        }
+      } else if (cart.recoveryEmailsSent === 2) {
+        // Send final email after 48 hours from last email
+        const lastSent = cart.lastRecoveryEmailAt instanceof Date
+          ? cart.lastRecoveryEmailAt
+          : (cart.lastRecoveryEmailAt as any)?.toDate?.();
+        if (lastSent) {
+          const hoursSinceLast = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+          isDue = hoursSinceLast >= 48;
+        }
+      }
+      // Max 3 emails - don't send more
+      
+      if (isDue) {
+        // Mark this email as processed to prevent duplicates in same batch
+        processedEmails.add(emailLower);
+        return true;
+      }
+      
       return false;
     });
 }

@@ -19,7 +19,6 @@ const formatCurrency = (amount: number, currency: string = 'CAD') => {
 
 interface Order {
   id: string;
-  orderNumber?: string;
   paymentId: string;
   status: string;
   total: number;
@@ -279,7 +278,7 @@ export default function OrdersPage() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div>
                         <h3 className="text-xl font-bold text-white mb-1">
-                          Order #{order.orderNumber || order.id?.slice(-8).toUpperCase() || 'Unknown'}
+                          Order #{order.id.slice(-8).toUpperCase()}
                         </h3>
                         <p className="text-slate-400 text-sm">
                           Placed on {formatDate(order.createdAt)}

@@ -7,18 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingCart, CheckCircle, AlertCircle, Package } from 'lucide-react';
 import Link from 'next/link';
-
-interface RestoredCartItem {
-  name: string;
-  sheetSize: string;
-  sheetWidth: number;
-  sheetLength: number;
-  imageCount: number;
-  estimatedPrice: number;
-  thumbnailUrl?: string;
-  placedItemsCount: number;
-  utilization?: number;
-}
+import type { AbandonedCartItem } from '@/lib/abandoned-carts';
 
 interface RestoreResponse {
   success?: boolean;
@@ -27,11 +16,10 @@ interface RestoreResponse {
   orderId?: string;
   cart?: {
     id: string;
-    items: RestoredCartItem[];
+    items: AbandonedCartItem[];
     estimatedTotal: number;
     email?: string;
     customerName?: string;
-    lastDiscountCode?: string;
   };
 }
 
@@ -42,8 +30,7 @@ export default function RecoverCartPage() {
   
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'already-recovered'>('loading');
   const [error, setError] = useState<string>('');
-  const [restoredItems, setRestoredItems] = useState<RestoredCartItem[]>([]);
-  const [discountCode, setDiscountCode] = useState<string | null>(null);
+  const [restoredItems, setRestoredItems] = useState<AbandonedCartItem[]>([]);
   const [orderId, setOrderId] = useState<string | null>(null);
   
   const cartId = params.cartId as string;
@@ -64,48 +51,76 @@ export default function RecoverCartPage() {
         }
         
         if (data.success && data.cart?.items) {
-          // Add items to cart
-          // Note: We're adding simplified items since full ManagedImage data isn't available
+          // Add items to cart with FULL recovery data
           for (const item of data.cart.items) {
+            // Check if we have full recovery data (images, placedItems, layout)
+            const hasFullData = item.images && item.images.length > 0;
+            
             // Create a cart item from the abandoned cart data
             const cartItem = {
               name: item.name,
               sheetSize: item.sheetSize as '11' | '13' | '17',
-              images: [], // Original images not available
-              layout: {
+              
+              // Restore original images if available
+              images: hasFullData ? item.images!.map(img => ({
+                id: img.id,
+                url: img.url,
+                width: img.width,
+                height: img.height,
+                aspectRatio: img.aspectRatio,
+                copies: img.copies,
+                dataAiHint: img.dataAiHint,
+              })) : [],
+              
+              // Restore full layout data if available
+              layout: item.layout ? {
+                positions: item.layout.positions || [],
+                utilization: item.layout.utilization || item.utilization || 0,
+                totalCopies: item.layout.totalCopies || item.placedItemsCount,
+                sheetWidth: item.layout.sheetWidth || item.sheetWidth,
+                sheetHeight: item.layout.sheetHeight || item.sheetLength,
+              } : {
                 positions: [],
                 utilization: item.utilization || 0,
                 totalCopies: item.placedItemsCount,
                 sheetWidth: item.sheetWidth,
                 sheetHeight: item.sheetLength,
               },
-              pricing: {
+              
+              // Restore pricing data if available
+              pricing: item.pricing ? {
+                basePrice: item.pricing.basePrice,
+                total: item.pricing.total,
+                sqInchPrice: item.pricing.sqInchPrice || 0,
+                perUnitPrice: item.pricing.perUnitPrice || 0,
+                breakdown: item.pricing.breakdown || [],
+              } : {
                 basePrice: item.estimatedPrice,
                 total: item.estimatedPrice,
                 sqInchPrice: 0,
                 perUnitPrice: 0,
                 breakdown: [],
               },
+              
               quantity: 1,
               sheetWidth: item.sheetWidth,
               sheetLength: item.sheetLength,
-              placedItems: [],
+              
+              // Restore placed items if available
+              placedItems: item.placedItems || [],
+              
               thumbnailUrl: item.thumbnailUrl,
-              // Mark as recovered so we know not to regenerate print file
+              
+              // Flag for recovered carts
               isRecoveredCart: true,
+              hasFullRecoveryData: hasFullData,
             };
             
             addItem(cartItem as any);
           }
           
           setRestoredItems(data.cart.items);
-          setDiscountCode(data.cart.lastDiscountCode || null);
           setStatus('success');
-          
-          // Store discount code in sessionStorage for checkout
-          if (data.cart.lastDiscountCode) {
-            sessionStorage.setItem('recovery_discount_code', data.cart.lastDiscountCode);
-          }
           
           // Auto-redirect to cart after 3 seconds
           setTimeout(() => {
@@ -157,16 +172,6 @@ export default function RecoverCartPage() {
               <p className="text-center text-muted-foreground">
                 We've restored {restoredItems.length} item(s) to your cart.
               </p>
-              
-              {discountCode && (
-                <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 w-full text-center">
-                  <p className="text-sm text-muted-foreground mb-1">Your discount code:</p>
-                  <p className="text-2xl font-bold text-primary tracking-wider">{discountCode}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Enter this at checkout to save!
-                  </p>
-                </div>
-              )}
               
               <div className="space-y-2 w-full">
                 {restoredItems.map((item, idx) => (
