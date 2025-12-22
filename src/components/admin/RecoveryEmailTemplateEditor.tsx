@@ -69,7 +69,7 @@ export default function RecoveryEmailTemplateEditor() {
   const [subject, setSubject] = useState('');
   const [htmlContent, setHtmlContent] = useState('');
 
-  // Handle image upload via button (separate from Quill toolbar)
+  // Handle image upload - inserts image directly into HTML content
   const handleImageUpload = async () => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
@@ -92,13 +92,14 @@ export default function RecoveryEmailTemplateEditor() {
         const snapshot = await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(snapshot.ref);
         
-        // Copy the image HTML to clipboard for easy insertion
-        const imageHtml = `<img src="${downloadURL}" alt="Email Image" style="max-width: 100%; height: auto;" />`;
-        await navigator.clipboard.writeText(imageHtml);
+        // Insert the image directly into the HTML content at the end
+        // Quill uses <p> tags, so we add an image in its own paragraph
+        const imageTag = `<p><img src="${downloadURL}" alt="Email Image" style="max-width: 100%; height: auto;"></p>`;
+        setHtmlContent(prev => prev + imageTag);
         
         toast({ 
-          title: 'Image uploaded!', 
-          description: 'Image URL copied to clipboard. Paste it in the editor where you want the image.' 
+          title: 'Image inserted!', 
+          description: 'Image has been added to your email template.' 
         });
       } catch (error: any) {
         console.error('Image upload failed:', error);
@@ -350,7 +351,7 @@ export default function RecoveryEmailTemplateEditor() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-16">
-                    Click "Upload Image" to add images. The image HTML will be copied to your clipboard - paste it where you want it in the editor.
+                    Click "Upload Image" to add images to your email. Images are stored in the cloud and will appear at the end of your content.
                   </p>
                 </div>
               </div>
