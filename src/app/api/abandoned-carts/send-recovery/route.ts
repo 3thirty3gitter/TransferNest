@@ -3,11 +3,12 @@ import { sendManualRecoveryEmail } from '@/lib/abandoned-cart-recovery';
 
 /**
  * API endpoint for sending manual recovery emails from admin panel
+ * Note: Emails are now personal reminders without discount codes
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { cartId, emailType, customDiscountPercent } = body;
+    const { cartId, emailType } = body;
     
     if (!cartId) {
       return NextResponse.json({ error: 'cartId is required' }, { status: 400 });
@@ -21,15 +22,13 @@ export async function POST(request: NextRequest) {
     
     const result = await sendManualRecoveryEmail(
       cartId, 
-      emailType as 'first' | 'second' | 'final',
-      customDiscountPercent
+      emailType as 'first' | 'second' | 'final'
     );
     
     if (result.success) {
       return NextResponse.json({ 
         success: true, 
-        message: `${emailType} recovery email sent successfully`,
-        discountCode: result.discountCode 
+        message: `${emailType} recovery email sent successfully`
       });
     } else {
       return NextResponse.json({ 
