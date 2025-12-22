@@ -32,8 +32,10 @@ import {
   Percent,
   Settings,
   Play,
-  Zap
+  Zap,
+  FileEdit
 } from 'lucide-react';
+import RecoveryEmailTemplateEditor from '@/components/admin/RecoveryEmailTemplateEditor';
 import type { AbandonedCart, AbandonedCartStats, AbandonmentStage } from '@/lib/abandoned-carts';
 
 // Recovery config type
@@ -341,6 +343,10 @@ export default function AbandonedCartsPage() {
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
               Recovery Settings
+            </TabsTrigger>
+            <TabsTrigger value="templates">
+              <FileEdit className="w-4 h-4 mr-2" />
+              Email Templates
             </TabsTrigger>
           </TabsList>
 
@@ -941,6 +947,11 @@ export default function AbandonedCartsPage() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Email Templates Tab */}
+          <TabsContent value="templates" className="space-y-6">
+            <RecoveryEmailTemplateEditor />
           </TabsContent>
         </Tabs>
       </div>

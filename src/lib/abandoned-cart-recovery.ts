@@ -14,6 +14,7 @@ import {
   getCartsNeedingRecovery, 
   recordRecoveryEmail 
 } from '@/lib/abandoned-carts';
+import { getEmailTemplate } from '@/lib/services/email-template-service';
 
 // ============ Types ============
 
@@ -197,6 +198,91 @@ export async function generateRecoveryDiscountCode(
 
 function getRecoveryUrl(config: RecoveryEmailConfig, cartId: string): string {
   return `${config.websiteUrl}/recover-cart/${cartId}`;
+}
+
+// Generate cart items HTML table
+function generateCartItemsTable(items: AbandonedCart['items']): string {
+  if (!items || items.length === 0) {
+    return '<p style="color: #666;">Your cart items are waiting for you!</p>';
+  }
+  
+  const rows = items.map(item => `
+    <tr>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">
+        ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">
+        <strong>${item.name || 'DTF Transfer'}</strong><br>
+        <span style="color: #666; font-size: 14px;">${item.imageCount || 0} images • ${item.sheetSize || '?'}" sheet</span>
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
+        $${(item.estimatedPrice || 0).toFixed(2)}
+      </td>
+    </tr>
+  `).join('');
+
+  return `<table style="width: 100%; border-collapse: collapse;">${rows}</table>`;
+}
+
+// Generate email from database template with variable substitution
+async function generateEmailFromTemplate(
+  templateId: 'cart_recovery_1' | 'cart_recovery_2' | 'cart_recovery_3',
+  cart: AbandonedCart,
+  config: RecoveryEmailConfig
+): Promise<{ subject: string; html: string } | null> {
+  try {
+    const template = await getEmailTemplate(templateId);
+    if (!template) {
+      console.error(`[RECOVERY] Template ${templateId} not found, falling back to hardcoded`);
+      return null;
+    }
+
+    const recoveryUrl = getRecoveryUrl(config, cart.id);
+    const firstName = cart.customerName ? cart.customerName.split(' ')[0] : 'there';
+    const cartItemsTable = generateCartItemsTable(cart.items);
+    const cartTotal = (cart.estimatedTotal || 0).toFixed(2);
+
+    // Variable substitutions
+    const variables: Record<string, string> = {
+      firstName,
+      customerName: cart.customerName || 'Valued Customer',
+      cartItemsTable,
+      cartTotal,
+      recoveryUrl,
+      companyName: config.companyName,
+      supportEmail: config.supportEmail,
+      websiteUrl: config.websiteUrl,
+    };
+
+    // Replace all variables in the template
+    let htmlContent = template.htmlContent;
+    let subject = template.subject;
+
+    Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      htmlContent = htmlContent.replace(regex, value);
+      subject = subject.replace(regex, value);
+    });
+
+    // Wrap in email HTML structure
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5;">
+  ${htmlContent}
+</body>
+</html>
+    `.trim();
+
+    return { subject, html };
+  } catch (error) {
+    console.error(`[RECOVERY] Error generating email from template ${templateId}:`, error);
+    return null;
+  }
 }
 
 function generateEmail1Template(
@@ -476,23 +562,44 @@ export async function processAbandonedCartRecovery(
         let emailType: 'first' | 'second' | 'final';
         let emailHtml: string;
         let subject: string;
+        let templateId: 'cart_recovery_1' | 'cart_recovery_2' | 'cart_recovery_3';
 
         // Determine which email to send (no discount codes - just friendly reminders)
         if (cart.recoveryEmailsSent === 0 && config.email1.enabled) {
           emailType = 'first';
+          templateId = 'cart_recovery_1';
           subject = config.email1.subject;
-          emailHtml = generateEmail1Template(cart, config);
         } else if (cart.recoveryEmailsSent === 1 && config.email2.enabled) {
           emailType = 'second';
+          templateId = 'cart_recovery_2';
           subject = config.email2.subject;
-          emailHtml = generateEmail2Template(cart, config);
         } else if (cart.recoveryEmailsSent === 2 && config.email3.enabled) {
           emailType = 'final';
+          templateId = 'cart_recovery_3';
           subject = config.email3.subject;
-          emailHtml = generateEmail3Template(cart, config);
         } else {
           // Skip this cart
           continue;
+        }
+
+        // Try to get email from database template first
+        const templateEmail = await generateEmailFromTemplate(templateId, cart, config);
+        
+        if (templateEmail) {
+          emailHtml = templateEmail.html;
+          // Subject was already set from config above, keep it or use template subject as fallback
+          if (!subject) {
+            subject = templateEmail.subject;
+          }
+        } else {
+          // Fallback to hardcoded templates
+          if (emailType === 'first') {
+            emailHtml = generateEmail1Template(cart, config);
+          } else if (emailType === 'second') {
+            emailHtml = generateEmail2Template(cart, config);
+          } else {
+            emailHtml = generateEmail3Template(cart, config);
+          }
         }
 
         // Send the email
@@ -593,15 +700,36 @@ export async function sendManualRecoveryEmail(
     let emailHtml: string;
     let subject: string;
     
-    if (emailType === 'first') {
-      subject = config.email1.subject;
-      emailHtml = generateEmail1Template(cart, config);
-    } else if (emailType === 'second') {
-      subject = config.email2.subject;
-      emailHtml = generateEmail2Template(cart, config);
+    // Map email type to template ID
+    const templateId: 'cart_recovery_1' | 'cart_recovery_2' | 'cart_recovery_3' = 
+      emailType === 'first' ? 'cart_recovery_1' :
+      emailType === 'second' ? 'cart_recovery_2' : 'cart_recovery_3';
+    
+    // Try to get email from database template first
+    const templateEmail = await generateEmailFromTemplate(templateId, cart, config);
+    
+    if (templateEmail) {
+      emailHtml = templateEmail.html;
+      // Use subject from admin config (allows override), fallback to template subject
+      if (emailType === 'first') {
+        subject = config.email1.subject || templateEmail.subject;
+      } else if (emailType === 'second') {
+        subject = config.email2.subject || templateEmail.subject;
+      } else {
+        subject = config.email3.subject || templateEmail.subject;
+      }
     } else {
-      subject = config.email3.subject;
-      emailHtml = generateEmail3Template(cart, config);
+      // Fallback to hardcoded templates
+      if (emailType === 'first') {
+        subject = config.email1.subject;
+        emailHtml = generateEmail1Template(cart, config);
+      } else if (emailType === 'second') {
+        subject = config.email2.subject;
+        emailHtml = generateEmail2Template(cart, config);
+      } else {
+        subject = config.email3.subject;
+        emailHtml = generateEmail3Template(cart, config);
+      }
     }
     
     await sendEmail(cart.email, subject, emailHtml);

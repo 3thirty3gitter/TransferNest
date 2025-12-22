@@ -148,6 +148,140 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
   <p>Best regards,<br/>The DTF Wholesale Team</p>
 </div>`,
     updatedAt: new Date()
+  },
+  // Cart Recovery Emails
+  {
+    id: 'cart_recovery_1',
+    name: 'Cart Recovery - First Reminder',
+    subject: 'You left something behind! 🛒',
+    description: 'Sent 1 hour after cart abandonment - friendly first reminder',
+    variables: ['firstName', 'customerName', 'cartItemsTable', 'cartTotal', 'recoveryUrl', 'companyName', 'supportEmail'],
+    htmlContent: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #0066cc; margin: 0;">{{companyName}}</h1>
+  </div>
+  
+  <h2 style="color: #333; margin-bottom: 20px;">Hey {{firstName}}! 👋</h2>
+  
+  <p>{{firstName}}, we noticed you were working on some awesome DTF transfers but didn't complete your order. No worries – your cart is still waiting for you!</p>
+  
+  <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;">
+    <h3 style="margin-top: 0; color: #333;">Your Cart:</h3>
+    {{cartItemsTable}}
+    <p style="margin-top: 15px; font-size: 18px;"><strong>Estimated Total: ${'$'}{{cartTotal}} CAD</strong></p>
+  </div>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{recoveryUrl}}" style="display: inline-block; background: #0066cc; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+      Complete Your Order →
+    </a>
+  </div>
+  
+  <p style="color: #666; font-size: 14px;">
+    If you have any questions about our DTF transfers or need help with your order, just reply to this email or contact us at <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>.
+  </p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  
+  <p style="color: #999; font-size: 12px; text-align: center;">{{companyName}}</p>
+</div>`,
+    updatedAt: new Date()
+  },
+  {
+    id: 'cart_recovery_2',
+    name: 'Cart Recovery - Second Reminder',
+    subject: 'Still thinking about your DTF transfers? 💭',
+    description: 'Sent 24 hours after first email - friendly follow-up',
+    variables: ['firstName', 'customerName', 'cartItemsTable', 'cartTotal', 'recoveryUrl', 'companyName', 'supportEmail'],
+    htmlContent: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #0066cc; margin: 0;">{{companyName}}</h1>
+  </div>
+  
+  <h2 style="color: #333; margin-bottom: 20px;">Hey {{firstName}}, still thinking it over? 💭</h2>
+  
+  <p>{{firstName}}, we just wanted to check in! Your custom DTF transfers are still saved and ready to go whenever you are.</p>
+  
+  <p>We know choosing the right print provider is a big decision. If there's anything we can help with – questions about sizing, turnaround times, or the printing process – we're here for you!</p>
+  
+  <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;">
+    <h3 style="margin-top: 0; color: #333;">Your Saved Cart:</h3>
+    {{cartItemsTable}}
+    <p style="margin-top: 15px; font-size: 18px;"><strong>Total: ${'$'}{{cartTotal}} CAD</strong></p>
+  </div>
+  
+  <div style="background: #e3f2fd; border-radius: 8px; padding: 16px; margin: 20px 0;">
+    <p style="margin: 0; color: #1565c0;">
+      <strong>💡 Why customers love our DTF transfers:</strong><br>
+      • Vibrant, long-lasting colors<br>
+      • Easy heat-press application<br>
+      • Fast turnaround on custom orders<br>
+      • No minimum order requirements
+    </p>
+  </div>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{recoveryUrl}}" style="display: inline-block; background: #0066cc; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+      Complete Your Order →
+    </a>
+  </div>
+  
+  <p style="color: #666; font-size: 14px;">
+    Have questions? Just hit reply – {{firstName}}, we'd love to help! Or reach us at <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>.
+  </p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  
+  <p style="color: #999; font-size: 12px; text-align: center;">{{companyName}}</p>
+</div>`,
+    updatedAt: new Date()
+  },
+  {
+    id: 'cart_recovery_3',
+    name: 'Cart Recovery - Final Reminder',
+    subject: "We'd hate to see you go! 💙",
+    description: 'Sent 72 hours after second email - final friendly reminder',
+    variables: ['firstName', 'customerName', 'cartItemsTable', 'cartTotal', 'recoveryUrl', 'companyName', 'supportEmail'],
+    htmlContent: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #0066cc; margin: 0;">{{companyName}}</h1>
+  </div>
+  
+  <h2 style="color: #333; margin-bottom: 20px;">{{firstName}}, we'd hate to see you go! 💙</h2>
+  
+  <p>This is just a final, friendly reminder that your custom DTF transfers are still waiting for you. We understand life gets busy, but we wanted to make sure you didn't forget about them!</p>
+  
+  <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;">
+    <h3 style="margin-top: 0; color: #333;">Your Saved Cart:</h3>
+    {{cartItemsTable}}
+    <p style="margin-top: 15px; font-size: 18px;"><strong>Total: ${'$'}{{cartTotal}} CAD</strong></p>
+  </div>
+  
+  <div style="background: #fff8e1; border: 1px solid #ffcc02; border-radius: 8px; padding: 16px; margin: 20px 0;">
+    <p style="margin: 0; color: #7c6800;">
+      <strong>⏰ Just a heads up:</strong><br>
+      After this reminder, we won't send any more emails about this cart. If you're still interested, now's a great time to complete your order!
+    </p>
+  </div>
+  
+  <p>{{firstName}}, if something is holding you back – pricing questions, sizing concerns, or anything else – we're genuinely here to help. Just reply to this email!</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{recoveryUrl}}" style="display: inline-block; background: #0066cc; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+      Complete Your Order →
+    </a>
+  </div>
+  
+  <p style="color: #666; font-size: 14px;">
+    Thanks for considering us, {{firstName}}! We hope to see you soon. 🙂<br><br>
+    Questions? <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>
+  </p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  
+  <p style="color: #999; font-size: 12px; text-align: center;">{{companyName}}</p>
+</div>`,
+    updatedAt: new Date()
   }
 ];
 
