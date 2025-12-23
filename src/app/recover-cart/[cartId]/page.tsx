@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/cart-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ interface RestoreResponse {
   success?: boolean;
   error?: string;
   recovered?: boolean;
+  alreadyRestored?: boolean;
   orderId?: string;
   cart?: {
     id: string;
@@ -23,42 +24,76 @@ interface RestoreResponse {
   };
 }
 
+// Helper to check if this cart was already restored in this browser session
+function wasCartRestoredInSession(cartId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const restored = sessionStorage.getItem(`cart_restored_${cartId}`);
+  return restored === 'true';
+}
+
+function markCartRestoredInSession(cartId: string): void {
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(`cart_restored_${cartId}`, 'true');
+}
+
 export default function RecoverCartPage() {
   const params = useParams();
   const router = useRouter();
   const { addItem, items: currentCartItems } = useCart();
   
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'already-recovered'>('loading');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'already-recovered'>('idle');
   const [error, setError] = useState<string>('');
   const [restoredItems, setRestoredItems] = useState<AbandonedCartItem[]>([]);
   const [orderId, setOrderId] = useState<string | null>(null);
   
-  // Track if we've already attempted to restore to prevent duplicate calls
-  const hasAttemptedRestore = useRef(false);
+  // Use a ref to track if restore was initiated (survives re-renders but not remounts)
+  const restoreInitiated = useRef(false);
+  
+  const cartId = params.cartId as string;
+  
+  // Store function refs to avoid dependency issues
   const addItemRef = useRef(addItem);
   const routerRef = useRef(router);
   
-  // Keep refs updated
   useEffect(() => {
     addItemRef.current = addItem;
     routerRef.current = router;
   }, [addItem, router]);
   
-  const cartId = params.cartId as string;
-  
   useEffect(() => {
-    // Prevent duplicate restore attempts
-    if (hasAttemptedRestore.current) {
+    // Multiple guards to prevent duplicate calls:
+    // 1. Check if this component instance already initiated restore
+    if (restoreInitiated.current) {
+      console.log('[RESTORE] Already initiated in this instance, skipping');
       return;
     }
     
+    // 2. Check if this cart was already restored in this browser session
+    if (wasCartRestoredInSession(cartId)) {
+      console.log('[RESTORE] Cart already restored in this session, redirecting to cart');
+      setStatus('success');
+      // Redirect immediately since cart should already have items
+      routerRef.current.push('/cart');
+      return;
+    }
+    
+    // Mark as initiated immediately (synchronously, before any async work)
+    restoreInitiated.current = true;
+    setStatus('loading');
+    
     const restoreCart = async () => {
-      // Mark as attempted immediately
-      hasAttemptedRestore.current = true;
-      
       try {
+        console.log('[RESTORE] Fetching cart data for:', cartId);
         const response = await fetch(`/api/abandoned-carts/restore/${cartId}`);
         const data: RestoreResponse = await response.json();
+        
+        // Check if API says it was already restored in this session
+        if (data.alreadyRestored) {
+          console.log('[RESTORE] API says already restored, redirecting');
+          setStatus('success');
+          routerRef.current.push('/cart');
+          return;
+        }
         
         if (!response.ok) {
           if (data.recovered) {
@@ -70,6 +105,9 @@ export default function RecoverCartPage() {
         }
         
         if (data.success && data.cart?.items) {
+          // Mark as restored in session BEFORE adding items
+          markCartRestoredInSession(cartId);
+          
           // Add items to cart with FULL recovery data
           for (const item of data.cart.items) {
             // Check if we have full recovery data (images, placedItems, layout)
@@ -166,14 +204,14 @@ export default function RecoverCartPage() {
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">
-            {status === 'loading' && 'Restoring Your Cart...'}
+            {(status === 'idle' || status === 'loading') && 'Restoring Your Cart...'}
             {status === 'success' && 'Cart Restored!'}
             {status === 'error' && 'Unable to Restore Cart'}
             {status === 'already-recovered' && 'Order Already Completed'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {status === 'loading' && (
+          {(status === 'idle' || status === 'loading') && (
             <div className="flex flex-col items-center gap-4 py-8">
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
               <p className="text-muted-foreground">

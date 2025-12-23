@@ -32,6 +32,24 @@ export async function GET(
       }, { status: 400 });
     }
     
+    // Check if this cart was just restored (within last 30 seconds)
+    // This prevents duplicate API calls from adding items multiple times
+    const lastRestoredAt = (cart as any).lastRestoredAt;
+    if (lastRestoredAt) {
+      const lastRestoreTime = lastRestoredAt.toDate ? lastRestoredAt.toDate() : new Date(lastRestoredAt);
+      const timeSinceRestore = Date.now() - lastRestoreTime.getTime();
+      const thirtySeconds = 30 * 1000;
+      
+      if (timeSinceRestore < thirtySeconds) {
+        console.log('[CART_RESTORE] Cart was just restored, returning alreadyRestored flag');
+        return NextResponse.json({
+          success: true,
+          alreadyRestored: true,
+          message: 'Cart was already restored moments ago',
+        });
+      }
+    }
+    
     // Mark the cart as being restored (track the recovery attempt)
     try {
       const db = getFirestore();
