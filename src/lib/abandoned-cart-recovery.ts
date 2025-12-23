@@ -200,30 +200,29 @@ function getRecoveryUrl(config: RecoveryEmailConfig, cartId: string): string {
   return `${config.websiteUrl}/recover-cart/${cartId}`;
 }
 
-// Generate cart items HTML table - email-safe table-based layout
+// Generate cart items HTML table - simple email-safe format
 function generateCartItemsTable(items: AbandonedCart['items']): string {
   if (!items || items.length === 0) {
-    return '<p style="color: #718096; font-style: italic; margin: 0;">Your cart items are waiting for you!</p>';
+    return '<p style="color:#888888;font-style:italic;margin:0;">Your cart items are waiting for you!</p>';
   }
   
   const rows = items.map(item => `
-    <tr>
-      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;" width="70">
-        ${item.thumbnailUrl 
-          ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" width="60" height="60" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; display: block;">` 
-          : `<div style="width: 60px; height: 60px; background-color: #e2e8f0; border-radius: 6px;"></div>`}
-      </td>
-      <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
-        <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">${item.name || 'DTF Transfer'}</p>
-        <p style="margin: 0; font-size: 13px; color: #718096;">${item.imageCount || 0} image${(item.imageCount || 0) !== 1 ? 's' : ''} • ${item.sheetSize || '?'}" sheet</p>
-      </td>
-      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top; text-align: right;" width="80">
-        <p style="margin: 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">$${(item.estimatedPrice || 0).toFixed(2)}</p>
-      </td>
-    </tr>
-  `).join('');
+<tr>
+<td width="70" style="padding:10px 0;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+${item.thumbnailUrl 
+  ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" width="60" height="60" style="width:60px;height:60px;object-fit:cover;border-radius:4px;display:block;">` 
+  : `<div style="width:60px;height:60px;background-color:#e0e0e0;border-radius:4px;"></div>`}
+</td>
+<td style="padding:10px;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+<p style="margin:0 0 4px 0;font-size:15px;font-weight:bold;color:#1a1a2e;">${item.name || 'DTF Transfer'}</p>
+<p style="margin:0;font-size:13px;color:#888888;">${item.imageCount || 0} image${(item.imageCount || 0) !== 1 ? 's' : ''} • ${item.sheetSize || '?'}" sheet</p>
+</td>
+<td width="80" align="right" style="padding:10px 0;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+<p style="margin:0;font-size:15px;font-weight:bold;color:#1a1a2e;">$${(item.estimatedPrice || 0).toFixed(2)}</p>
+</td>
+</tr>`).join('');
 
-  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">${rows}</table>`;
+  return `<table width="100%" cellpadding="0" cellspacing="0">${rows}</table>`;
 }
 
 // Generate email from database template with variable substitution

@@ -275,32 +275,32 @@ export default function RecoveryEmailTemplateEditor() {
       firstName: 'John',
       customerName: 'John Doe',
       cartItemsTable: `
-        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
-          <tr>
-            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;" width="70">
-              <div style="width: 60px; height: 60px; background-color: #e2e8f0; border-radius: 6px;"></div>
-            </td>
-            <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
-              <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">Custom DTF Transfer</p>
-              <p style="margin: 0; font-size: 13px; color: #718096;">5 images • 22x60" sheet</p>
-            </td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top; text-align: right;" width="80">
-              <p style="margin: 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">$45.99</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;" width="70">
-              <div style="width: 60px; height: 60px; background-color: #e2e8f0; border-radius: 6px;"></div>
-            </td>
-            <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
-              <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">Gang Sheet Bundle</p>
-              <p style="margin: 0; font-size: 13px; color: #718096;">3 images • 12x22" sheet</p>
-            </td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top; text-align: right;" width="80">
-              <p style="margin: 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">$22.50</p>
-            </td>
-          </tr>
-        </table>
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr>
+<td width="70" style="padding:10px 0;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+<div style="width:60px;height:60px;background-color:#e0e0e0;border-radius:4px;"></div>
+</td>
+<td style="padding:10px;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+<p style="margin:0 0 4px 0;font-size:15px;font-weight:bold;color:#1a1a2e;">Custom DTF Transfer</p>
+<p style="margin:0;font-size:13px;color:#888888;">5 images • 22x60" sheet</p>
+</td>
+<td width="80" align="right" style="padding:10px 0;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+<p style="margin:0;font-size:15px;font-weight:bold;color:#1a1a2e;">$45.99</p>
+</td>
+</tr>
+<tr>
+<td width="70" style="padding:10px 0;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+<div style="width:60px;height:60px;background-color:#e0e0e0;border-radius:4px;"></div>
+</td>
+<td style="padding:10px;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+<p style="margin:0 0 4px 0;font-size:15px;font-weight:bold;color:#1a1a2e;">Gang Sheet Bundle</p>
+<p style="margin:0;font-size:13px;color:#888888;">3 images • 12x22" sheet</p>
+</td>
+<td width="80" align="right" style="padding:10px 0;border-bottom:1px solid #e0e0e0;vertical-align:top;">
+<p style="margin:0;font-size:15px;font-weight:bold;color:#1a1a2e;">$22.50</p>
+</td>
+</tr>
+</table>
       `,
       cartTotal: '68.49',
       recoveryUrl: 'https://dtf-wholesale.ca/recover/sample-123',

@@ -149,7 +149,7 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
 </div>`,
     updatedAt: new Date()
   },
-  // Cart Recovery Emails - Professional Table-Based HTML
+  // Cart Recovery Emails - Simple, bulletproof email HTML
   {
     id: 'cart_recovery_1',
     name: 'Cart Recovery - First Reminder',
@@ -157,114 +157,83 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
     description: 'Sent 1 hour after cart abandonment - friendly first reminder',
     variables: ['firstName', 'customerName', 'cartItemsTable', 'cartTotal', 'recoveryUrl', 'companyName', 'supportEmail', 'logoUrl', 'websiteUrl'],
     htmlContent: `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>You left something behind!</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f7;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <!-- Main Container -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          
-          <!-- Header with Logo -->
-          <tr>
-            <td align="center" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px 40px 30px 40px;">
-              <a href="{{websiteUrl}}" style="text-decoration: none;">
-                <img src="{{logoUrl}}" alt="{{companyName}}" width="200" style="max-width: 200px; height: auto; display: block;">
-              </a>
-            </td>
-          </tr>
-          
-          <!-- Body Content -->
-          <tr>
-            <td style="padding: 40px 40px 20px 40px;">
-              <h1 style="margin: 0 0 20px 0; font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1.3;">
-                Hey {{firstName}}! 👋
-              </h1>
-              <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #4a5568;">
-                We noticed you were working on some awesome DTF transfers but didn't complete your order. No worries – your cart is still waiting for you!
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Cart Items Section -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #1a1a2e;">
-                      🛒 Your Cart
-                    </h2>
-                    {{cartItemsTable}}
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 16px; border-top: 2px solid #e2e8f0; padding-top: 16px;">
-                      <tr>
-                        <td style="font-size: 18px; font-weight: 700; color: #1a1a2e;">
-                          Estimated Total:
-                        </td>
-                        <td align="right" style="font-size: 24px; font-weight: 700; color: #0066cc;">
-                          ${'$'}{{cartTotal}} CAD
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- CTA Button -->
-          <tr>
-            <td align="center" style="padding: 32px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); border-radius: 8px;">
-                    <a href="{{recoveryUrl}}" style="display: inline-block; padding: 16px 48px; font-size: 18px; font-weight: 600; color: #ffffff; text-decoration: none; letter-spacing: 0.5px;">
-                      Complete Your Order →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Help Section -->
-          <tr>
-            <td style="padding: 0 40px 40px 40px;">
-              <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #718096; text-align: center;">
-                Questions about our DTF transfers? Just reply to this email or contact us at
-                <a href="mailto:{{supportEmail}}" style="color: #0066cc; text-decoration: none; font-weight: 500;">{{supportEmail}}</a>
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #1a1a2e; padding: 30px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #ffffff;">
-                      {{companyName}}
-                    </p>
-                    <p style="margin: 0; font-size: 12px; color: #a0aec0;">
-                      Premium DTF Transfers in Canada
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-        </table>
-      </td>
-    </tr>
-  </table>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;">
+<tr>
+<td align="center" style="padding:40px 20px;">
+
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
+<!-- Header -->
+<tr>
+<td align="center" bgcolor="#1a1a2e" style="padding:30px 40px;">
+<a href="{{websiteUrl}}">
+<img src="{{logoUrl}}" alt="{{companyName}}" width="180" style="display:block;border:0;">
+</a>
+</td>
+</tr>
+
+<!-- Body -->
+<tr>
+<td style="padding:40px;">
+<h1 style="margin:0 0 20px 0;font-size:26px;color:#1a1a2e;">Hey {{firstName}}! 👋</h1>
+<p style="margin:0 0 25px 0;font-size:16px;line-height:1.6;color:#555555;">
+We noticed you were working on some awesome DTF transfers but didn't complete your order. No worries – your cart is still waiting for you!
+</p>
+
+<!-- Cart Box -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa;border-radius:8px;margin-bottom:30px;">
+<tr>
+<td style="padding:25px;">
+<h2 style="margin:0 0 15px 0;font-size:18px;color:#1a1a2e;">🛒 Your Cart</h2>
+{{cartItemsTable}}
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:2px solid #e0e0e0;padding-top:15px;">
+<tr>
+<td style="font-size:16px;font-weight:bold;color:#1a1a2e;padding-top:15px;">Estimated Total:</td>
+<td align="right" style="font-size:22px;font-weight:bold;color:#0066cc;padding-top:15px;">${'$'}{{cartTotal}} CAD</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+
+<!-- CTA Button -->
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr>
+<td align="center" style="padding:10px 0 30px 0;">
+<table cellpadding="0" cellspacing="0">
+<tr>
+<td align="center" bgcolor="#0066cc" style="border-radius:6px;">
+<a href="{{recoveryUrl}}" style="display:inline-block;padding:16px 40px;font-size:18px;font-weight:bold;color:#ffffff;text-decoration:none;">Complete Your Order →</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+
+<p style="margin:0;font-size:14px;line-height:1.6;color:#888888;text-align:center;">
+Questions? Just reply to this email or contact us at <a href="mailto:{{supportEmail}}" style="color:#0066cc;">{{supportEmail}}</a>
+</p>
+</td>
+</tr>
+
+<!-- Footer -->
+<tr>
+<td align="center" bgcolor="#1a1a2e" style="padding:25px 40px;">
+<p style="margin:0 0 5px 0;font-size:14px;font-weight:bold;color:#ffffff;">{{companyName}}</p>
+<p style="margin:0;font-size:12px;color:#aaaaaa;">Premium DTF Transfers in Canada</p>
+</td>
+</tr>
+</table>
+
+</td>
+</tr>
+</table>
 </body>
 </html>`,
     updatedAt: new Date()
@@ -276,146 +245,101 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
     description: 'Sent 24 hours after first email - friendly follow-up',
     variables: ['firstName', 'customerName', 'cartItemsTable', 'cartTotal', 'recoveryUrl', 'companyName', 'supportEmail', 'logoUrl', 'websiteUrl'],
     htmlContent: `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Still thinking it over?</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f7;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <!-- Main Container -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          
-          <!-- Header with Logo -->
-          <tr>
-            <td align="center" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px 40px 30px 40px;">
-              <a href="{{websiteUrl}}" style="text-decoration: none;">
-                <img src="{{logoUrl}}" alt="{{companyName}}" width="200" style="max-width: 200px; height: auto; display: block;">
-              </a>
-            </td>
-          </tr>
-          
-          <!-- Body Content -->
-          <tr>
-            <td style="padding: 40px 40px 20px 40px;">
-              <h1 style="margin: 0 0 20px 0; font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1.3;">
-                Still thinking it over, {{firstName}}? 💭
-              </h1>
-              <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #4a5568;">
-                Just wanted to check in! Your custom DTF transfers are still saved and ready to go whenever you are.
-              </p>
-              <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #4a5568;">
-                We know choosing the right print provider is a big decision. If there's anything we can help with – questions about sizing, turnaround times, or the printing process – we're here for you!
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Why Choose Us Section -->
-          <tr>
-            <td style="padding: 0 40px 20px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%); border-radius: 8px; border-left: 4px solid #0066cc;">
-                <tr>
-                  <td style="padding: 20px 24px;">
-                    <p style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #1a1a2e;">
-                      💡 Why customers love our DTF transfers:
-                    </p>
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding: 4px 0; font-size: 14px; color: #334155;">✓ Vibrant, long-lasting colors</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 4px 0; font-size: 14px; color: #334155;">✓ Easy heat-press application</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 4px 0; font-size: 14px; color: #334155;">✓ Fast turnaround on custom orders</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 4px 0; font-size: 14px; color: #334155;">✓ No minimum order requirements</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Cart Items Section -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #1a1a2e;">
-                      🛒 Your Saved Cart
-                    </h2>
-                    {{cartItemsTable}}
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 16px; border-top: 2px solid #e2e8f0; padding-top: 16px;">
-                      <tr>
-                        <td style="font-size: 18px; font-weight: 700; color: #1a1a2e;">
-                          Total:
-                        </td>
-                        <td align="right" style="font-size: 24px; font-weight: 700; color: #0066cc;">
-                          ${'$'}{{cartTotal}} CAD
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- CTA Button -->
-          <tr>
-            <td align="center" style="padding: 32px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); border-radius: 8px;">
-                    <a href="{{recoveryUrl}}" style="display: inline-block; padding: 16px 48px; font-size: 18px; font-weight: 600; color: #ffffff; text-decoration: none; letter-spacing: 0.5px;">
-                      Complete Your Order →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Help Section -->
-          <tr>
-            <td style="padding: 0 40px 40px 40px;">
-              <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #718096; text-align: center;">
-                Have questions? Just hit reply – we'd love to help! Or reach us at
-                <a href="mailto:{{supportEmail}}" style="color: #0066cc; text-decoration: none; font-weight: 500;">{{supportEmail}}</a>
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #1a1a2e; padding: 30px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #ffffff;">
-                      {{companyName}}
-                    </p>
-                    <p style="margin: 0; font-size: 12px; color: #a0aec0;">
-                      Premium DTF Transfers in Canada
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-        </table>
-      </td>
-    </tr>
-  </table>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;">
+<tr>
+<td align="center" style="padding:40px 20px;">
+
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
+<!-- Header -->
+<tr>
+<td align="center" bgcolor="#1a1a2e" style="padding:30px 40px;">
+<a href="{{websiteUrl}}">
+<img src="{{logoUrl}}" alt="{{companyName}}" width="180" style="display:block;border:0;">
+</a>
+</td>
+</tr>
+
+<!-- Body -->
+<tr>
+<td style="padding:40px;">
+<h1 style="margin:0 0 20px 0;font-size:26px;color:#1a1a2e;">Still thinking it over, {{firstName}}? 💭</h1>
+<p style="margin:0 0 15px 0;font-size:16px;line-height:1.6;color:#555555;">
+Just wanted to check in! Your custom DTF transfers are still saved and ready to go whenever you are.
+</p>
+<p style="margin:0 0 25px 0;font-size:16px;line-height:1.6;color:#555555;">
+We know choosing the right print provider is important. If there's anything we can help with – questions about sizing, turnaround times, or the printing process – we're here for you!
+</p>
+
+<!-- Why Choose Us Box -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#e8f4fd;border-left:4px solid #0066cc;border-radius:4px;margin-bottom:25px;">
+<tr>
+<td style="padding:20px;">
+<p style="margin:0 0 10px 0;font-size:15px;font-weight:bold;color:#1a1a2e;">💡 Why customers love our DTF transfers:</p>
+<p style="margin:0;font-size:14px;line-height:1.8;color:#444444;">
+✓ Vibrant, long-lasting colors<br>
+✓ Easy heat-press application<br>
+✓ Fast turnaround on custom orders<br>
+✓ No minimum order requirements
+</p>
+</td>
+</tr>
+</table>
+
+<!-- Cart Box -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa;border-radius:8px;margin-bottom:30px;">
+<tr>
+<td style="padding:25px;">
+<h2 style="margin:0 0 15px 0;font-size:18px;color:#1a1a2e;">🛒 Your Saved Cart</h2>
+{{cartItemsTable}}
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:2px solid #e0e0e0;padding-top:15px;">
+<tr>
+<td style="font-size:16px;font-weight:bold;color:#1a1a2e;padding-top:15px;">Total:</td>
+<td align="right" style="font-size:22px;font-weight:bold;color:#0066cc;padding-top:15px;">${'$'}{{cartTotal}} CAD</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+
+<!-- CTA Button -->
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr>
+<td align="center" style="padding:10px 0 30px 0;">
+<table cellpadding="0" cellspacing="0">
+<tr>
+<td align="center" bgcolor="#0066cc" style="border-radius:6px;">
+<a href="{{recoveryUrl}}" style="display:inline-block;padding:16px 40px;font-size:18px;font-weight:bold;color:#ffffff;text-decoration:none;">Complete Your Order →</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+
+<p style="margin:0;font-size:14px;line-height:1.6;color:#888888;text-align:center;">
+Have questions? Just hit reply – we'd love to help! Or reach us at <a href="mailto:{{supportEmail}}" style="color:#0066cc;">{{supportEmail}}</a>
+</p>
+</td>
+</tr>
+
+<!-- Footer -->
+<tr>
+<td align="center" bgcolor="#1a1a2e" style="padding:25px 40px;">
+<p style="margin:0 0 5px 0;font-size:14px;font-weight:bold;color:#ffffff;">{{companyName}}</p>
+<p style="margin:0;font-size:12px;color:#aaaaaa;">Premium DTF Transfers in Canada</p>
+</td>
+</tr>
+</table>
+
+</td>
+</tr>
+</table>
 </body>
 </html>`,
     updatedAt: new Date()
@@ -427,139 +351,100 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
     description: 'Sent 72 hours after second email - final friendly reminder',
     variables: ['firstName', 'customerName', 'cartItemsTable', 'cartTotal', 'recoveryUrl', 'companyName', 'supportEmail', 'logoUrl', 'websiteUrl'],
     htmlContent: `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>We'd hate to see you go!</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f7;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <!-- Main Container -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          
-          <!-- Header with Logo -->
-          <tr>
-            <td align="center" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px 40px 30px 40px;">
-              <a href="{{websiteUrl}}" style="text-decoration: none;">
-                <img src="{{logoUrl}}" alt="{{companyName}}" width="200" style="max-width: 200px; height: auto; display: block;">
-              </a>
-            </td>
-          </tr>
-          
-          <!-- Body Content -->
-          <tr>
-            <td style="padding: 40px 40px 20px 40px;">
-              <h1 style="margin: 0 0 20px 0; font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1.3;">
-                {{firstName}}, we'd hate to see you go! 💙
-              </h1>
-              <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #4a5568;">
-                This is just a final, friendly reminder that your custom DTF transfers are still waiting for you. We understand life gets busy, but we wanted to make sure you didn't forget about them!
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Urgency Notice -->
-          <tr>
-            <td style="padding: 0 40px 20px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fffbeb; border-radius: 8px; border: 1px solid #fcd34d;">
-                <tr>
-                  <td style="padding: 20px 24px;">
-                    <p style="margin: 0; font-size: 15px; color: #92400e; line-height: 1.5;">
-                      <strong>⏰ Just a heads up:</strong><br>
-                      After this reminder, we won't send any more emails about this cart. If you're still interested, now's a great time to complete your order!
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Cart Items Section -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #1a1a2e;">
-                      🛒 Your Saved Cart
-                    </h2>
-                    {{cartItemsTable}}
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 16px; border-top: 2px solid #e2e8f0; padding-top: 16px;">
-                      <tr>
-                        <td style="font-size: 18px; font-weight: 700; color: #1a1a2e;">
-                          Total:
-                        </td>
-                        <td align="right" style="font-size: 24px; font-weight: 700; color: #0066cc;">
-                          ${'$'}{{cartTotal}} CAD
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Personal Message -->
-          <tr>
-            <td style="padding: 24px 40px 0 40px;">
-              <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #4a5568;">
-                {{firstName}}, if something is holding you back – pricing questions, sizing concerns, or anything else – we're genuinely here to help. Just reply to this email!
-              </p>
-            </td>
-          </tr>
-          
-          <!-- CTA Button -->
-          <tr>
-            <td align="center" style="padding: 32px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); border-radius: 8px;">
-                    <a href="{{recoveryUrl}}" style="display: inline-block; padding: 16px 48px; font-size: 18px; font-weight: 600; color: #ffffff; text-decoration: none; letter-spacing: 0.5px;">
-                      Complete Your Order →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Help Section -->
-          <tr>
-            <td style="padding: 0 40px 40px 40px;">
-              <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #718096; text-align: center;">
-                Thanks for considering us, {{firstName}}! We hope to see you soon. 🙂<br><br>
-                Questions? <a href="mailto:{{supportEmail}}" style="color: #0066cc; text-decoration: none; font-weight: 500;">{{supportEmail}}</a>
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #1a1a2e; padding: 30px 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #ffffff;">
-                      {{companyName}}
-                    </p>
-                    <p style="margin: 0; font-size: 12px; color: #a0aec0;">
-                      Premium DTF Transfers in Canada
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-        </table>
-      </td>
-    </tr>
-  </table>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;">
+<tr>
+<td align="center" style="padding:40px 20px;">
+
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
+<!-- Header -->
+<tr>
+<td align="center" bgcolor="#1a1a2e" style="padding:30px 40px;">
+<a href="{{websiteUrl}}">
+<img src="{{logoUrl}}" alt="{{companyName}}" width="180" style="display:block;border:0;">
+</a>
+</td>
+</tr>
+
+<!-- Body -->
+<tr>
+<td style="padding:40px;">
+<h1 style="margin:0 0 20px 0;font-size:26px;color:#1a1a2e;">{{firstName}}, we'd hate to see you go! 💙</h1>
+<p style="margin:0 0 25px 0;font-size:16px;line-height:1.6;color:#555555;">
+This is just a final, friendly reminder that your custom DTF transfers are still waiting for you. We understand life gets busy, but we wanted to make sure you didn't forget about them!
+</p>
+
+<!-- Urgency Box -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fffbeb;border:1px solid #f59e0b;border-radius:6px;margin-bottom:25px;">
+<tr>
+<td style="padding:20px;">
+<p style="margin:0;font-size:15px;line-height:1.5;color:#92400e;">
+<strong>⏰ Just a heads up:</strong><br>
+After this reminder, we won't send any more emails about this cart. If you're still interested, now's a great time to complete your order!
+</p>
+</td>
+</tr>
+</table>
+
+<!-- Cart Box -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa;border-radius:8px;margin-bottom:25px;">
+<tr>
+<td style="padding:25px;">
+<h2 style="margin:0 0 15px 0;font-size:18px;color:#1a1a2e;">🛒 Your Saved Cart</h2>
+{{cartItemsTable}}
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:2px solid #e0e0e0;padding-top:15px;">
+<tr>
+<td style="font-size:16px;font-weight:bold;color:#1a1a2e;padding-top:15px;">Total:</td>
+<td align="right" style="font-size:22px;font-weight:bold;color:#0066cc;padding-top:15px;">${'$'}{{cartTotal}} CAD</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+
+<p style="margin:0 0 25px 0;font-size:16px;line-height:1.6;color:#555555;">
+{{firstName}}, if something is holding you back – pricing questions, sizing concerns, or anything else – we're genuinely here to help. Just reply to this email!
+</p>
+
+<!-- CTA Button -->
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr>
+<td align="center" style="padding:10px 0 30px 0;">
+<table cellpadding="0" cellspacing="0">
+<tr>
+<td align="center" bgcolor="#0066cc" style="border-radius:6px;">
+<a href="{{recoveryUrl}}" style="display:inline-block;padding:16px 40px;font-size:18px;font-weight:bold;color:#ffffff;text-decoration:none;">Complete Your Order →</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+
+<p style="margin:0;font-size:14px;line-height:1.6;color:#888888;text-align:center;">
+Thanks for considering us! We hope to see you soon. 🙂<br><br>
+Questions? <a href="mailto:{{supportEmail}}" style="color:#0066cc;">{{supportEmail}}</a>
+</p>
+</td>
+</tr>
+
+<!-- Footer -->
+<tr>
+<td align="center" bgcolor="#1a1a2e" style="padding:25px 40px;">
+<p style="margin:0 0 5px 0;font-size:14px;font-weight:bold;color:#ffffff;">{{companyName}}</p>
+<p style="margin:0;font-size:12px;color:#aaaaaa;">Premium DTF Transfers in Canada</p>
+</td>
+</tr>
+</table>
+
+</td>
+</tr>
+</table>
 </body>
 </html>`,
     updatedAt: new Date()
