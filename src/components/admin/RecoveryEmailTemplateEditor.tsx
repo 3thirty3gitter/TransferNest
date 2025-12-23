@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Save, ArrowLeft, Edit2, Copy, Check, RotateCcw, Image, Eye, Mail } from 'lucide-react';
+import { Loader2, Save, ArrowLeft, Edit2, Copy, Check, RotateCcw, Image, Eye, Mail, Maximize2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getEmailTemplatesAction, saveEmailTemplateAction, resetEmailTemplateAction } from '@/lib/actions/email-template-actions';
 import { EmailTemplate } from '@/lib/services/email-template-service';
 import { useAuth } from '@/contexts/auth-context';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import dynamic from 'next/dynamic';
 import 'react-quill-new/dist/quill.snow.css';
 
@@ -68,8 +69,31 @@ export default function RecoveryEmailTemplateEditor() {
   // Form state
   const [subject, setSubject] = useState('');
   const [htmlContent, setHtmlContent] = useState('');
+  
+  // Image upload dialog state
+  const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
+  const [imageWidth, setImageWidth] = useState('400');
+  const [showImageDialog, setShowImageDialog] = useState(false);
 
-  // Handle image upload - inserts image directly into HTML content
+  // Handle inserting image with specified width
+  const handleInsertImage = () => {
+    if (!pendingImageUrl) return;
+    
+    const width = parseInt(imageWidth) || 400;
+    const imageTag = `<p><img src="${pendingImageUrl}" alt="Email Image" style="width: ${width}px; max-width: 100%; height: auto;"></p>`;
+    setHtmlContent(prev => prev + imageTag);
+    
+    setShowImageDialog(false);
+    setPendingImageUrl(null);
+    setImageWidth('400');
+    
+    toast({ 
+      title: 'Image inserted!', 
+      description: `Image added with ${width}px width.` 
+    });
+  };
+
+  // Handle image upload - uploads then shows size dialog
   const handleImageUpload = async () => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
@@ -92,15 +116,10 @@ export default function RecoveryEmailTemplateEditor() {
         const snapshot = await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(snapshot.ref);
         
-        // Insert the image directly into the HTML content at the end
-        // Quill uses <p> tags, so we add an image in its own paragraph
-        const imageTag = `<p><img src="${downloadURL}" alt="Email Image" style="max-width: 100%; height: auto;"></p>`;
-        setHtmlContent(prev => prev + imageTag);
+        // Show dialog to set image size before inserting
+        setPendingImageUrl(downloadURL);
+        setShowImageDialog(true);
         
-        toast({ 
-          title: 'Image inserted!', 
-          description: 'Image has been added to your email template.' 
-        });
       } catch (error: any) {
         console.error('Image upload failed:', error);
         toast({ 
@@ -266,7 +285,60 @@ export default function RecoveryEmailTemplateEditor() {
     };
 
     return (
-      <div className="space-y-6">
+      <>
+        {/* Image Size Dialog */}
+        <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Set Image Size</DialogTitle>
+              <DialogDescription>
+                Choose the width for your image. It will scale proportionally.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {pendingImageUrl && (
+                <div className="border rounded-lg p-2 bg-muted/50">
+                  <img 
+                    src={pendingImageUrl} 
+                    alt="Preview" 
+                    className="max-h-32 mx-auto object-contain"
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Width (pixels)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={imageWidth}
+                    onChange={(e) => setImageWidth(e.target.value)}
+                    placeholder="400"
+                    min="50"
+                    max="600"
+                  />
+                  <span className="text-sm text-muted-foreground self-center">px</span>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button variant="outline" size="sm" onClick={() => setImageWidth('200')}>Small (200)</Button>
+                  <Button variant="outline" size="sm" onClick={() => setImageWidth('400')}>Medium (400)</Button>
+                  <Button variant="outline" size="sm" onClick={() => setImageWidth('560')}>Large (560)</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Recommended: 400px for logos, 560px for full-width images. Email max width is ~600px.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowImageDialog(false)}>Cancel</Button>
+              <Button onClick={handleInsertImage}>
+                <Image className="h-4 w-4 mr-2" />
+                Insert Image
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => setSelectedTemplate(null)}>
@@ -418,6 +490,7 @@ export default function RecoveryEmailTemplateEditor() {
           </TabsContent>
         </Tabs>
       </div>
+      </>
     );
   }
 
