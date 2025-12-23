@@ -75,12 +75,22 @@ export default function RecoveryEmailTemplateEditor() {
   const [imageWidth, setImageWidth] = useState('400');
   const [showImageDialog, setShowImageDialog] = useState(false);
 
+  // Process HTML to ensure images have proper sizing styles for email
+  const processHtmlForEmail = (html: string): string => {
+    // Add inline styles to images that have width attributes
+    return html.replace(
+      /<img([^>]*?)width="(\d+)"([^>]*?)>/gi,
+      '<img$1width="$2" style="width: $2px; max-width: 100%; height: auto;"$3>'
+    );
+  };
+
   // Handle inserting image with specified width
   const handleInsertImage = () => {
     if (!pendingImageUrl) return;
     
     const width = parseInt(imageWidth) || 400;
-    const imageTag = `<p><img src="${pendingImageUrl}" alt="Email Image" style="width: ${width}px; max-width: 100%; height: auto;"></p>`;
+    // Use width attribute - we'll process it to add styles when saving/previewing
+    const imageTag = `<p><img src="${pendingImageUrl}" alt="Email Image" width="${width}"></p>`;
     setHtmlContent(prev => prev + imageTag);
     
     setShowImageDialog(false);
@@ -179,10 +189,14 @@ export default function RecoveryEmailTemplateEditor() {
     }
 
     setSaving(true);
+    
+    // Process HTML to add inline styles for images with width attributes
+    const processedHtml = processHtmlForEmail(htmlContent);
+    
     const updatedTemplate: EmailTemplate = {
       ...selectedTemplate,
       subject,
-      htmlContent,
+      htmlContent: processedHtml,
       updatedAt: new Date()
     };
 
@@ -195,7 +209,8 @@ export default function RecoveryEmailTemplateEditor() {
       // Update local state with saved content
       const updated = templates.find(t => t.id === selectedTemplate.id);
       if (updated) {
-        setSelectedTemplate({ ...updated, subject, htmlContent });
+        setSelectedTemplate({ ...updated, subject, htmlContent: processedHtml });
+        setHtmlContent(processedHtml);
       }
     } else {
       toast({ title: 'Error saving template', description: result.error, variant: 'destructive' });
@@ -239,7 +254,8 @@ export default function RecoveryEmailTemplateEditor() {
 
   // Generate preview with sample data
   const getPreviewHtml = () => {
-    let preview = htmlContent;
+    // Process HTML for proper image sizing
+    let preview = processHtmlForEmail(htmlContent);
     const sampleData: Record<string, string> = {
       firstName: 'John',
       customerName: 'John Doe',
