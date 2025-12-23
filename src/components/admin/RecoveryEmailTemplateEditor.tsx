@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Save, ArrowLeft, Edit2, Copy, Check, RotateCcw, Image, Eye, Mail, Maximize2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getEmailTemplatesAction, saveEmailTemplateAction, resetEmailTemplateAction } from '@/lib/actions/email-template-actions';
+import { getEmailTemplatesAction, saveEmailTemplateAction, resetEmailTemplateAction, resetAllRecoveryTemplatesAction } from '@/lib/actions/email-template-actions';
 import { EmailTemplate } from '@/lib/services/email-template-service';
 import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -65,6 +65,7 @@ export default function RecoveryEmailTemplateEditor() {
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [resettingAll, setResettingAll] = useState(false);
 
   // Form state
   const [subject, setSubject] = useState('');
@@ -242,6 +243,20 @@ export default function RecoveryEmailTemplateEditor() {
       toast({ title: 'Error resetting template', description: result.error, variant: 'destructive' });
     }
     setLoading(false);
+  };
+
+  const handleResetAll = async () => {
+    if (!confirm('Reset ALL recovery email templates to the professional default design? This will overwrite any customizations.')) return;
+
+    setResettingAll(true);
+    const result = await resetAllRecoveryTemplatesAction();
+    if (result.success) {
+      toast({ title: 'All templates reset!', description: 'Recovery emails now use the professional design.' });
+      await loadTemplates();
+    } else {
+      toast({ title: 'Error resetting templates', description: result.error, variant: 'destructive' });
+    }
+    setResettingAll(false);
   };
 
   const copyVariable = (variable: string) => {
@@ -516,9 +531,11 @@ export default function RecoveryEmailTemplateEditor() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div 
-                  className="bg-white p-6"
-                  dangerouslySetInnerHTML={{ __html: getPreviewHtml() }}
+                <iframe
+                  srcDoc={getPreviewHtml()}
+                  title="Email Preview"
+                  className="w-full border-0"
+                  style={{ height: '700px', backgroundColor: '#f4f4f7' }}
                 />
               </CardContent>
             </Card>
@@ -532,11 +549,26 @@ export default function RecoveryEmailTemplateEditor() {
   // Template list view
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">Recovery Email Templates</h3>
-        <p className="text-sm text-muted-foreground">
-          Customize the content of your cart recovery emails. Changes are saved to your account.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Recovery Email Templates</h3>
+          <p className="text-sm text-muted-foreground">
+            Customize the content of your cart recovery emails. Changes are saved to your account.
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={handleResetAll}
+          disabled={resettingAll || templates.length === 0}
+          className="shrink-0"
+        >
+          {resettingAll ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <RotateCcw className="h-4 w-4 mr-2" />
+          )}
+          Reset All to Professional Design
+        </Button>
       </div>
 
       {templates.length === 0 ? (

@@ -637,6 +637,22 @@ export async function resetEmailTemplate(id: string): Promise<void> {
   });
 }
 
+// Reset all recovery email templates to defaults
+export async function resetAllRecoveryTemplates(): Promise<void> {
+  const db = getFirestore();
+  const recoveryTemplateIds = ['cart_recovery_1', 'cart_recovery_2', 'cart_recovery_3'];
+  
+  for (const id of recoveryTemplateIds) {
+    const defaultTemplate = DEFAULT_TEMPLATES.find(t => t.id === id);
+    if (defaultTemplate) {
+      await db.collection(COLLECTION).doc(id).set({
+        ...defaultTemplate,
+        updatedAt: Timestamp.now()
+      });
+    }
+  }
+}
+
 export async function getEmailTemplate(id: string): Promise<EmailTemplate | null> {
   const db = getFirestore();
   try {
