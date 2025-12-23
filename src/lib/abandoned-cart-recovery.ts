@@ -200,28 +200,30 @@ function getRecoveryUrl(config: RecoveryEmailConfig, cartId: string): string {
   return `${config.websiteUrl}/recover-cart/${cartId}`;
 }
 
-// Generate cart items HTML table
+// Generate cart items HTML table - email-safe table-based layout
 function generateCartItemsTable(items: AbandonedCart['items']): string {
   if (!items || items.length === 0) {
-    return '<p style="color: #666;">Your cart items are waiting for you!</p>';
+    return '<p style="color: #718096; font-style: italic; margin: 0;">Your cart items are waiting for you!</p>';
   }
   
   const rows = items.map(item => `
     <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
+      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;" width="70">
+        ${item.thumbnailUrl 
+          ? `<img src="${item.thumbnailUrl}" alt="${item.name || 'Item'}" width="60" height="60" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; display: block;">` 
+          : `<div style="width: 60px; height: 60px; background-color: #e2e8f0; border-radius: 6px;"></div>`}
       </td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        <strong>${item.name || 'DTF Transfer'}</strong><br>
-        <span style="color: #666; font-size: 14px;">${item.imageCount || 0} images • ${item.sheetSize || '?'}" sheet</span>
+      <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+        <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">${item.name || 'DTF Transfer'}</p>
+        <p style="margin: 0; font-size: 13px; color: #718096;">${item.imageCount || 0} image${(item.imageCount || 0) !== 1 ? 's' : ''} • ${item.sheetSize || '?'}" sheet</p>
       </td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
-        $${(item.estimatedPrice || 0).toFixed(2)}
+      <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top; text-align: right;" width="80">
+        <p style="margin: 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">$${(item.estimatedPrice || 0).toFixed(2)}</p>
       </td>
     </tr>
   `).join('');
 
-  return `<table style="width: 100%; border-collapse: collapse;">${rows}</table>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">${rows}</table>`;
 }
 
 // Generate email from database template with variable substitution
@@ -241,6 +243,9 @@ async function generateEmailFromTemplate(
     const firstName = cart.customerName ? cart.customerName.split(' ')[0] : 'there';
     const cartItemsTable = generateCartItemsTable(cart.items);
     const cartTotal = (cart.estimatedTotal || 0).toFixed(2);
+    
+    // Logo URL - use uploaded logo or default from public folder
+    const logoUrl = config.companyLogo || `${config.websiteUrl}/logo.png`;
 
     // Variable substitutions
     const variables: Record<string, string> = {
@@ -252,6 +257,7 @@ async function generateEmailFromTemplate(
       companyName: config.companyName,
       supportEmail: config.supportEmail,
       websiteUrl: config.websiteUrl,
+      logoUrl,
     };
 
     // Replace all variables in the template

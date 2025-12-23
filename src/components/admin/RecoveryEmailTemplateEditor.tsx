@@ -260,21 +260,39 @@ export default function RecoveryEmailTemplateEditor() {
       firstName: 'John',
       customerName: 'John Doe',
       cartItemsTable: `
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr style="background: #f0f0f0;">
-            <td style="padding: 8px; border: 1px solid #ddd;">Sample DTF Transfer - 22x60"</td>
-            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$45.99</td>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+          <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;" width="70">
+              <div style="width: 60px; height: 60px; background-color: #e2e8f0; border-radius: 6px;"></div>
+            </td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+              <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">Custom DTF Transfer</p>
+              <p style="margin: 0; font-size: 13px; color: #718096;">5 images • 22x60" sheet</p>
+            </td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top; text-align: right;" width="80">
+              <p style="margin: 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">$45.99</p>
+            </td>
           </tr>
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">Custom Gang Sheet - 12x22"</td>
-            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$22.50</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;" width="70">
+              <div style="width: 60px; height: 60px; background-color: #e2e8f0; border-radius: 6px;"></div>
+            </td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+              <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">Gang Sheet Bundle</p>
+              <p style="margin: 0; font-size: 13px; color: #718096;">3 images • 12x22" sheet</p>
+            </td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top; text-align: right;" width="80">
+              <p style="margin: 0; font-size: 15px; font-weight: 600; color: #1a1a2e;">$22.50</p>
+            </td>
           </tr>
         </table>
       `,
       cartTotal: '68.49',
-      recoveryUrl: 'https://example.com/recover/sample-123',
+      recoveryUrl: 'https://dtf-wholesale.ca/recover/sample-123',
       companyName: 'DTF Wholesale Canada',
-      supportEmail: 'orders@dtf-wholesale.ca'
+      supportEmail: 'orders@dtf-wholesale.ca',
+      logoUrl: 'https://dtf-wholesale.ca/logo.png',
+      websiteUrl: 'https://dtf-wholesale.ca'
     };
     
     Object.entries(sampleData).forEach(([key, value]) => {
@@ -476,6 +494,7 @@ export default function RecoveryEmailTemplateEditor() {
                   </CardHeader>
                   <CardContent className="text-sm text-muted-foreground space-y-2">
                     <p>• Use {'{{firstName}}'} to personalize the greeting</p>
+                    <p>• {'{{logoUrl}}'} displays your company logo</p>
                     <p>• {'{{cartItemsTable}}'} shows a formatted list of items</p>
                     <p>• {'{{recoveryUrl}}'} is the cart recovery link</p>
                     <p>• Images can be uploaded directly - click the image icon</p>
