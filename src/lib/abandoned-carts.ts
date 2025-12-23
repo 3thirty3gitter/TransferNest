@@ -435,11 +435,16 @@ export async function recordRecoveryEmail(
   const data = cart.data() as AbandonedCart;
   const now = new Date();
   
-  const emailRecord = {
+  // Build email record without undefined values (Firestore doesn't accept undefined)
+  const emailRecord: { sentAt: Date; templateType: 'first' | 'second' | 'final'; discountCode?: string } = {
     sentAt: now,
     templateType,
-    discountCode,
   };
+  
+  // Only add discountCode if it's defined
+  if (discountCode) {
+    emailRecord.discountCode = discountCode;
+  }
   
   await cartRef.update({
     recoveryEmailsSent: (data.recoveryEmailsSent || 0) + 1,
