@@ -25,6 +25,8 @@ export interface CartItem {
   sheetLength?: number;  // Numeric sheet length for print generation
   placedItems?: any[];  // Placed items for print generation after payment
   thumbnailUrl?: string; // Optional preview image URL
+  isRecoveredCart?: boolean; // Flag for items restored from abandoned cart
+  hasFullRecoveryData?: boolean; // Flag indicating full layout data is available for editing
 }
 
 interface CartState {

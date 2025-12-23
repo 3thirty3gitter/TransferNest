@@ -76,6 +76,7 @@ export default async function NestingTool17Page({
 }) {
   const resolvedSearchParams = await searchParams;
   const openWizard = resolvedSearchParams.openWizard === 'true';
+  const restoreCartItemId = typeof resolvedSearchParams.restore === 'string' ? resolvedSearchParams.restore : undefined;
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
@@ -93,7 +94,7 @@ export default async function NestingTool17Page({
       <div className="h-40"></div>
       <main className="flex-1">
         <Suspense fallback={<NestingToolFallback/>}>
-          <NestingTool sheetWidth={17} openWizard={openWizard} />
+          <NestingTool sheetWidth={17} openWizard={openWizard} restoreCartItemId={restoreCartItemId} />
         </Suspense>
       </main>
       <Footer />

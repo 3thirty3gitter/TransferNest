@@ -3,18 +3,32 @@
 import { useCart } from '@/contexts/cart-context';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Trash2, ArrowRight, Package, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, Trash2, ArrowRight, Package, ShieldCheck, RefreshCw, Pencil, X } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CopyrightModal from '@/components/copyright-modal';
 
 export default function CartPage() {
   const { items, totalItems, totalPrice, removeItem } = useCart();
   const { user } = useAuth();
   const [isCopyrightModalOpen, setIsCopyrightModalOpen] = useState(false);
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
+
+  // Check if any items are recovered from abandoned cart
+  const hasRecoveredItems = items.some(item => (item as any).isRecoveredCart);
+  const recoveredItemsCount = items.filter(item => (item as any).isRecoveredCart).length;
+
+  useEffect(() => {
+    if (hasRecoveredItems) {
+      setShowRecoveryBanner(true);
+      // Auto-hide banner after 10 seconds
+      const timer = setTimeout(() => setShowRecoveryBanner(false), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasRecoveredItems]);
 
   if (!user) {
     return (
@@ -75,6 +89,35 @@ export default function CartPage() {
       <Header />
       <div className="h-40"></div>
       
+      {/* Recovery Banner */}
+      {showRecoveryBanner && hasRecoveredItems && (
+        <div className="bg-gradient-to-r from-green-600/90 to-emerald-600/90 border-b border-green-400/20">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <RefreshCw className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-medium">
+                    Welcome back! We've restored {recoveredItemsCount} item{recoveredItemsCount !== 1 ? 's' : ''} to your cart.
+                  </p>
+                  <p className="text-green-100 text-sm">
+                    Your gang sheet{recoveredItemsCount !== 1 ? 's are' : ' is'} ready to complete checkout.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowRecoveryBanner(false)}
+                className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex-1 container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -125,7 +168,22 @@ export default function CartPage() {
                           <span className="px-2 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium">
                             DTF Transfer
                           </span>
+                          {(item as any).isRecoveredCart && (
+                            <span className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-300 text-xs font-medium">
+                              Restored
+                            </span>
+                          )}
                         </div>
+                        {/* Edit link for recovered items with full data */}
+                        {(item as any).hasFullRecoveryData && item.images && item.images.length > 0 && (
+                          <Link 
+                            href={`/nesting-tool?restore=${item.id}`}
+                            className="inline-flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit Gang Sheet
+                          </Link>
+                        )}
                       </div>
                       <button 
                         onClick={() => removeItem(item.id)}

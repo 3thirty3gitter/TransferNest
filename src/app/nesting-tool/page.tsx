@@ -8,11 +8,16 @@ export default async function NestingToolPage({
 }) {
   const resolvedSearchParams = await searchParams;
   const openWizard = resolvedSearchParams.openWizard === 'true';
+  const restoreCartItemId = typeof resolvedSearchParams.restore === 'string' ? resolvedSearchParams.restore : undefined;
   
-  if (openWizard) {
-    redirect('/nesting-tool-17?openWizard=true');
-  }
+  // Build query string for redirect
+  const queryParams = new URLSearchParams();
+  if (openWizard) queryParams.set('openWizard', 'true');
+  if (restoreCartItemId) queryParams.set('restore', restoreCartItemId);
+  
+  const queryString = queryParams.toString();
+  const redirectUrl = queryString ? `/nesting-tool-17?${queryString}` : '/nesting-tool-17';
 
-  // Redirect to the default 17-inch tool.
-  redirect('/nesting-tool-17');
+  // Redirect to the default 17-inch tool with query params.
+  redirect(redirectUrl);
 }

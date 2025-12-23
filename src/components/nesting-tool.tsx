@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ManagedImage, NestingResult } from '@/lib/nesting-algorithm';
 import SheetPreview from './sheet-preview';
 import ImageManager from './image-manager';
@@ -26,13 +26,15 @@ const debugLog = (...args: any[]) => {
 interface NestingToolProps {
   sheetWidth?: number; // Optional now, defaults to 13
   openWizard?: boolean; // Optional prop to auto-open wizard
+  restoreCartItemId?: string; // Optional cart item ID to restore for editing
 }
 
-export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard = false }: NestingToolProps) {
+export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard = false, restoreCartItemId }: NestingToolProps) {
   const [images, setImages] = useState<ManagedImage[]>([]);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sheetWidth, setSheetWidth] = useState<11 | 13 | 17>(initialWidth as 11 | 13 | 17); // Supports 11, 13, or 17 inch sheets
+  const [isRestoringItem, setIsRestoringItem] = useState(false);
   
   // Progress modal state
   const [modalStage, setModalStage] = useState<'preparing' | 'genetic-algorithm' | 'optimizing' | 'complete'>('preparing');
@@ -40,10 +42,50 @@ export default function NestingTool({ sheetWidth: initialWidth = 17, openWizard 
   const [currentGeneration, setCurrentGeneration] = useState(0);
   const [bestUtilization, setBestUtilization] = useState(0);
   
-  const { addItem } = useCart();
+  const { addItem, items: cartItems, removeItem, updateItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
   const { trackAddToCart } = useCartTracking();
+
+  // Restore cart item for editing
+  useEffect(() => {
+    if (restoreCartItemId && cartItems.length > 0 && !isRestoringItem) {
+      const itemToRestore = cartItems.find(item => item.id === restoreCartItemId);
+      if (itemToRestore && itemToRestore.images && itemToRestore.images.length > 0) {
+        setIsRestoringItem(true);
+        
+        // Set sheet width from restored item
+        const restoredSheetWidth = parseInt(itemToRestore.sheetSize) as 11 | 13 | 17;
+        if ([11, 13, 17].includes(restoredSheetWidth)) {
+          setSheetWidth(restoredSheetWidth);
+        }
+        
+        // Restore images
+        setImages(itemToRestore.images);
+        
+        // If we have layout data, restore the nesting result
+        if (itemToRestore.layout && itemToRestore.placedItems) {
+          setNestingResult({
+            sheetLength: itemToRestore.layout.sheetHeight || itemToRestore.sheetLength || 0,
+            placedItems: itemToRestore.placedItems,
+            areaUtilizationPct: (itemToRestore.layout.utilization || 0) / 100,
+            totalCount: itemToRestore.layout.totalCopies,
+            failedCount: 0,
+            sortStrategy: 'restored',
+            packingMethod: 'restored',
+          });
+        }
+        
+        // Remove the item from cart since we're editing it
+        removeItem(restoreCartItemId);
+        
+        toast({
+          title: "Gang sheet restored",
+          description: "Your gang sheet has been loaded for editing. Make changes and add back to cart when ready.",
+        });
+      }
+    }
+  }, [restoreCartItemId, cartItems, isRestoringItem, removeItem, toast]);
 
   const performNesting = async () => {
     if (images.length === 0) return;
