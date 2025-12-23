@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/cart-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingCart, CheckCircle, AlertCircle, Package } from 'lucide-react';
+import { Loader2, ShoppingCart, CheckCircle, AlertCircle, Package, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import type { AbandonedCartItem } from '@/lib/abandoned-carts';
 
@@ -33,10 +33,29 @@ export default function RecoverCartPage() {
   const [restoredItems, setRestoredItems] = useState<AbandonedCartItem[]>([]);
   const [orderId, setOrderId] = useState<string | null>(null);
   
+  // Track if we've already attempted to restore to prevent duplicate calls
+  const hasAttemptedRestore = useRef(false);
+  const addItemRef = useRef(addItem);
+  const routerRef = useRef(router);
+  
+  // Keep refs updated
+  useEffect(() => {
+    addItemRef.current = addItem;
+    routerRef.current = router;
+  }, [addItem, router]);
+  
   const cartId = params.cartId as string;
   
   useEffect(() => {
+    // Prevent duplicate restore attempts
+    if (hasAttemptedRestore.current) {
+      return;
+    }
+    
     const restoreCart = async () => {
+      // Mark as attempted immediately
+      hasAttemptedRestore.current = true;
+      
       try {
         const response = await fetch(`/api/abandoned-carts/restore/${cartId}`);
         const data: RestoreResponse = await response.json();
@@ -116,7 +135,7 @@ export default function RecoverCartPage() {
               hasFullRecoveryData: hasFullData,
             };
             
-            addItem(cartItem as any);
+            addItemRef.current(cartItem as any);
           }
           
           setRestoredItems(data.cart.items);
@@ -124,7 +143,7 @@ export default function RecoverCartPage() {
           
           // Auto-redirect to cart after 3 seconds
           setTimeout(() => {
-            router.push('/cart');
+            routerRef.current.push('/cart');
           }, 3000);
         } else {
           throw new Error('No items to restore');
@@ -140,7 +159,7 @@ export default function RecoverCartPage() {
     if (cartId) {
       restoreCart();
     }
-  }, [cartId, addItem, router]);
+  }, [cartId]); // Only depend on cartId - use refs for functions
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center p-4">
@@ -174,29 +193,49 @@ export default function RecoverCartPage() {
               </p>
               
               <div className="space-y-2 w-full">
-                {restoredItems.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
-                    <Package className="w-5 h-5 text-muted-foreground" />
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.imageCount} images • ${item.estimatedPrice.toFixed(2)}
-                      </p>
+                {restoredItems.map((item, idx) => {
+                  const hasFullData = item.images && item.images.length > 0;
+                  return (
+                    <div key={idx} className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+                      <Package className="w-5 h-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.imageCount} images • ${item.estimatedPrice.toFixed(2)}
+                        </p>
+                      </div>
+                      {hasFullData && (
+                        <Link 
+                          href="/nesting-tool"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Edit
+                        </Link>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               <p className="text-sm text-muted-foreground">
                 Redirecting to cart in 3 seconds...
               </p>
               
-              <Button asChild className="w-full">
-                <Link href="/cart">
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  Go to Cart Now
-                </Link>
-              </Button>
+              <div className="flex gap-2 w-full">
+                <Button asChild variant="outline" className="flex-1">
+                  <Link href="/nesting-tool">
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Items
+                  </Link>
+                </Button>
+                <Button asChild className="flex-1">
+                  <Link href="/cart">
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Go to Cart
+                  </Link>
+                </Button>
+              </div>
             </div>
           )}
           
