@@ -273,8 +273,8 @@ export default function RecoveryEmailTemplateEditor() {
       `,
       cartTotal: '68.49',
       recoveryUrl: 'https://example.com/recover/sample-123',
-      companyName: '3Thirty3 Printing',
-      supportEmail: 'support@3thirty3printing.com'
+      companyName: 'DTF Wholesale Canada',
+      supportEmail: 'orders@dtf-wholesale.ca'
     };
     
     Object.entries(sampleData).forEach(([key, value]) => {

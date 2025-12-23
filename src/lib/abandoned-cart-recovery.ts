@@ -89,8 +89,8 @@ export const DEFAULT_RECOVERY_CONFIG: RecoveryEmailConfig = {
     discountPercent: 0,
     discountValidDays: 0,
   },
-  companyName: "DTF Wholesale",
-  supportEmail: "hello@dtf-wholesale.ca",
+  companyName: "DTF Wholesale Canada",
+  supportEmail: "orders@dtf-wholesale.ca",
   websiteUrl: "https://dtf-wholesale.ca",
 };
 
